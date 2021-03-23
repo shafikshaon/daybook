@@ -31,7 +31,6 @@ class Command(BaseCommand):
                 is_active=True,
                 is_organization_admin=True,
                 is_staff=True,
-                role=1,
                 code='U-00001'
             )
             super_user.set_password('p@ss1234')
