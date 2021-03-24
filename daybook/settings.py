@@ -30,6 +30,7 @@ INSTALLED_APPS += [
     'gist',
     'accounts',
     'meals',
+    'configuration',
     'rest_framework'
 ]
 
