@@ -3,9 +3,9 @@ from django.utils.translation import gettext_lazy as _
 
 
 class TimeLog(models.Model):
-    add_at = models.DateTimeField(_('code'), auto_now_add=True, editable=False)
-    change_at = models.DateTimeField(_('change at'), null=True, blank=True, editable=False)
-    delete_at = models.DateTimeField(_('delete at'), null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(_('created at'), auto_now_add=True, editable=False)
+    changed_at = models.DateTimeField(_('changed at'), auto_now=True, null=True, blank=True, editable=False)
+    deleted_at = models.DateTimeField(_('deleted at'), null=True, blank=True, editable=False)
 
     class Meta:
         abstract = True

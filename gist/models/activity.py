@@ -6,14 +6,14 @@ from django.utils.translation import gettext_lazy as _
 
 def get_sentinel_user():
     return get_user_model().objects.get_or_create(
-        email='deleted@gmail.com',
-        username='deleted@gmail.com',
-        is_delete=True
+        email='deleted@mail.com',
+        username='deleted@mail.com',
+        is_deleted=True
     )[0]
 
 
 class Activity(models.Model):
-    is_delete = models.BooleanField(_('delete status'), default=False, null=False, blank=False)
+    is_deleted = models.BooleanField(_('delete status'), default=False, null=False, blank=False)
     add_by = models.ForeignKey(
         verbose_name=_('add by'),
         to=settings.AUTH_USER_MODEL,

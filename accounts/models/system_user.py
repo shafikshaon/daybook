@@ -17,14 +17,12 @@ def user_picture_directory_path(instance, filename):
 
 class SystemUser(AbstractUser, Key, TimeLog, Activity):
     email = models.EmailField(_('email'), blank=False, null=False, unique=True)
-    is_organization_admin = models.BooleanField(_('organization admin status'), default=False)
-    is_password_change = models.BooleanField(_('password change status'), default=False)
     picture = models.ImageField(_('picture'), upload_to=user_picture_directory_path, blank=True, null=True)
 
     class Meta:
         app_label = 'accounts'
         db_table = 'accounts'
-        ordering = ['-add_at']
+        ordering = ['-created_at']
         verbose_name = 'account'
         verbose_name_plural = 'accounts'
 
