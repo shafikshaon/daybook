@@ -29,6 +29,7 @@ INSTALLED_APPS = [
 INSTALLED_APPS += [
     'gist',
     'accounts',
+    'meals',
     'rest_framework'
 ]
 
