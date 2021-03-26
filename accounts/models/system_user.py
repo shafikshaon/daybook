@@ -1,8 +1,5 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.urls import reverse
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from gist.models.activity import Activity
@@ -27,9 +24,4 @@ class SystemUser(AbstractUser, Key, TimeLog, Activity):
         verbose_name_plural = 'accounts'
 
     def __str__(self):
-        return mark_safe(
-            '<a href="%s">%s</a>' % (
-                reverse("profile", args=(self.username,)),
-                escape(self.get_full_name() if self.get_full_name() else self.username)
-            )
-        )
+        return self.get_full_name()
