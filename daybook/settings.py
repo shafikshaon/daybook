@@ -1,8 +1,10 @@
 import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 from decouple import config
+from django.conf import settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,6 +33,8 @@ INSTALLED_APPS += [
     'accounts',
     'meals',
     'configuration',
+    'auth_token',
+    'shopping',
     'rest_framework'
 ]
 
@@ -91,6 +95,45 @@ AUTHENTICATION_BACKENDS = (
 )
 
 AUTH_USER_MODEL = 'accounts.SystemUser'
+
+AUTH_TOKEN_MODEL = 'auth_token.AuthToken'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'auth_token.authentication.BasicAuthentication',
+        'auth_token.authentication.TokenAuthentication',
+    ]
+}
+
+AUTH_TOKEN_CONFIG = {
+    'JWT_SECRET_KEY': settings.SECRET_KEY,
+    'JWT_ALGORITHM': 'HS256',
+    # HS256 - HMAC using SHA-256 hash algorithm (default)
+    # HS384 - HMAC using SHA-384 hash algorithm
+    # HS512 - HMAC using SHA-512 hash algorithm
+    # ES256 - ECDSA signature algorithm using SHA-256 hash algorithm
+    # ES384 - ECDSA signature algorithm using SHA-384 hash algorithm
+    # ES512 - ECDSA signature algorithm using SHA-512 hash algorithm
+    # RS256 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-256 hash algorithm
+    # RS384 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-384 hash algorithm
+    # RS512 - RSASSA-PKCS1-v1_5 signature algorithm using SHA-512 hash algorithm
+    # PS256 - RSASSA-PSS signature using SHA-256 and MGF1 padding with SHA-256
+    # PS384 - RSASSA-PSS signature using SHA-384 and MGF1 padding with SHA-384
+    # PS512 - RSASSA-PSS signature using SHA-512 and MGF1 padding with SHA-512
+    # EdDSA - Ed25519255 signature using SHA-512. Provides 128-bit security
+    'JWT_EXPIRATION_DELTA': timedelta(seconds=300),
+    #
+    'HASH_ALGORITHM': 'HS256',
+    'AUTH_TOKEN_CHARACTER_LENGTH': 64,
+    'TOKEN_EXPIRY': timedelta(seconds=3000),
+    'USER_SERIALIZER': 'auth_token.serializers.UserSerializer',
+    'TOKEN_LIMIT_PER_USER': None,
+    'AUTO_REFRESH': False,
+    'MIN_REFRESH_INTERVAL': 60,
+    'AUTH_HEADER_PREFIX': 'Bearer',
+}
+
+AUTH_TOKEN_SETTING = AUTH_TOKEN_CONFIG
 
 # Templates
 TEMPLATES = [
