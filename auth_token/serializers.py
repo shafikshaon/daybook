@@ -3,6 +3,9 @@ from django.utils.translation import gettext_lazy as _
 
 from rest_framework import serializers
 
+from auth_record.models.login_attempt_record import LoginAttemptLogger
+from auth_record.models.login_record import LoginLogger
+
 User = get_user_model()
 
 username_field = User.USERNAME_FIELD if hasattr(User, 'USERNAME_FIELD') else 'username'
@@ -43,9 +46,13 @@ class AuthTokenSerializer(serializers.Serializer):
             # backend.)
             if not user:
                 msg = _('Unable to log in with provided credentials.')
+                LoginLogger.log_failed_login(username=username, request=self.context['request'])
+                LoginAttemptLogger.increment(username)
                 raise serializers.ValidationError(msg, code='authorization')
         else:
             msg = _('Must include "username" and "password".')
+            LoginLogger.log_failed_login(username=username, request=self.context['request'])
+            LoginAttemptLogger.increment(username)
             raise serializers.ValidationError(msg, code='authorization')
 
         attrs['user'] = user

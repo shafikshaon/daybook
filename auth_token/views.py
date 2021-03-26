@@ -3,11 +3,12 @@ from rest_framework import parsers, renderers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from auth_record.models.login_attempt_record import LoginAttemptLogger
+from auth_record.models.login_record import LoginLogger
 from auth_token.serializers import AuthTokenSerializer
 from auth_token.settings import auth_token_settings
 
 app_setting = auth_token_settings
-
 
 
 class GetAuthToken(APIView):
@@ -43,7 +44,12 @@ class GetAuthToken(APIView):
     def post(self, request, *args, **kwargs):
         from auth_token.utils import get_auth_token_model
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        is_valid = serializer.is_valid(raise_exception=True)
+        if is_valid:
+            LoginLogger.log_login(username=request.data['username'], request=request)
+            LoginAttemptLogger.reset(request.data['username'])
+        else:
+            LoginLogger.log_failed_login(username=request.data['username'], request=request)
         user = serializer.validated_data['user']
         # payload = get_decoded_data_from_encoded_key()
         token_expiry = timezone.now() + app_setting.TOKEN_EXPIRY

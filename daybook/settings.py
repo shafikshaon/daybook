@@ -34,6 +34,7 @@ INSTALLED_APPS += [
     'meals',
     'configuration',
     'auth_token',
+    'auth_record',
     'shopping',
     'rest_framework'
 ]
