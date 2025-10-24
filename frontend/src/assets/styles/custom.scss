@@ -979,22 +979,813 @@ nav.sidebar {
   font-size: 0.8125rem;
 }
 
-// Responsive
-@media (max-width: 768px) {
+// ============================================================================
+// MOBILE APP-LIKE STYLES (iOS/Android Native App Design)
+// ============================================================================
+
+// Mobile-only styles (max-width: 767px) - App-like design
+@media (max-width: 767px) {
+  // iOS Safe Area Support
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  // Hide desktop sidebar completely on mobile
+  nav.sidebar {
+    display: none !important;
+  }
+
+  // Compact top navbar for mobile
+  .top-navbar {
+    height: 48px;
+    background-color: $bg-secondary;
+    border-bottom: 1px solid $border-light;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding-top: env(safe-area-inset-top);
+
+    .top-navbar-content {
+      padding: 0 12px;
+    }
+
+    // Hide desktop sidebar toggle on mobile
+    .sidebar-toggle-btn {
+      display: none !important;
+    }
+
+    // Show mobile menu toggle
+    .mobile-menu-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: $text-primary;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+
+      &:active {
+        background-color: rgba($primary, 0.1);
+      }
+
+      svg {
+        display: block;
+      }
+    }
+
+    .navbar-brand {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-left: 0;
+    }
+
+    .profile-btn {
+      padding: 0.25rem 0.5rem;
+
+      .profile-name {
+        display: none; // Hide profile name on mobile
+      }
+
+      .profile-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+      }
+    }
+  }
+
+  // Main content adjustments for mobile
+  .main-content {
+    margin-left: 0 !important;
+    margin-top: 48px;
+    padding: 12px 12px 80px 12px; // Extra bottom padding for bottom nav
+    min-height: calc(100vh - 48px - 68px); // Viewport - top nav - bottom nav
+    background-color: $bg-primary;
+  }
+
+  // Page titles - mobile optimized
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    margin-bottom: 1rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+  }
+
+  // ============================================================================
+  // MOBILE DRAWER MENU (iOS/Android Slide-Out Menu)
+  // ============================================================================
+
+  // Drawer Overlay (backdrop)
+  .mobile-drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    z-index: 1040;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+
+    &.show {
+      opacity: 1;
+      visibility: visible;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(2px);
+    }
+  }
+
+  // Drawer Menu
+  .mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background-color: $bg-secondary;
+    z-index: 1050;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+    overflow-y: auto;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+
+    &.show {
+      left: 0;
+    }
+
+    // Smooth scrolling
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $border-medium;
+      border-radius: 2px;
+    }
+  }
+
+  // Drawer Header
+  .mobile-drawer-header {
+    padding: 20px 16px;
+    border-bottom: 1px solid $border-light;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: $bg-secondary;
+  }
+
+  .drawer-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+
+    .user-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, $primary 0%, color.scale($primary, $lightness: 20%) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba($primary, 0.3);
+    }
+
+    .user-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+      min-width: 0;
+
+      .user-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: $text-primary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .user-email {
+        font-size: 13px;
+        color: $text-tertiary;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
+
+  .drawer-close-btn {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+
+    &:active {
+      background-color: rgba($danger, 0.1);
+      color: $danger;
+    }
+
+    svg {
+      display: block;
+    }
+  }
+
+  // Drawer Content
+  .mobile-drawer-content {
+    padding: 8px 0;
+  }
+
+  .drawer-nav {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .drawer-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: $text-tertiary;
+    padding: 20px 16px 8px 16px;
+    margin: 0;
+  }
+
+  .drawer-nav-item {
+    margin: 0;
+  }
+
+  .drawer-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    color: $text-primary;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+
+    &:active {
+      background-color: rgba($primary, 0.08);
+    }
+
+    &.router-link-active {
+      background-color: rgba($primary, 0.08);
+      color: $primary;
+      border-left-color: $primary;
+      font-weight: 600;
+
+      .drawer-nav-icon {
+        color: $primary;
+      }
+    }
+
+    .drawer-nav-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      color: $text-secondary;
+      transition: color 0.2s ease;
+    }
+
+    span {
+      flex: 1;
+    }
+  }
+
+  // ============================================================================
+  // ENHANCED MOBILE UI COMPONENTS
+  // ============================================================================
+
+  // Card styles - full width, app-like
+  .card {
+    border-radius: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid $border-light;
+    overflow: hidden;
+
+    .card-header {
+      padding: 20px 16px 16px 16px;
+      background-color: $bg-secondary;
+      border-bottom: 1px solid $border-light;
+
+      h5 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+      }
+    }
+
+    .card-body {
+      padding: 16px;
+    }
+
+    .card-footer {
+      padding: 12px 16px;
+      background-color: $bg-tertiary;
+      border-top: 1px solid $border-light;
+    }
+  }
+
+  // Stat cards - mobile optimized grid
+  .stat-card {
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.375rem;
+      font-weight: 700;
+    }
+
+    .stat-label {
+      font-size: 0.8125rem;
+    }
+  }
+
+  // ============================================================================
+  // TOUCH-OPTIMIZED BUTTONS (iOS/Android Standards)
+  // ============================================================================
+
+  .btn {
+    min-height: 48px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &.btn-primary {
+      background: linear-gradient(135deg, $primary 0%, color.scale($primary, $lightness: -5%) 100%);
+      border: none;
+      box-shadow: 0 2px 8px rgba($primary, 0.3);
+
+      &:active {
+        box-shadow: 0 1px 4px rgba($primary, 0.3);
+      }
+    }
+
+    &.btn-secondary {
+      background-color: $bg-tertiary;
+      color: $text-primary;
+      border: 1px solid $border-medium;
+    }
+
+    &.btn-outline-primary {
+      background-color: transparent;
+      border: 2px solid $primary;
+      color: $primary;
+    }
+
+    &.btn-sm {
+      min-height: 40px;
+      padding: 8px 16px;
+      font-size: 14px;
+    }
+
+    &.btn-lg {
+      min-height: 56px;
+      padding: 16px 32px;
+      font-size: 18px;
+    }
+
+    // Full width button for mobile
+    &.btn-block {
+      width: 100%;
+      display: flex;
+    }
+  }
+
+  // Button groups
+  .btn-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .btn {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  // ============================================================================
+  // MOBILE-OPTIMIZED FORMS
+  // ============================================================================
+
+  .form-control, .form-select, textarea.form-control {
+    min-height: 48px;
+    padding: 12px 16px;
+    font-size: 16px; // Prevents iOS zoom
+    border-radius: 12px;
+    border: 1.5px solid $border-medium;
+    transition: all 0.2s ease;
+    -webkit-appearance: none;
+    appearance: none;
+
+    &:focus {
+      border-color: $primary;
+      box-shadow: 0 0 0 4px rgba($primary, 0.1);
+      outline: none;
+    }
+
+    &::placeholder {
+      color: $text-tertiary;
+    }
+  }
+
+  textarea.form-control {
+    min-height: 120px;
+    resize: vertical;
+  }
+
+  .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 12px;
+    padding-right: 40px;
+  }
+
+  .form-label {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: $text-primary;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  // Checkbox and Radio - Touch friendly
+  .form-check {
+    padding-left: 32px;
+    min-height: 28px;
+    margin-bottom: 12px;
+
+    .form-check-input {
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      margin-left: -32px;
+      border: 2px solid $border-medium;
+      cursor: pointer;
+
+      &:checked {
+        background-color: $primary;
+        border-color: $primary;
+      }
+    }
+
+    .form-check-label {
+      font-size: 15px;
+      padding-left: 8px;
+      cursor: pointer;
+    }
+  }
+
+  // Input groups
+  .input-group {
+    margin-bottom: 20px;
+
+    .input-group-text {
+      min-height: 48px;
+      padding: 12px 16px;
+      font-size: 16px;
+      border-radius: 12px;
+      background-color: $bg-tertiary;
+      border: 1.5px solid $border-medium;
+    }
+
+    .form-control {
+      border-radius: 12px;
+    }
+  }
+
+  // Tables - mobile responsive
+  .table {
+    font-size: 0.8125rem;
+
+    thead th {
+      padding: 10px 8px;
+      font-size: 0.75rem;
+    }
+
+    tbody td {
+      padding: 12px 8px;
+    }
+  }
+
+  // Mobile-optimized spacing
+  .mb-3 {
+    margin-bottom: 1rem !important;
+  }
+
+  .mb-4 {
+    margin-bottom: 1.25rem !important;
+  }
+}
+
+// Bottom Navigation Bar (iOS/Android App Style) - Mobile Only
+@media (max-width: 767px) {
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 68px;
+    background-color: $bg-secondary;
+    border-top: 1px solid $border-light;
+    z-index: 1030;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px calc(env(safe-area-inset-bottom) + 8px) 8px;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 4px;
+      text-decoration: none;
+      color: $text-tertiary;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 12px;
+      min-height: 52px;
+      position: relative;
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      .nav-icon {
+        font-size: 24px;
+        margin-bottom: 2px;
+        transition: all 0.2s ease;
+        color: $text-tertiary;
+      }
+
+      .nav-label {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        transition: all 0.2s ease;
+      }
+
+      &.active {
+        color: $primary;
+
+        .nav-icon {
+          color: $primary;
+          transform: scale(1.1);
+        }
+
+        .nav-label {
+          color: $primary;
+          font-weight: 700;
+        }
+      }
+
+      &:hover:not(.active) {
+        background-color: rgba($primary, 0.05);
+
+        .nav-icon {
+          color: $text-secondary;
+        }
+      }
+    }
+  }
+
+  // ============================================================================
+  // DARK MODE SUPPORT FOR MOBILE
+  // ============================================================================
+
+  .dark-mode {
+    // Mobile Bottom Nav - Dark Mode
+    .mobile-bottom-nav {
+      background-color: #1f2937;
+      border-top-color: #374151;
+      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+
+      .nav-item {
+        color: #9ca3af;
+
+        .nav-icon {
+          color: #9ca3af;
+        }
+
+        .nav-label {
+          color: #9ca3af;
+        }
+
+        &.active {
+          color: $primary;
+
+          .nav-icon {
+            color: $primary;
+          }
+
+          .nav-label {
+            color: $primary;
+          }
+        }
+
+        &:hover:not(.active) {
+          background-color: rgba($primary, 0.1);
+
+          .nav-icon {
+            color: #e5e7eb;
+          }
+
+          .nav-label {
+            color: #e5e7eb;
+          }
+        }
+      }
+    }
+
+    // Mobile Top Nav - Dark Mode
+    .top-navbar {
+      background-color: #1f2937;
+      border-bottom-color: #374151;
+
+      .mobile-menu-toggle {
+        color: #f9fafb;
+
+        &:active {
+          background-color: rgba($primary, 0.15);
+        }
+      }
+    }
+
+    // Mobile Drawer - Dark Mode
+    .mobile-drawer {
+      background-color: #1f2937;
+      box-shadow: 2px 0 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .mobile-drawer-header {
+      background-color: #1f2937;
+      border-bottom-color: #374151;
+    }
+
+    .drawer-user-info {
+      .user-name {
+        color: #f9fafb;
+      }
+
+      .user-email {
+        color: #9ca3af;
+      }
+    }
+
+    .drawer-close-btn {
+      color: #9ca3af;
+
+      &:active {
+        background-color: rgba($danger, 0.15);
+        color: $danger;
+      }
+    }
+
+    .drawer-section-title {
+      color: #6b7280;
+    }
+
+    .drawer-nav-link {
+      color: #e5e7eb;
+
+      &:active {
+        background-color: rgba($primary, 0.15);
+      }
+
+      &.router-link-active {
+        background-color: rgba($primary, 0.15);
+        color: $primary;
+        border-left-color: $primary;
+
+        .drawer-nav-icon {
+          color: $primary;
+        }
+      }
+
+      .drawer-nav-icon {
+        color: #9ca3af;
+      }
+    }
+
+    // Cards Dark Mode
+    .card {
+      background-color: #1f2937;
+      border-color: #374151;
+
+      .card-header {
+        background-color: #1f2937;
+        border-bottom-color: #374151;
+
+        h5 {
+          color: #f9fafb;
+        }
+      }
+
+      .card-footer {
+        background-color: #111827;
+        border-top-color: #374151;
+      }
+    }
+
+    // Forms Dark Mode
+    .form-control, .form-select, textarea.form-control {
+      background-color: #111827;
+      border-color: #374151;
+      color: #f9fafb;
+
+      &:focus {
+        border-color: $primary;
+        background-color: #111827;
+        box-shadow: 0 0 0 4px rgba($primary, 0.2);
+      }
+
+      &::placeholder {
+        color: #6b7280;
+      }
+    }
+
+    .form-label {
+      color: #e5e7eb;
+    }
+
+    .input-group-text {
+      background-color: #111827;
+      border-color: #374151;
+      color: #e5e7eb;
+    }
+  }
+}
+
+// Tablet styles (768px - 1024px) - Keep current web design
+@media (min-width: 768px) and (max-width: 1024px) {
   .sidebar {
     width: 70px;
 
     &:not(.collapsed) {
-      width: 260px;
+      width: 240px;
     }
   }
 
   .main-content {
     margin-left: 70px;
-    padding: 0.75rem;
+    padding: 1.5rem;
 
     &:not(.sidebar-collapsed) {
-      margin-left: 260px;
+      margin-left: 240px;
     }
   }
 
@@ -1009,25 +1800,129 @@ nav.sidebar {
   }
 
   .stat-card {
-    padding: 0.875rem;
+    padding: 1rem;
 
     .stat-icon {
       width: 36px;
       height: 36px;
-      font-size: 1.125rem;
     }
 
     .stat-value {
-      font-size: 1.25rem;
+      font-size: 1.375rem;
+    }
+  }
+}
+
+// Hide mobile-only elements on desktop/tablet
+@media (min-width: 768px) {
+  .mobile-bottom-nav {
+    display: none !important;
+  }
+
+  .mobile-menu-toggle {
+    display: none !important;
+  }
+
+  .mobile-drawer, .mobile-drawer-overlay {
+    display: none !important;
+  }
+}
+
+// ============================================================================
+// MOBILE APP-LIKE ANIMATIONS & INTERACTIONS
+// ============================================================================
+
+// Smooth page transitions for mobile
+@media (max-width: 767px) {
+  // Touch feedback for interactive elements
+  .btn, .card, .stat-card, .table tbody tr {
+    -webkit-tap-highlight-color: rgba(99, 91, 255, 0.1);
+  }
+
+  // Smooth transitions for page navigation
+  .main-content {
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  // Pull to refresh indicator (visual feedback)
+  .card, .stat-card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+
+  // Modal animations for mobile
+  .modal.fade .modal-dialog {
+    transform: translate(0, 100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .modal.show .modal-dialog {
+    transform: translate(0, 0);
+  }
+
+  // Dropdown animations
+  .dropdown-menu {
+    transform-origin: top;
+    animation: dropdownSlideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes dropdownSlideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 
-  h1 {
-    font-size: 1.5rem;
+  // Loading states
+  .loading {
+    animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  h5 {
-    font-size: 1rem;
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  // Slide up animation for cards
+  .card, .stat-card {
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  // Haptic feedback simulation (visual bounce)
+  .btn:active, .mobile-bottom-nav .nav-item:active {
+    transform: scale(0.96);
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  // Smooth scroll
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  // Optimized scrolling for lists
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
   }
 }
 
