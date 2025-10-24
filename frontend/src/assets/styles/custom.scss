@@ -1,0 +1,1087 @@
+// Import Sass built-in modules first
+@use 'sass:color';
+@use 'sass:math';
+
+// Stripe-Inspired Theme Colors
+@use 'bootstrap/scss/bootstrap' as * with (
+  $primary: #635bff,       // Stripe Purple
+  $secondary: #0a2540,     // Stripe Navy
+  $success: #00d924,       // Stripe Green
+  $danger: #df1b41,        // Stripe Red
+  $warning: #ff6600,       // Stripe Orange
+  $info: #0073e6           // Stripe Blue
+);
+
+// Stripe-Inspired Variables
+$stripe-purple: #635bff;
+$stripe-purple-hover: #0a2540;
+$stripe-purple-light: #f6f8fb;
+$primary-hover: #5851d9;        // Purple hover state
+$primary-light: #f6f8fb;        // Light purple background
+
+// Background & Surface Colors (Stripe)
+$bg-primary: #f6f9fc;        // Light gray background
+$bg-secondary: #ffffff;       // Pure white cards
+$bg-tertiary: #f6f8fb;       // Slight gray for alternating rows
+$bg-hover: #f6f9fc;          // Hover state
+
+// Text Colors (Stripe)
+$text-primary: #0a2540;      // Navy - primary text
+$text-secondary: #425466;    // Gray - secondary text
+$text-tertiary: #8898aa;     // Light gray - tertiary text
+$text-disabled: #c7d2e0;     // Disabled text
+
+// Border Colors (Stripe)
+$border-light: #e3e8ee;      // Light borders
+$border-medium: #c7d2e0;     // Medium borders
+$border-dark: #8898aa;       // Dark borders
+
+// Sidebar (Stripe)
+$sidebar-bg: #0a2540;        // Navy sidebar
+$sidebar-text: #8898aa;      // Gray text
+$sidebar-text-hover: #ffffff; // White on hover
+$sidebar-hover: rgba(99, 91, 255, 0.08);
+$sidebar-active: #635bff;    // Purple active
+$sidebar-active-text: #ffffff;
+
+// Typography (Stripe Style)
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, 'Helvetica Neue', Arial, sans-serif;
+  background-color: $bg-primary;
+  color: $text-primary;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-weight: 400;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: $text-primary;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 40px;
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 32px;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+h4, h5 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+h6 {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-tertiary;
+}
+
+.text-muted {
+  color: $text-tertiary !important;
+}
+
+.text-secondary {
+  color: $text-secondary !important;
+}
+
+// Top Navbar - Clean & Modern
+.top-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background-color: $bg-secondary;
+  border-bottom: 1px solid $border-light;
+  z-index: 1030;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.03);
+
+  .top-navbar-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 1rem;
+  }
+
+  .sidebar-toggle-btn {
+    background: none;
+    border: 1px solid $border-light;
+    font-size: 1rem;
+    color: $text-secondary;
+    cursor: pointer;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background-color: $bg-tertiary;
+      border-color: $border-medium;
+      color: $text-primary;
+    }
+  }
+
+  .navbar-brand {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: $text-primary;
+    flex-grow: 1;
+    margin-left: 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .profile-btn {
+    background: none;
+    border: 1px solid $border-light;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: $text-primary;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+      background-color: $bg-tertiary;
+      border-color: $primary;
+    }
+
+    .profile-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: $primary;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .profile-name {
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+  }
+
+  .dropdown-menu {
+    margin-top: 0.5rem;
+    border: 1px solid $border-light;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.08);
+    min-width: 180px;
+  }
+}
+
+// Sidebar Styles - Stripe Design
+nav.sidebar {
+  background: #f6f9fc !important;  // Stripe light gray background
+  background-color: #f6f9fc !important;
+  min-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
+  position: fixed;
+  top: 56px;
+  left: 0;
+  z-index: 1000;
+  width: 240px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid #e3e8ee;
+  box-shadow: none;
+
+  // Custom scrollbar - Stripe style
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c7d2e0;
+    border-radius: 3px;
+
+    &:hover {
+      background: #8898aa;
+    }
+  }
+
+  &.collapsed {
+    width: 70px;
+
+    .nav-link {
+      justify-content: center;
+      padding: 12px;
+    }
+  }
+
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #e3e8ee;
+    margin-bottom: 8px;
+  }
+
+  .sidebar-user-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #e3e8ee;
+    }
+
+    .user-initials {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: $primary;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .user-name {
+      color: #0a2540;
+      font-size: 14px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .sidebar-user-collapsed {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: $primary;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 auto;
+  }
+
+  .nav-link {
+    color: #425466 !important;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 2px 8px;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    position: relative;
+
+    &:hover {
+      background-color: #e3e8ee !important;
+      color: #0a2540 !important;
+
+      .nav-icon,
+      i {
+        color: #0a2540;
+      }
+    }
+
+    &.active {
+      background-color: #e3e8ee !important;
+      color: #635bff !important;
+      font-weight: 600;
+
+      .nav-icon,
+      i {
+        color: #635bff;
+      }
+    }
+
+    .nav-icon {
+      width: 16px;
+      height: 16px;
+      min-width: 16px;
+      transition: all 0.15s ease;
+      color: #425466;
+      flex-shrink: 0;
+    }
+
+    i {
+      font-size: 18px;
+      min-width: 18px;
+      transition: all 0.15s ease;
+      color: #425466;
+    }
+
+    &:hover .nav-icon,
+    &:hover i {
+      color: #0a2540;
+    }
+
+    &.active .nav-icon,
+    &.active i {
+      color: #635bff;
+    }
+
+    span {
+      white-space: nowrap;
+    }
+  }
+
+  // Section Titles - Stripe style
+  .nav-section-title {
+    color: #8898aa;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 20px 12px 8px 12px;
+    margin-top: 16px;
+    list-style: none;
+
+    &:first-of-type {
+      margin-top: 8px;
+    }
+  }
+
+  // Divider - Stripe style
+  .nav-divider {
+    height: 1px;
+    background: #e3e8ee;
+    margin: 16px 12px;
+    list-style: none;
+  }
+}
+
+// Main Content - Stripe style
+.main-content {
+  margin-left: 240px;
+  margin-top: 56px;
+  padding: 32px 40px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: none;
+  min-height: calc(100vh - 56px);
+
+  &.sidebar-collapsed {
+    margin-left: 70px;
+  }
+}
+
+// Card Styles - Stripe style
+.card {
+  border: 1px solid $border-light;
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+  background-color: $bg-secondary;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.06);
+  }
+
+  .card-header {
+    background-color: $bg-secondary;
+    border-bottom: 1px solid $border-light;
+    padding: 20px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    color: $text-primary;
+
+    h5 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: $text-primary;
+    }
+  }
+
+  .card-body {
+    padding: 24px;
+  }
+
+  .card-footer {
+    padding: 16px 24px;
+    background-color: $bg-tertiary;
+    border-top: 1px solid $border-light;
+  }
+}
+
+// Stats Cards - Stripe-inspired clean design
+.stat-card {
+  background: $bg-secondary;
+  border: 1px solid $border-light;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03), 0 3px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.08);
+    border-color: $border-medium;
+  }
+
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+    margin-bottom: 0.875rem;
+
+    &.purple { background-color: rgba($primary, 0.1); color: $primary; }
+    &.green { background-color: rgba($success, 0.1); color: $success; }
+    &.blue { background-color: rgba($info, 0.1); color: $info; }
+    &.orange { background-color: rgba($warning, 0.1); color: $warning; }
+    &.red { background-color: rgba($danger, 0.1); color: $danger; }
+  }
+
+  .stat-value {
+    font-size: 1.625rem;
+    font-weight: 700;
+    color: $text-primary;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  .stat-label {
+    color: $text-secondary;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+
+  .stat-change {
+    font-size: 0.8125rem;
+    margin-top: 0.5rem;
+    font-weight: 500;
+
+    &.positive { color: $success; }
+    &.negative { color: $danger; }
+  }
+}
+
+// Button Styles - Stripe-inspired
+.btn-primary {
+  background-color: $primary;
+  border-color: $primary;
+  font-weight: 500;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03), 0 3px 6px rgba($primary, 0.2);
+
+  &:hover {
+    background-color: $primary-hover;
+    border-color: $primary-hover;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 8px 16px rgba($primary, 0.25);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.btn-outline-primary {
+  color: $primary;
+  border-color: $border-medium;
+  font-weight: 500;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background-color: rgba($primary, 0.04);
+    border-color: $primary;
+    color: $primary;
+    transform: translateY(-1px);
+  }
+}
+
+.btn-secondary {
+  background-color: $bg-tertiary;
+  border-color: $border-medium;
+  color: $text-secondary;
+  font-weight: 500;
+
+  &:hover {
+    background-color: color.scale($bg-tertiary, $lightness: -2%);
+    border-color: $border-dark;
+    color: $text-primary;
+  }
+}
+
+// Badge Styles
+.badge {
+  padding: 0.375rem 0.75rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+}
+
+// Form Styles
+.form-control, .form-select {
+  border-radius: 0.5rem;
+  border: 1px solid $border-medium;
+  padding: 0.625rem 0.875rem;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 0.2rem rgba($primary, 0.25);
+  }
+}
+
+// Table Styles
+.table {
+  background-color: $bg-secondary;
+
+  thead {
+    background-color: $bg-tertiary;
+
+    th {
+      border-bottom: 2px solid $border-light;
+      font-weight: 600;
+      color: $text-primary;
+      padding: 0.75rem;
+    }
+  }
+
+  tbody {
+    tr {
+      transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        background-color: $bg-tertiary;
+      }
+
+      td {
+        padding: 0.75rem;
+        vertical-align: middle;
+        color: $text-primary;
+      }
+    }
+  }
+}
+
+// Modal Styles
+.modal-content {
+  border-radius: 0.75rem;
+  border: 1px solid $border-light;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  border-bottom: 1px solid $border-light;
+  padding: 1.25rem;
+}
+
+.modal-footer {
+  border-top: 1px solid $border-light;
+  padding: 1.25rem;
+}
+
+// Dark Mode - Harmonious dark theme
+.dark-mode {
+  background-color: #111827;
+  color: #f9fafb;
+
+  // Text colors for dark mode
+  h1, h2, h3, h4, h5, h6 {
+    color: #f9fafb !important;
+  }
+
+  p, span, div, label, td, th {
+    color: #e5e7eb !important;
+  }
+
+  .text-muted {
+    color: #9ca3af !important;
+  }
+
+  .text-secondary {
+    color: #9ca3af !important;
+  }
+
+  .stat-label {
+    color: #9ca3af !important;
+  }
+
+  .stat-value {
+    color: #f9fafb !important;
+  }
+
+  .form-label {
+    color: #e5e7eb !important;
+  }
+
+  .fw-semibold, .fw-bold {
+    color: #f9fafb !important;
+  }
+
+  .text-end {
+    color: #f9fafb !important;
+  }
+
+  .main-content {
+    background-color: #111827;
+  }
+
+  .card, .stat-card {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+
+    .card-header {
+      background-color: #1f2937;
+      border-bottom-color: #374151;
+      color: #f9fafb;
+
+      h5 {
+        color: #f9fafb !important;
+      }
+    }
+
+    .card-body {
+      color: #e5e7eb;
+
+      p {
+        color: #e5e7eb !important;
+      }
+    }
+
+    .card-footer {
+      background-color: #1f2937;
+      border-top-color: #374151;
+      color: #e5e7eb;
+    }
+  }
+
+  .stat-card {
+    .stat-icon {
+      filter: brightness(1.2);
+    }
+
+    .stat-value {
+      color: #f9fafb !important;
+      font-weight: 700;
+    }
+
+    .stat-label {
+      color: #9ca3af !important;
+    }
+  }
+
+  .table {
+    background-color: #1f2937;
+    color: #f9fafb;
+    border-color: #374151;
+
+    thead {
+      background-color: #111827;
+
+      th {
+        border-bottom-color: #374151;
+        color: #f9fafb !important;
+        font-weight: 600;
+      }
+    }
+
+    tbody tr {
+      border-color: #374151;
+
+      &:hover {
+        background-color: #374151;
+      }
+
+      td {
+        color: #e5e7eb !important;
+        border-color: #374151;
+
+        .fw-semibold {
+          color: #f9fafb !important;
+        }
+
+        .fw-bold {
+          color: #f9fafb !important;
+        }
+
+        span {
+          color: #e5e7eb !important;
+        }
+
+        .text-muted {
+          color: #9ca3af !important;
+        }
+      }
+    }
+  }
+
+  .table-hover tbody tr:hover {
+    background-color: #374151;
+    color: #f9fafb;
+  }
+
+  .badge {
+    &.bg-secondary {
+      background-color: #4b5563 !important;
+      color: #e5e7eb !important;
+    }
+  }
+
+  .form-control, .form-select, textarea.form-control {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb !important;
+
+    &:focus {
+      border-color: $primary;
+      background-color: #1f2937;
+      color: #f9fafb !important;
+    }
+
+    &::placeholder {
+      color: #6b7280;
+    }
+
+    option {
+      background-color: #1f2937;
+      color: #f9fafb;
+    }
+  }
+
+  .modal-content {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #f9fafb;
+
+    .modal-title {
+      color: #f9fafb !important;
+    }
+
+    .modal-body {
+      color: #e5e7eb;
+    }
+  }
+
+  .modal-header, .modal-footer {
+    border-color: #374151;
+  }
+
+  .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
+  }
+
+  .top-navbar {
+    background-color: #1f2937;
+    border-bottom-color: #374151;
+
+    .navbar-brand, .sidebar-toggle-btn {
+      color: #f9fafb !important;
+    }
+
+    .profile-btn {
+      color: #f9fafb !important;
+      border-color: #374151;
+
+      &:hover {
+        background-color: #374151;
+      }
+
+      .profile-name {
+        color: #f9fafb !important;
+      }
+    }
+  }
+
+  .btn-secondary {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #f9fafb !important;
+
+    &:hover {
+      background-color: #4b5563;
+      color: #f9fafb !important;
+    }
+  }
+
+  .btn-outline-primary {
+    color: $primary !important;
+    border-color: #374151;
+
+    &:hover {
+      background-color: rgba($primary, 0.1);
+      border-color: $primary;
+      color: $primary !important;
+    }
+  }
+
+  .btn-outline-danger {
+    color: $danger !important;
+    border-color: #374151;
+
+    &:hover {
+      background-color: rgba($danger, 0.1);
+      border-color: $danger;
+      color: $danger !important;
+    }
+  }
+
+  .dropdown-menu {
+    background-color: #1f2937;
+    border-color: #374151;
+
+    .dropdown-item {
+      color: #e5e7eb;
+
+      &:hover {
+        background-color: #374151;
+        color: #f9fafb;
+      }
+    }
+  }
+
+  // Dark mode sidebar
+  nav.sidebar {
+    background: #1f2937 !important;
+    background-color: #1f2937 !important;
+    border-right-color: #374151;
+
+    .sidebar-header {
+      border-bottom-color: #374151;
+    }
+
+    .sidebar-user-info {
+      &:hover {
+        background-color: #374151;
+      }
+
+      .user-name {
+        color: #f9fafb;
+      }
+    }
+
+    .nav-link {
+      color: #9ca3af !important;
+
+      &:hover {
+        background-color: #374151 !important;
+        color: #f9fafb !important;
+
+        .nav-icon,
+        i {
+          color: #f9fafb;
+        }
+      }
+
+      &.active {
+        background-color: #374151 !important;
+        color: #635bff !important;
+        font-weight: 600;
+
+        .nav-icon,
+        i {
+          color: #635bff;
+        }
+      }
+
+      .nav-icon,
+      i {
+        color: #9ca3af;
+      }
+    }
+
+    .nav-section-title {
+      color: #6b7280;
+    }
+
+    .nav-divider {
+      background: #374151;
+    }
+  }
+}
+
+// Table Compact Styles
+.table {
+  font-size: 0.875rem;
+
+  thead th {
+    padding: 0.625rem 0.75rem;
+  }
+
+  tbody td {
+    padding: 0.625rem 0.75rem;
+  }
+}
+
+// Form Compact Styles
+.form-control, .form-select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.form-label {
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.mb-3 {
+  margin-bottom: 0.875rem !important;
+}
+
+// Button Compact
+.btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .sidebar {
+    width: 70px;
+
+    &:not(.collapsed) {
+      width: 260px;
+    }
+  }
+
+  .main-content {
+    margin-left: 70px;
+    padding: 0.75rem;
+
+    &:not(.sidebar-collapsed) {
+      margin-left: 260px;
+    }
+  }
+
+  .top-navbar {
+    .navbar-brand {
+      font-size: 1rem;
+    }
+
+    .profile-name {
+      display: none;
+    }
+  }
+
+  .stat-card {
+    padding: 0.875rem;
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      font-size: 1.125rem;
+    }
+
+    .stat-value {
+      font-size: 1.25rem;
+    }
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h5 {
+    font-size: 1rem;
+  }
+}
+
+// Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+// Utility Classes
+.text-purple {
+  color: $primary !important;
+}
+
+.bg-purple {
+  background-color: $primary !important;
+}
+
+.border-purple {
+  border-color: $primary !important;
+}
+
+// Force Stripe Light Sidebar - Final Override
+nav.sidebar,
+.sidebar {
+  background: #f6f9fc !important;
+  background-color: #f6f9fc !important;
+  border-right: 1px solid #e3e8ee !important;
+}
+
+nav.sidebar .nav-link,
+.sidebar .nav-link {
+  color: #425466 !important;
+}
+
+nav.sidebar .nav-link:hover,
+.sidebar .nav-link:hover {
+  background-color: #e3e8ee !important;
+  color: #0a2540 !important;
+}
+
+nav.sidebar .nav-link.active,
+.sidebar .nav-link.active {
+  background-color: #e3e8ee !important;
+  color: #635bff !important;
+  font-weight: 600 !important;
+}
