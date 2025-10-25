@@ -167,6 +167,16 @@ func SetupRoutes(router *gin.Engine) {
 				settingsRoutes.GET("", handlers.GetSettings)
 				settingsRoutes.PUT("", handlers.UpdateSettings)
 			}
+
+			// File upload routes
+			uploadRoutes := protected.Group("/uploads")
+			{
+				uploadRoutes.POST("", handlers.UploadFiles)         // Multiple files
+				uploadRoutes.POST("/single", handlers.UploadSingleFile) // Single file
+				uploadRoutes.GET("/:userId/:filename", handlers.ServeUploadedFile)
+				uploadRoutes.DELETE("/:filename", handlers.DeleteFile)
+				uploadRoutes.GET("/info/:filename", handlers.GetFileInfo)
+			}
 		}
 	}
 }

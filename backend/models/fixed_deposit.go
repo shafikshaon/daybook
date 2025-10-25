@@ -24,6 +24,7 @@ type FixedDeposit struct {
 	WithdrawnDate        *time.Time     `json:"withdrawnDate"`
 	AutoRenew            bool           `gorm:"default:false" json:"autoRenew"`
 	Notes                string         `json:"notes"`
+	Attachments          []string       `gorm:"type:text[]" json:"attachments"`
 	CreatedAt            time.Time      `json:"createdAt"`
 	UpdatedAt            time.Time      `json:"updatedAt"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`

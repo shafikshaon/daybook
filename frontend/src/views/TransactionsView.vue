@@ -103,6 +103,7 @@
                 <th>Account</th>
                 <th>Type</th>
                 <th class="text-end">Amount</th>
+                <th class="text-center">Files</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -143,6 +144,12 @@
                   >
                     {{ transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '↔' : '-' }}{{ formatCurrency(transaction.amount) }}
                   </span>
+                </td>
+                <td class="text-center">
+                  <span v-if="transaction.attachments && transaction.attachments.length > 0" class="badge bg-info" style="cursor: pointer;" @click="viewAttachments(transaction)" :title="`${transaction.attachments.length} file(s)`">
+                    📎 {{ transaction.attachments.length }}
+                  </span>
+                  <span v-else class="text-muted">-</span>
                 </td>
                 <td class="text-center">
                   <button
@@ -241,6 +248,17 @@
                   class="form-control"
                   v-model="form.description"
                   placeholder="Optional description"
+                />
+              </div>
+
+              <div class="mb-3">
+                <FileUpload
+                  v-model="transactionAttachments"
+                  label="Attachments (Receipts/Invoices)"
+                  :multiple="true"
+                  :max-files="5"
+                  :max-size="10485760"
+                  accepted-types=".jpg,.jpeg,.png,.pdf,.doc,.docx"
                 />
               </div>
 
@@ -408,6 +426,57 @@
         </div>
       </div>
     </div>
+
+    <!-- View Attachments Modal -->
+    <div
+      class="modal fade"
+      :class="{ 'show d-block': showAttachmentsModal }"
+      style="background-color: rgba(0,0,0,0.5);"
+      v-if="showAttachmentsModal"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Transaction Attachments</h5>
+            <button type="button" class="btn-close" @click="showAttachmentsModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="viewingTransaction && viewingTransaction.attachments && viewingTransaction.attachments.length > 0">
+              <div class="row g-3">
+                <div
+                  v-for="(url, index) in viewingTransaction.attachments"
+                  :key="index"
+                  class="col-md-6 col-lg-4"
+                >
+                  <div class="attachment-card">
+                    <div v-if="isImageUrl(url)" class="attachment-preview">
+                      <img :src="url" :alt="`Attachment ${index + 1}`" class="img-fluid" @click="openAttachment(url)" style="cursor: pointer;" />
+                    </div>
+                    <div v-else class="attachment-file-icon" @click="openAttachment(url)" style="cursor: pointer;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5 4a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm-.5 2.5A.5.5 0 0 1 5 6h6a.5.5 0 0 1 0 1H5a.5.5 0 0 1-.5-.5M5 8a.5.5 0 0 0 0 1h6a.5.5 0 0 0 0-1zm0 2a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1z"/>
+                        <path d="M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm10-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1"/>
+                      </svg>
+                    </div>
+                    <div class="attachment-info">
+                      <p class="mb-1 small text-truncate" :title="getFileNameFromUrl(url)">
+                        {{ getFileNameFromUrl(url) }}
+                      </p>
+                      <a :href="url" target="_blank" class="btn btn-sm btn-outline-primary">
+                        Download
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center text-muted py-4">
+              No attachments available
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -418,6 +487,7 @@ import { useAccountsStore } from '@/stores/accounts'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useSettingsStore } from '@/stores/settings'
+import { FileUpload } from '@/components'
 
 const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
@@ -428,7 +498,9 @@ const settingsStore = useSettingsStore()
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showTransferModal = ref(false)
+const showAttachmentsModal = ref(false)
 const editingTransaction = ref(null)
+const viewingTransaction = ref(null)
 
 const filters = ref({
   type: '',
@@ -444,8 +516,11 @@ const form = ref({
   accountId: '',
   date: new Date().toISOString().split('T')[0],
   description: '',
-  tags: []
+  tags: [],
+  attachments: []
 })
+
+const transactionAttachments = ref([])
 
 const transferForm = ref({
   fromAccountId: '',
@@ -532,6 +607,12 @@ const editTransaction = (transaction) => {
     ...transaction,
     date: new Date(transaction.date).toISOString().split('T')[0]
   }
+  // Load existing attachments
+  transactionAttachments.value = (transaction.attachments || []).map(url => ({
+    fileUrl: url,
+    originalName: url.split('/').pop(),
+    fileName: url.split('/').pop()
+  }))
   showEditModal.value = true
 }
 
@@ -545,7 +626,8 @@ const saveTransaction = async () => {
   try {
     const transactionData = {
       ...form.value,
-      date: new Date(form.value.date).toISOString()
+      date: new Date(form.value.date).toISOString(),
+      attachments: transactionAttachments.value.map(f => f.fileUrl)
     }
 
     if (showEditModal.value) {
@@ -571,8 +653,10 @@ const closeModal = () => {
     accountId: '',
     date: new Date().toISOString().split('T')[0],
     description: '',
-    tags: []
+    tags: [],
+    attachments: []
   }
+  transactionAttachments.value = []
 }
 
 const saveTransfer = async () => {
@@ -669,6 +753,24 @@ const closeTransferModal = () => {
   }
 }
 
+// File attachment helper functions
+const viewAttachments = (transaction) => {
+  viewingTransaction.value = transaction
+  showAttachmentsModal.value = true
+}
+
+const isImageUrl = (url) => {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(url)
+}
+
+const getFileNameFromUrl = (url) => {
+  return url.split('/').pop()
+}
+
+const openAttachment = (url) => {
+  window.open(url, '_blank')
+}
+
 onMounted(async () => {
   await Promise.all([
     transactionsStore.fetchTransactions(),
@@ -678,3 +780,67 @@ onMounted(async () => {
   ])
 })
 </script>
+
+<style scoped>
+.attachment-card {
+  border: 1px solid #e3e8ee;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.attachment-card:hover {
+  border-color: #635bff;
+  box-shadow: 0 2px 8px rgba(99, 91, 255, 0.2);
+}
+
+.attachment-preview {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background-color: #f6f9fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attachment-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.attachment-file-icon {
+  width: 100%;
+  height: 200px;
+  background-color: #f6f9fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8898aa;
+}
+
+.attachment-info {
+  padding: 12px;
+  background-color: #ffffff;
+}
+
+/* Dark mode styles */
+.dark-mode .attachment-card {
+  border-color: #374151;
+  background-color: #1f2937;
+}
+
+.dark-mode .attachment-preview,
+.dark-mode .attachment-file-icon {
+  background-color: #111827;
+}
+
+.dark-mode .attachment-info {
+  background-color: #1f2937;
+}
+
+.dark-mode .attachment-info p {
+  color: #e5e7eb;
+}
+</style>

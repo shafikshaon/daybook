@@ -24,6 +24,7 @@ type SavingsGoal struct {
 	ArchivedDate         *time.Time     `json:"archivedDate"`
 	LastContribution     float64        `gorm:"default:0" json:"lastContribution"`
 	LastContributionDate *time.Time     `json:"lastContributionDate"`
+	Attachments          []string       `gorm:"type:text[]" json:"attachments"`
 	CreatedAt            time.Time      `json:"createdAt"`
 	UpdatedAt            time.Time      `json:"updatedAt"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`
@@ -40,12 +41,13 @@ type SavingsContribution struct {
 	ID        uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	GoalID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
-	Amount    float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	Date      time.Time      `gorm:"not null;index" json:"date"`
-	Notes     string         `json:"notes"`
-	CreatedAt time.Time      `json:"createdAt"`
-	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
+	Date        time.Time      `gorm:"not null;index" json:"date"`
+	Notes       string         `json:"notes"`
+	Attachments []string       `gorm:"type:text[]" json:"attachments"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
+	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (sc *SavingsContribution) BeforeCreate(tx *gorm.DB) error {

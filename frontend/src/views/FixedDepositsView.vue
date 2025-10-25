@@ -57,10 +57,20 @@
                 <span class="fw-bold">{{ fixedDepositsStore.getDaysUntilMaturity(fd.id) }} days</span>
               </div>
             </div>
-            <button v-if="!fd.withdrawn" class="btn btn-sm btn-outline-danger" @click="withdrawFD(fd.id)">
-              Withdraw
-            </button>
-            <span v-else class="badge bg-secondary">Withdrawn</span>
+            <div class="d-flex gap-2 align-items-center">
+              <button v-if="!fd.withdrawn" class="btn btn-sm btn-outline-danger" @click="withdrawFD(fd.id)">
+                Withdraw
+              </button>
+              <span v-else class="badge bg-secondary">Withdrawn</span>
+              <span
+                v-if="fd.attachments && fd.attachments.length > 0"
+                class="badge bg-info"
+                style="cursor: pointer;"
+                @click="viewAttachments(fd)"
+              >
+                📎 {{ fd.attachments.length }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -104,6 +114,16 @@
                 <label class="form-label">Maturity Date</label>
                 <input type="date" class="form-control" v-model="form.maturityDate" readonly />
               </div>
+              <div class="mb-3">
+                <FileUpload
+                  v-model="fdAttachments"
+                  label="FD Certificate & Documents"
+                  :multiple="true"
+                  :max-files="3"
+                  :max-size="10485760"
+                  accepted-types=".pdf,.jpg,.jpeg,.png"
+                />
+              </div>
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" @click="showAddModal = false">Cancel</button>
                 <button type="submit" class="btn btn-primary">Create</button>
@@ -120,14 +140,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useSettingsStore } from '@/stores/settings'
+import { FileUpload } from '@/components'
 
 const fixedDepositsStore = useFixedDepositsStore()
 const settingsStore = useSettingsStore()
 const showAddModal = ref(false)
+const fdAttachments = ref([])
+const showAttachmentsModal = ref(false)
+const viewingFD = ref(null)
+
 const form = ref({
   name: '', bank: '', principal: 0, interestRate: 0,
   startDate: new Date().toISOString().split('T')[0],
-  tenureMonths: 12, maturityDate: '', compounding: 'monthly'
+  tenureMonths: 12, maturityDate: '', compounding: 'monthly',
+  attachments: []
 })
 
 const fixedDeposits = computed(() => fixedDepositsStore.allFixedDeposits)
@@ -147,13 +173,37 @@ const withdrawFD = async (id) => {
 }
 
 const saveFD = async () => {
-  await fixedDepositsStore.createFixedDeposit(form.value)
+  const data = {
+    ...form.value,
+    attachments: fdAttachments.value.map(f => f.fileUrl)
+  }
+
+  await fixedDepositsStore.createFixedDeposit(data)
   showAddModal.value = false
   form.value = {
     name: '', bank: '', principal: 0, interestRate: 0,
     startDate: new Date().toISOString().split('T')[0],
-    tenureMonths: 12, maturityDate: '', compounding: 'monthly'
+    tenureMonths: 12, maturityDate: '', compounding: 'monthly',
+    attachments: []
   }
+  fdAttachments.value = []
+}
+
+const viewAttachments = (fd) => {
+  viewingFD.value = fd
+  showAttachmentsModal.value = true
+}
+
+const isImageUrl = (url) => {
+  return /\.(jpg|jpeg|png|gif|webp)$/i.test(url)
+}
+
+const getFileNameFromUrl = (url) => {
+  return url.split('/').pop()
+}
+
+const openAttachment = (url) => {
+  window.open(url, '_blank')
 }
 
 onMounted(() => {
