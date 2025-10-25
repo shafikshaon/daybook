@@ -65,6 +65,12 @@ func Signup(c *gin.Context) {
 	}
 	database.DB.Create(&settings)
 
+	// Create default account types for the user
+	if err := models.SeedDefaultAccountTypes(database.DB, user.ID); err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create default account types")
+		return
+	}
+
 	// Generate JWT token
 	token, err := utilities.GenerateToken(&user)
 	if err != nil {

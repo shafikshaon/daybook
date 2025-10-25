@@ -39,6 +39,7 @@ func InitDatabase(cfg *config.Config) error {
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Account{},
+		&models.AccountType{},
 		&models.Transaction{},
 		&models.RecurringTransaction{},
 		&models.Tag{},
