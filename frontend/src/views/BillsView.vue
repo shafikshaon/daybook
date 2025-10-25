@@ -75,10 +75,10 @@
                 <td>{{ bill.frequency }}</td>
                 <td>{{ formatDate(billsStore.getNextDueDate(bill)) }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-outline-success me-1" @click="markPaid(bill.id)">
+                  <button class="btn btn-sm btn-mark-paid me-1" @click="markPaid(bill.id)">
                     Mark Paid
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" @click="deleteBill(bill.id)">
+                  <button class="btn btn-sm btn-delete" @click="deleteBill(bill.id)">
                     Delete
                   </button>
                 </td>
@@ -202,3 +202,55 @@ const saveBill = async () => {
 
 onMounted(() => billsStore.fetchBills())
 </script>
+
+<style scoped>
+/* Professional button styles */
+.btn-mark-paid {
+  color: #1e40af;
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.btn-mark-paid:hover {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #2563eb;
+}
+
+.btn-delete {
+  color: #991b1b;
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.btn-delete:hover {
+  color: #ffffff;
+  background-color: #ef4444;
+  border-color: #dc2626;
+}
+
+/* Dark mode support */
+.dark-mode .btn-mark-paid {
+  color: #93c5fd;
+  border-color: #3b82f6;
+  background-color: #1e3a5f;
+}
+
+.dark-mode .btn-mark-paid:hover {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #60a5fa;
+}
+
+.dark-mode .btn-delete {
+  color: #fca5a5;
+  border-color: #ef4444;
+  background-color: #5f1e1e;
+}
+
+.dark-mode .btn-delete:hover {
+  color: #ffffff;
+  background-color: #ef4444;
+  border-color: #f87171;
+}
+</style>

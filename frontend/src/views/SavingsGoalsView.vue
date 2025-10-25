@@ -51,7 +51,7 @@
               </div>
               <div class="progress" style="height: 12px;">
                 <div
-                  class="progress-bar bg-success"
+                  class="progress-bar progress-bar-professional"
                   :style="{ width: Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) + '%' }"
                 ></div>
               </div>
@@ -66,10 +66,10 @@
               <small class="text-muted">Target: {{ formatDate(goal.targetDate) }}</small>
             </div>
             <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-success flex-fill" @click="addContribution(goal.id)">
+              <button class="btn btn-sm btn-add-contribution flex-fill" @click="addContribution(goal.id)">
                 Add Contribution
               </button>
-              <button class="btn btn-sm btn-outline-danger" @click="deleteGoal(goal.id)">
+              <button class="btn btn-sm btn-delete-goal" @click="deleteGoal(goal.id)">
                 Delete
               </button>
             </div>
@@ -133,12 +133,36 @@
           <div class="modal-body">
             <form @submit.prevent="saveContribution">
               <div class="mb-3">
+                <label class="form-label">From Account *</label>
+                <select class="form-select" v-model="contributionForm.accountId" required>
+                  <option value="">Select account...</option>
+                  <option v-for="account in accounts" :key="account.id" :value="account.id">
+                    {{ account.name }} ({{ formatCurrency(account.balance) }})
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
                 <label class="form-label">Amount *</label>
-                <input type="number" step="0.01" class="form-control" v-model.number="contributionAmount" required />
+                <input type="number" step="0.01" class="form-control" v-model.number="contributionForm.amount" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Date *</label>
+                <input type="date" class="form-control" v-model="contributionForm.date" required />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <input type="text" class="form-control" v-model="contributionForm.description" placeholder="Optional note" />
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  This will deduct {{ formatCurrency(contributionForm.amount || 0) }} from
+                  {{ getAccountName(contributionForm.accountId) || 'selected account' }} and add it to your savings goal.
+                  A transaction record will be created.
+                </small>
               </div>
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" @click="showContributionModal = false">Cancel</button>
-                <button type="submit" class="btn btn-primary">Add</button>
+                <button type="submit" class="btn btn-primary">Add Contribution</button>
               </div>
             </form>
           </div>
@@ -151,33 +175,135 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
+import { useAccountsStore } from '@/stores/accounts'
+import { useTransactionsStore } from '@/stores/transactions'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
 
 const savingsGoalsStore = useSavingsGoalsStore()
+const accountsStore = useAccountsStore()
+const transactionsStore = useTransactionsStore()
 const settingsStore = useSettingsStore()
 const { confirm, success, error } = useNotification()
 const showAddModal = ref(false)
 const showContributionModal = ref(false)
 const selectedGoalId = ref(null)
-const contributionAmount = ref(0)
 const form = ref({ name: '', icon: '🎯', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, targetDate: '' })
 
+const contributionForm = ref({
+  accountId: '',
+  amount: 0,
+  date: new Date().toISOString().split('T')[0],
+  description: ''
+})
+
 const savingsGoals = computed(() => savingsGoalsStore.activeSavingsGoals)
+const accounts = computed(() => accountsStore.allAccounts)
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const formatDate = (date) => new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 
+const getAccountName = (accountId) => {
+  const account = accountsStore.getAccountById(accountId)
+  return account ? account.name : ''
+}
+
 const addContribution = (goalId) => {
   selectedGoalId.value = goalId
-  contributionAmount.value = 0
+  contributionForm.value = {
+    accountId: '',
+    amount: 0,
+    date: new Date().toISOString().split('T')[0],
+    description: ''
+  }
   showContributionModal.value = true
 }
 
 const saveContribution = async () => {
   try {
-    await savingsGoalsStore.addContribution(selectedGoalId.value, contributionAmount.value)
+    if (!contributionForm.value.accountId) {
+      error('Please select an account')
+      return
+    }
+
+    if (contributionForm.value.amount <= 0) {
+      error('Amount must be greater than 0')
+      return
+    }
+
+    // Get the selected account
+    const account = accountsStore.getAccountById(contributionForm.value.accountId)
+    if (!account) {
+      error('Selected account not found')
+      return
+    }
+
+    // Check balance (ensure both are numbers for comparison)
+    // Parse balance by removing any currency symbols and converting to number
+    let accountBalance = account.balance
+
+    // If balance is a string with currency formatting, extract the numeric value
+    if (typeof accountBalance === 'string') {
+      // Remove currency symbols and commas, then parse
+      accountBalance = parseFloat(accountBalance.replace(/[^\d.-]/g, ''))
+    } else {
+      accountBalance = Number(accountBalance)
+    }
+
+    const contributionAmount = Number(contributionForm.value.amount)
+
+    console.log('Balance Check:', {
+      rawBalance: account.balance,
+      accountBalance,
+      contributionAmount,
+      comparison: `${accountBalance} < ${contributionAmount} = ${accountBalance < contributionAmount}`
+    })
+
+    if (isNaN(accountBalance) || isNaN(contributionAmount)) {
+      error('Invalid amount or balance value')
+      return
+    }
+
+    if (accountBalance < contributionAmount) {
+      error(`Insufficient balance. Available: ${formatCurrency(accountBalance)}, Requested: ${formatCurrency(contributionAmount)}`)
+      return
+    }
+
+    // Get the savings goal to include in description
+    const goal = savingsGoals.value.find(g => g.id === selectedGoalId.value)
+    const description = contributionForm.value.description || `Contribution to ${goal?.name || 'Savings Goal'}`
+
+    // Create transaction record (expense type as money is leaving the account)
+    // Parse the date properly - date input gives YYYY-MM-DD, we need to add time
+    const dateObj = new Date(contributionForm.value.date + 'T12:00:00')
+
+    const transactionData = {
+      type: 'expense',
+      amount: contributionForm.value.amount,
+      categoryId: 'other_expense',
+      accountId: contributionForm.value.accountId,
+      date: dateObj.toISOString(),
+      description: description,
+      tags: ['savings_goal', selectedGoalId.value]
+    }
+
+    // Create the transaction (this will also update account balance in backend)
+    await transactionsStore.createTransaction(transactionData)
+
+    // Add contribution to savings goal
+    await savingsGoalsStore.addContribution(
+      selectedGoalId.value,
+      contributionForm.value.amount,
+      contributionForm.value.date
+    )
+
     success('Contribution added successfully')
     showContributionModal.value = false
+
+    // Refresh data
+    await Promise.all([
+      accountsStore.fetchAccounts(),
+      savingsGoalsStore.fetchSavingsGoals()
+    ])
   } catch (err) {
     error(err.response?.data?.message || err.message || 'Error adding contribution')
   }
@@ -213,5 +339,73 @@ const saveGoal = async () => {
   }
 }
 
-onMounted(() => savingsGoalsStore.fetchSavingsGoals())
+onMounted(async () => {
+  await Promise.all([
+    savingsGoalsStore.fetchSavingsGoals(),
+    accountsStore.fetchAccounts()
+  ])
+})
 </script>
+
+<style scoped>
+/* Professional progress bar */
+.progress-bar-professional {
+  background-color: #3b82f6;
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+  background-size: 1rem 1rem;
+}
+
+/* Professional button styles */
+.btn-add-contribution {
+  color: #1e40af;
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.btn-add-contribution:hover {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #2563eb;
+}
+
+.btn-delete-goal {
+  color: #991b1b;
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.btn-delete-goal:hover {
+  color: #ffffff;
+  background-color: #ef4444;
+  border-color: #dc2626;
+}
+
+/* Dark mode support */
+.dark-mode .progress-bar-professional {
+  background-color: #3b82f6;
+}
+
+.dark-mode .btn-add-contribution {
+  color: #93c5fd;
+  border-color: #3b82f6;
+  background-color: #1e3a5f;
+}
+
+.dark-mode .btn-add-contribution:hover {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #60a5fa;
+}
+
+.dark-mode .btn-delete-goal {
+  color: #fca5a5;
+  border-color: #ef4444;
+  background-color: #5f1e1e;
+}
+
+.dark-mode .btn-delete-goal:hover {
+  color: #ffffff;
+  background-color: #ef4444;
+  border-color: #f87171;
+}
+</style>

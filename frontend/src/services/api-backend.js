@@ -83,8 +83,27 @@ const apiService = {
   },
 
   // Generic CRUD operations
-  async get(endpoint, id = null) {
-    const url = id ? `/${endpoint}/${id}` : `/${endpoint}`
+  async get(endpoint, params = null) {
+    let url = `/${endpoint}`
+
+    // If params is a string, treat it as an ID
+    if (typeof params === 'string') {
+      url = `/${endpoint}/${params}`
+    }
+    // If params is an object, treat it as query parameters
+    else if (params && typeof params === 'object') {
+      const queryParams = new URLSearchParams()
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null) {
+          queryParams.append(key, params[key])
+        }
+      })
+      const queryString = queryParams.toString()
+      if (queryString) {
+        url = `/${endpoint}?${queryString}`
+      }
+    }
+
     const response = await api.get(url)
     return response
   },

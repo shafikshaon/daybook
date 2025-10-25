@@ -55,10 +55,10 @@ const getTitle = (type) => {
 
 const getHeaderClass = (type) => {
   const classes = {
-    success: 'bg-success text-white',
-    error: 'bg-danger text-white',
-    warning: 'bg-warning',
-    info: 'bg-info text-white'
+    success: 'toast-success',
+    error: 'toast-error',
+    warning: 'toast-warning',
+    info: 'toast-info'
   }
   return classes[type] || classes.info
 }
@@ -95,6 +95,56 @@ defineExpose({
   min-width: 300px;
   max-width: 350px;
   margin-bottom: 0.5rem;
+}
+
+/* Professional toast colors */
+.toast-success {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-left: 4px solid #3b82f6;
+}
+
+.toast-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
+.toast-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
+}
+
+.toast-info {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-left: 4px solid #6366f1;
+}
+
+/* Dark mode support */
+.dark-mode .toast-success {
+  background-color: #1e3a5f;
+  color: #93c5fd;
+  border-left-color: #3b82f6;
+}
+
+.dark-mode .toast-error {
+  background-color: #5f1e1e;
+  color: #fca5a5;
+  border-left-color: #ef4444;
+}
+
+.dark-mode .toast-warning {
+  background-color: #5f4e1e;
+  color: #fcd34d;
+  border-left-color: #f59e0b;
+}
+
+.dark-mode .toast-info {
+  background-color: #312e5f;
+  color: #a5b4fc;
+  border-left-color: #6366f1;
 }
 
 .toast-enter-active,

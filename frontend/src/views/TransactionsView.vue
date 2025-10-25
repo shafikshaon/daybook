@@ -50,10 +50,10 @@
     <!-- Filters -->
     <div class="card mb-4">
       <div class="card-body">
-        <div class="row g-3">
+        <div class="row g-3 mb-3">
           <div class="col-12 col-md-3">
             <label class="form-label">Type</label>
-            <select class="form-select" v-model="filters.type">
+            <select class="form-select" v-model="filters.type" @change="applyFilters">
               <option value="">All</option>
               <option value="income">Income</option>
               <option value="expense">Expense</option>
@@ -62,7 +62,7 @@
           </div>
           <div class="col-12 col-md-3">
             <label class="form-label">Category</label>
-            <select class="form-select" v-model="filters.category">
+            <select class="form-select" v-model="filters.category" @change="applyFilters">
               <option value="">All Categories</option>
               <option v-for="cat in allCategories" :key="cat.id" :value="cat.id">
                 {{ cat.name }}
@@ -71,7 +71,7 @@
           </div>
           <div class="col-12 col-md-3">
             <label class="form-label">Account</label>
-            <select class="form-select" v-model="filters.account">
+            <select class="form-select" v-model="filters.account" @change="applyFilters">
               <option value="">All Accounts</option>
               <option v-for="acc in accounts" :key="acc.id" :value="acc.id">
                 {{ acc.name }}
@@ -85,7 +85,57 @@
               class="form-control"
               v-model="filters.search"
               placeholder="Search transactions..."
+              @input="applyFilters"
             />
+          </div>
+        </div>
+        <div class="row g-3 align-items-end">
+          <div class="col-12 col-md-3">
+            <label class="form-label">Start Date</label>
+            <input
+              type="date"
+              class="form-control"
+              v-model="filters.startDate"
+              @change="applyFilters"
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">End Date</label>
+            <input
+              type="date"
+              class="form-control"
+              v-model="filters.endDate"
+              @change="applyFilters"
+            />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Quick Filter</label>
+            <select class="form-select" v-model="quickDateFilter" @change="applyQuickFilter">
+              <option value="">Custom Range</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="this_week">This Week</option>
+              <option value="last_week">Last Week</option>
+              <option value="this_month">This Month</option>
+              <option value="last_month">Last Month</option>
+              <option value="this_year">This Year</option>
+            </select>
+          </div>
+          <div class="col-12 col-md-3">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="groupByDay"
+                v-model="groupByDay"
+              />
+              <label class="form-check-label" for="groupByDay">
+                Group by Day
+              </label>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary mt-2" @click="clearFilters">
+              Clear Filters
+            </button>
           </div>
         </div>
       </div>
@@ -93,12 +143,104 @@
 
     <!-- Transactions Table -->
     <div class="card">
-      <div class="card-header">
+      <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Transaction History</h5>
+        <div class="d-flex align-items-center gap-2">
+          <label class="mb-0 me-2">Items per page:</label>
+          <select class="form-select form-select-sm" v-model.number="itemsPerPage" @change="changeItemsPerPage(itemsPerPage)" style="width: auto;">
+            <option :value="20">20</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+            <option :value="500">500</option>
+          </select>
+        </div>
       </div>
       <div class="card-body p-0">
         <div v-if="filteredTransactions.length === 0" class="p-4 text-center text-muted">
           No transactions found
+        </div>
+        <div v-else-if="groupByDay" class="grouped-transactions">
+          <div v-for="group in groupedTransactions" :key="group.date" class="day-group">
+            <div class="day-header">
+              <div class="day-date">
+                <strong>{{ formatGroupDate(group.date) }}</strong>
+                <span class="text-muted ms-2">({{ group.transactions.length }} transactions)</span>
+              </div>
+              <div class="day-summary">
+                <span class="text-muted me-3">Income: <strong class="amount-income">{{ formatCurrency(group.totalIncome) }}</strong></span>
+                <span class="text-muted">Expense: <strong class="amount-expense">{{ formatCurrency(group.totalExpense) }}</strong></span>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <tbody>
+                  <tr v-for="transaction in group.transactions" :key="transaction.id">
+                    <td style="width: 35%">
+                      <div>{{ transaction.description || '-' }}</div>
+                      <small v-if="transaction.creditCardId" class="text-muted">
+                        💳 {{ getCreditCardName(transaction.creditCardId) }}
+                      </small>
+                    </td>
+                    <td style="width: 15%">
+                      <span class="badge" :style="{ backgroundColor: getCategoryColor(transaction.categoryId) }">
+                        {{ getCategoryName(transaction.categoryId) }}
+                      </span>
+                    </td>
+                    <td style="width: 20%">
+                      <span v-if="transaction.type === 'transfer'">
+                        {{ getAccountName(transaction.accountId) }} → {{ getAccountName(transaction.toAccountId) }}
+                      </span>
+                      <span v-else>{{ getAccountName(transaction.accountId) }}</span>
+                    </td>
+                    <td style="width: 10%">
+                      <span
+                        class="badge transaction-type-badge"
+                        :class="{
+                          'badge-income': transaction.type === 'income',
+                          'badge-expense': transaction.type === 'expense',
+                          'badge-transfer': transaction.type === 'transfer'
+                        }"
+                      >
+                        {{ transaction.type }}
+                      </span>
+                    </td>
+                    <td class="text-end" style="width: 10%">
+                      <span
+                        class="fw-bold transaction-amount"
+                        :class="{
+                          'amount-income': transaction.type === 'income',
+                          'amount-expense': transaction.type === 'expense',
+                          'amount-transfer': transaction.type === 'transfer'
+                        }"
+                      >
+                        {{ transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '↔' : '-' }}{{ formatCurrency(transaction.amount) }}
+                      </span>
+                    </td>
+                    <td class="text-center" style="width: 5%">
+                      <span v-if="transaction.attachments && transaction.attachments.length > 0" class="badge bg-info" style="cursor: pointer;" @click="viewAttachments(transaction)" :title="`${transaction.attachments.length} file(s)`">
+                        📎 {{ transaction.attachments.length }}
+                      </span>
+                      <span v-else class="text-muted">-</span>
+                    </td>
+                    <td class="text-center" style="width: 5%">
+                      <button
+                        class="btn btn-sm btn-outline-primary me-1"
+                        @click="editTransaction(transaction)"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-danger"
+                        @click="confirmDelete(transaction)"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
         <div v-else class="table-responsive">
           <table class="table table-hover mb-0">
@@ -136,11 +278,11 @@
                 </td>
                 <td>
                   <span
-                    class="badge"
+                    class="badge transaction-type-badge"
                     :class="{
-                      'bg-success': transaction.type === 'income',
-                      'bg-danger': transaction.type === 'expense',
-                      'bg-primary': transaction.type === 'transfer'
+                      'badge-income': transaction.type === 'income',
+                      'badge-expense': transaction.type === 'expense',
+                      'badge-transfer': transaction.type === 'transfer'
                     }"
                   >
                     {{ transaction.type }}
@@ -148,10 +290,11 @@
                 </td>
                 <td class="text-end">
                   <span
+                    class="fw-bold transaction-amount"
                     :class="{
-                      'text-success fw-bold': transaction.type === 'income',
-                      'text-danger fw-bold': transaction.type === 'expense',
-                      'text-primary fw-bold': transaction.type === 'transfer'
+                      'amount-income': transaction.type === 'income',
+                      'amount-expense': transaction.type === 'expense',
+                      'amount-transfer': transaction.type === 'transfer'
                     }"
                   >
                     {{ transaction.type === 'income' ? '+' : transaction.type === 'transfer' ? '↔' : '-' }}{{ formatCurrency(transaction.amount) }}
@@ -180,6 +323,31 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+      <div class="card-footer" v-if="pagination.totalPages > 1">
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="pagination-info">
+            Showing {{ (pagination.currentPage - 1) * pagination.limit + 1 }} to {{ Math.min(pagination.currentPage * pagination.limit, pagination.totalCount) }} of {{ pagination.totalCount }} transactions
+          </div>
+          <nav aria-label="Transaction pagination">
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" :class="{ disabled: !pagination.hasPrev }">
+                <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">Previous</a>
+              </li>
+              <li
+                v-for="page in visiblePages"
+                :key="page"
+                class="page-item"
+                :class="{ active: page === currentPage }"
+              >
+                <a class="page-link" href="#" @click.prevent="changePage(page)">{{ page }}</a>
+              </li>
+              <li class="page-item" :class="{ disabled: !pagination.hasNext }">
+                <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">Next</a>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </div>
@@ -493,7 +661,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
@@ -522,8 +690,15 @@ const filters = ref({
   type: '',
   category: '',
   account: '',
-  search: ''
+  search: '',
+  startDate: '',
+  endDate: ''
 })
+
+const quickDateFilter = ref('')
+const groupByDay = ref(false)
+const currentPage = ref(1)
+const itemsPerPage = ref(20)
 
 const form = ref({
   type: 'expense',
@@ -555,6 +730,7 @@ const transactions = computed(() => transactionsStore.allTransactions)
 const accounts = computed(() => accountsStore.allAccounts)
 const savingsGoals = computed(() => savingsGoalsStore.activeSavingsGoals)
 const allCategories = computed(() => transactionsStore.categories)
+const pagination = computed(() => transactionsStore.pagination)
 
 const filteredCategories = computed(() => {
   return transactionsStore.categories.filter(c => c.type === form.value.type)
@@ -566,18 +742,7 @@ const totalExpense = computed(() => transactionsStore.totalExpense())
 const filteredTransactions = computed(() => {
   let result = transactions.value
 
-  if (filters.value.type) {
-    result = result.filter(t => t.type === filters.value.type)
-  }
-
-  if (filters.value.category) {
-    result = result.filter(t => t.categoryId === filters.value.category)
-  }
-
-  if (filters.value.account) {
-    result = result.filter(t => t.accountId === filters.value.account)
-  }
-
+  // Client-side search filter only (other filters handled by backend)
   if (filters.value.search) {
     const search = filters.value.search.toLowerCase()
     result = result.filter(t =>
@@ -589,8 +754,171 @@ const filteredTransactions = computed(() => {
   return result
 })
 
+const groupedTransactions = computed(() => {
+  if (!groupByDay.value) return []
+
+  const groups = {}
+
+  filteredTransactions.value.forEach(transaction => {
+    const dateKey = new Date(transaction.date).toISOString().split('T')[0]
+
+    if (!groups[dateKey]) {
+      groups[dateKey] = {
+        date: dateKey,
+        transactions: [],
+        totalIncome: 0,
+        totalExpense: 0
+      }
+    }
+
+    groups[dateKey].transactions.push(transaction)
+
+    if (transaction.type === 'income') {
+      groups[dateKey].totalIncome += transaction.amount
+    } else if (transaction.type === 'expense') {
+      groups[dateKey].totalExpense += transaction.amount
+    }
+  })
+
+  // Convert to array and sort by date descending
+  return Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date))
+})
+
 const paginatedTransactions = computed(() => {
-  return filteredTransactions.value.slice(0, 50)
+  // Return transactions directly from API (already paginated)
+  return filteredTransactions.value
+})
+
+const totalPages = computed(() => pagination.value.totalPages || 1)
+
+const changePage = async (page) => {
+  if (page < 1 || page > totalPages.value) return
+  currentPage.value = page
+  await loadTransactions()
+}
+
+const changeItemsPerPage = async (newLimit) => {
+  itemsPerPage.value = newLimit
+  currentPage.value = 1 // Reset to first page
+  await loadTransactions()
+}
+
+const loadTransactions = async () => {
+  try {
+    const params = {
+      page: currentPage.value,
+      limit: itemsPerPage.value
+    }
+
+    // Add filters to params
+    if (filters.value.type) params.type = filters.value.type
+    if (filters.value.category) params.categoryId = filters.value.category
+    if (filters.value.account) params.accountId = filters.value.account
+    if (filters.value.startDate) params.startDate = filters.value.startDate
+    if (filters.value.endDate) params.endDate = filters.value.endDate
+
+    await transactionsStore.fetchTransactions(params.page, params.limit, params)
+  } catch (err) {
+    error('Error loading transactions')
+  }
+}
+
+const applyFilters = () => {
+  currentPage.value = 1 // Reset to first page when filters change
+  loadTransactions()
+}
+
+const applyQuickFilter = () => {
+  const today = new Date()
+  const value = quickDateFilter.value
+
+  if (!value) {
+    return
+  }
+
+  switch (value) {
+    case 'today':
+      filters.value.startDate = today.toISOString().split('T')[0]
+      filters.value.endDate = today.toISOString().split('T')[0]
+      break
+    case 'yesterday':
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+      filters.value.startDate = yesterday.toISOString().split('T')[0]
+      filters.value.endDate = yesterday.toISOString().split('T')[0]
+      break
+    case 'this_week':
+      const startOfWeek = new Date(today)
+      startOfWeek.setDate(today.getDate() - today.getDay())
+      filters.value.startDate = startOfWeek.toISOString().split('T')[0]
+      filters.value.endDate = today.toISOString().split('T')[0]
+      break
+    case 'last_week':
+      const lastWeekStart = new Date(today)
+      lastWeekStart.setDate(today.getDate() - today.getDay() - 7)
+      const lastWeekEnd = new Date(lastWeekStart)
+      lastWeekEnd.setDate(lastWeekStart.getDate() + 6)
+      filters.value.startDate = lastWeekStart.toISOString().split('T')[0]
+      filters.value.endDate = lastWeekEnd.toISOString().split('T')[0]
+      break
+    case 'this_month':
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+      filters.value.startDate = startOfMonth.toISOString().split('T')[0]
+      filters.value.endDate = today.toISOString().split('T')[0]
+      break
+    case 'last_month':
+      const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1)
+      const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0)
+      filters.value.startDate = lastMonthStart.toISOString().split('T')[0]
+      filters.value.endDate = lastMonthEnd.toISOString().split('T')[0]
+      break
+    case 'this_year':
+      const startOfYear = new Date(today.getFullYear(), 0, 1)
+      filters.value.startDate = startOfYear.toISOString().split('T')[0]
+      filters.value.endDate = today.toISOString().split('T')[0]
+      break
+    default:
+      // Custom range - do nothing
+      break
+  }
+
+  applyFilters()
+}
+
+const clearFilters = () => {
+  filters.value = {
+    type: '',
+    category: '',
+    account: '',
+    search: '',
+    startDate: '',
+    endDate: ''
+  }
+  quickDateFilter.value = ''
+  applyFilters()
+}
+
+const visiblePages = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+
+  // Always show first page
+  pages.push(1)
+
+  // Show pages around current page
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
+    if (!pages.includes(i)) {
+      pages.push(i)
+    }
+  }
+
+  // Always show last page if there are multiple pages
+  if (total > 1 && !pages.includes(total)) {
+    pages.push(total)
+  }
+
+  return pages.sort((a, b) => a - b)
 })
 
 const formatCurrency = (amount) => {
@@ -600,6 +928,24 @@ const formatCurrency = (amount) => {
 const formatDate = (dateString) => {
   const date = new Date(dateString)
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+const formatGroupDate = (dateString) => {
+  const date = new Date(dateString)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  const isToday = date.toDateString() === today.toDateString()
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+
+  if (isToday) {
+    return 'Today, ' + date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  } else if (isYesterday) {
+    return 'Yesterday, ' + date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+  } else {
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  }
 }
 
 const getCategoryName = (categoryId) => {
@@ -650,6 +996,7 @@ const confirmDelete = async (transaction) => {
     try {
       await transactionsStore.deleteTransaction(transaction.id)
       success('Transaction deleted successfully')
+      await loadTransactions()
     } catch (err) {
       error(err.response?.data?.message || err.message || 'Error deleting transaction')
     }
@@ -673,6 +1020,7 @@ const saveTransaction = async () => {
     }
 
     closeModal()
+    await loadTransactions()
   } catch (err) {
     error(err.response?.data?.message || err.message || 'Error saving transaction')
   }
@@ -771,6 +1119,7 @@ const saveTransfer = async () => {
     closeTransferModal()
     // Refresh accounts to show updated balances
     await accountsStore.fetchAccounts()
+    await loadTransactions()
   } catch (err) {
     error(err.response?.data?.message || err.message || 'Error transferring funds')
   }
@@ -810,9 +1159,18 @@ const openAttachment = (url) => {
   window.open(url, '_blank')
 }
 
+// Watch for manual date changes to reset quick filter
+watch([() => filters.value.startDate, () => filters.value.endDate], () => {
+  // Reset quick filter to custom when dates are manually changed
+  // Only if a quick filter was previously selected
+  if (quickDateFilter.value !== '') {
+    quickDateFilter.value = ''
+  }
+})
+
 onMounted(async () => {
   await Promise.all([
-    transactionsStore.fetchTransactions(),
+    transactionsStore.fetchTransactions(currentPage.value, itemsPerPage.value),
     accountsStore.fetchAccounts(),
     savingsGoalsStore.fetchSavingsGoals(),
     fixedDepositsStore.fetchFixedDeposits(),
@@ -865,6 +1223,38 @@ onMounted(async () => {
   background-color: #ffffff;
 }
 
+/* Pagination styles */
+.pagination-info {
+  font-size: 0.875rem;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.pagination .page-link {
+  color: #4b5563;
+  border-color: #d1d5db;
+  font-weight: 500;
+}
+
+.pagination .page-link:hover {
+  color: #635bff;
+  background-color: #f3f4f6;
+  border-color: #635bff;
+}
+
+.pagination .page-item.active .page-link {
+  background-color: #635bff;
+  border-color: #635bff;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #9ca3af;
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
 /* Dark mode styles */
 .dark-mode .attachment-card {
   border-color: #374151;
@@ -881,6 +1271,155 @@ onMounted(async () => {
 }
 
 .dark-mode .attachment-info p {
+  color: #e5e7eb;
+}
+
+.dark-mode .pagination-info {
+  color: #d1d5db;
+}
+
+.dark-mode .pagination .page-link {
+  color: #d1d5db;
+  background-color: #374151;
+  border-color: #4b5563;
+}
+
+.dark-mode .pagination .page-link:hover {
+  color: #818cf8;
+  background-color: #4b5563;
+  border-color: #818cf8;
+}
+
+.dark-mode .pagination .page-item.active .page-link {
+  background-color: #635bff;
+  border-color: #635bff;
+  color: #ffffff;
+}
+
+.dark-mode .pagination .page-item.disabled .page-link {
+  color: #6b7280;
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+/* Transaction type badges */
+.transaction-type-badge {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.badge-income {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.badge-expense {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-transfer {
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+/* Transaction amounts */
+.transaction-amount {
+  font-size: 0.95rem;
+}
+
+.amount-income {
+  color: #1e40af;
+}
+
+.amount-expense {
+  color: #991b1b;
+}
+
+.amount-transfer {
+  color: #3730a3;
+}
+
+/* Dark mode transaction colors */
+.dark-mode .badge-income {
+  background-color: #1e3a5f;
+  color: #93c5fd;
+}
+
+.dark-mode .badge-expense {
+  background-color: #5f1e1e;
+  color: #fca5a5;
+}
+
+.dark-mode .badge-transfer {
+  background-color: #312e5f;
+  color: #a5b4fc;
+}
+
+.dark-mode .amount-income {
+  color: #93c5fd;
+}
+
+.dark-mode .amount-expense {
+  color: #fca5a5;
+}
+
+.dark-mode .amount-transfer {
+  color: #a5b4fc;
+}
+
+/* Grouped transactions styles */
+.grouped-transactions {
+  padding: 0;
+}
+
+.day-group {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.day-group:last-child {
+  border-bottom: none;
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.day-date {
+  font-size: 1rem;
+}
+
+.day-summary {
+  font-size: 0.875rem;
+}
+
+.day-group .table {
+  margin-bottom: 0;
+}
+
+.day-group .table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Dark mode grouped transactions */
+.dark-mode .day-group {
+  border-bottom-color: #374151;
+}
+
+.dark-mode .day-header {
+  background-color: #1f2937;
+  border-bottom-color: #374151;
+}
+
+.dark-mode .day-date strong,
+.dark-mode .day-summary {
   color: #e5e7eb;
 }
 </style>

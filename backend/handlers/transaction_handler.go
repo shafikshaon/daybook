@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"daybook-backend/database"
@@ -38,23 +39,74 @@ func ListTransactions(c *gin.Context) {
 
 	if startDate := c.Query("startDate"); startDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
-			query = query.Where("date >= ?", parsedDate)
+			// Set to beginning of day
+			startOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
+			query = query.Where("date >= ?", startOfDay)
 		}
 	}
 
 	if endDate := c.Query("endDate"); endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			query = query.Where("date <= ?", parsedDate)
+			// Set to end of day
+			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+			query = query.Where("date <= ?", endOfDay)
 		}
 	}
 
+	// Pagination parameters
+	page := 1
+	limit := 20 // default limit
+
+	if pageParam := c.Query("page"); pageParam != "" {
+		if parsedPage, err := strconv.Atoi(pageParam); err == nil && parsedPage > 0 {
+			page = parsedPage
+		}
+	}
+
+	if limitParam := c.Query("limit"); limitParam != "" {
+		if parsedLimit, err := strconv.Atoi(limitParam); err == nil && parsedLimit > 0 {
+			// Validate limit is one of the allowed values: 20, 50, 100, 500
+			switch parsedLimit {
+			case 20, 50, 100, 500:
+				limit = parsedLimit
+			default:
+				limit = 20 // fallback to default if invalid value
+			}
+		}
+	}
+
+	// Get total count before pagination
+	var totalCount int64
+	if err := query.Model(&models.Transaction{}).Count(&totalCount).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to count transactions")
+		return
+	}
+
+	// Calculate offset
+	offset := (page - 1) * limit
+
 	var transactions []models.Transaction
-	if err := query.Order("date DESC, created_at DESC").Find(&transactions).Error; err != nil {
+	if err := query.Order("date DESC, created_at DESC").Limit(limit).Offset(offset).Find(&transactions).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch transactions")
 		return
 	}
 
-	utilities.SuccessResponse(c, transactions, "Transactions retrieved successfully")
+	// Calculate pagination metadata
+	totalPages := int((totalCount + int64(limit) - 1) / int64(limit))
+
+	response := map[string]interface{}{
+		"transactions": transactions,
+		"pagination": map[string]interface{}{
+			"currentPage": page,
+			"limit":       limit,
+			"totalCount":  totalCount,
+			"totalPages":  totalPages,
+			"hasNext":     page < totalPages,
+			"hasPrev":     page > 1,
+		},
+	}
+
+	utilities.SuccessResponse(c, response, "Transactions retrieved successfully")
 }
 
 // GetTransaction returns a specific transaction by ID

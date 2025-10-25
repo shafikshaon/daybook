@@ -130,9 +130,22 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
 
     async addContribution(goalId, amount, date = null) {
       try {
+        // Ensure date is in proper ISO format
+        let formattedDate
+        if (date) {
+          // If date is a string like "2025-10-25", convert to full ISO format
+          if (typeof date === 'string' && date.length === 10) {
+            formattedDate = new Date(date + 'T12:00:00').toISOString()
+          } else {
+            formattedDate = new Date(date).toISOString()
+          }
+        } else {
+          formattedDate = new Date().toISOString()
+        }
+
         const contribution = {
           amount,
-          date: date || new Date().toISOString(),
+          date: formattedDate,
           notes: 'Contribution to savings goal'
         }
 

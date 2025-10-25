@@ -88,11 +88,23 @@ const icon = computed(() => {
 })
 
 const headerClass = computed(() => {
-  return props.variant === 'danger' ? 'bg-danger text-white' : ''
+  const classes = {
+    danger: 'modal-header-danger',
+    warning: 'modal-header-warning',
+    primary: 'modal-header-primary',
+    success: 'modal-header-success'
+  }
+  return classes[props.variant] || ''
 })
 
 const confirmButtonClass = computed(() => {
-  return `btn btn-${props.variant}`
+  const classes = {
+    danger: 'btn btn-modal-danger',
+    warning: 'btn btn-modal-warning',
+    primary: 'btn btn-primary',
+    success: 'btn btn-modal-success'
+  }
+  return classes[props.variant] || 'btn btn-primary'
 })
 
 const handleConfirm = () => {
@@ -103,3 +115,89 @@ const handleCancel = () => {
   emit('cancel')
 }
 </script>
+
+<style scoped>
+/* Professional modal header colors */
+.modal-header-danger {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-bottom: 2px solid #ef4444;
+}
+
+.modal-header-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-bottom: 2px solid #f59e0b;
+}
+
+.modal-header-primary {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-bottom: 2px solid #6366f1;
+}
+
+.modal-header-success {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-bottom: 2px solid #3b82f6;
+}
+
+/* Professional button colors */
+.btn-modal-danger {
+  color: #ffffff;
+  background-color: #ef4444;
+  border-color: #ef4444;
+}
+
+.btn-modal-danger:hover {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-modal-warning {
+  color: #ffffff;
+  background-color: #f59e0b;
+  border-color: #f59e0b;
+}
+
+.btn-modal-warning:hover {
+  background-color: #d97706;
+  border-color: #d97706;
+}
+
+.btn-modal-success {
+  color: #ffffff;
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.btn-modal-success:hover {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+/* Dark mode support */
+.dark-mode .modal-header-danger {
+  background-color: #5f1e1e;
+  color: #fca5a5;
+  border-bottom-color: #ef4444;
+}
+
+.dark-mode .modal-header-warning {
+  background-color: #5f4e1e;
+  color: #fcd34d;
+  border-bottom-color: #f59e0b;
+}
+
+.dark-mode .modal-header-primary {
+  background-color: #312e5f;
+  color: #a5b4fc;
+  border-bottom-color: #6366f1;
+}
+
+.dark-mode .modal-header-success {
+  background-color: #1e3a5f;
+  color: #93c5fd;
+  border-bottom-color: #3b82f6;
+}
+</style>

@@ -10,16 +10,10 @@
                 <p class="text-muted">Personal Finance Tracker</p>
               </div>
 
-              <h4 class="mb-4">Sign In</h4>
+              <h4 class="mb-4 text-center">Sign In</h4>
 
               <div v-if="error" class="alert alert-danger" role="alert">
                 {{ error }}
-              </div>
-
-              <div v-if="showDefaultCredentials" class="alert alert-info" role="alert">
-                <strong>Default Admin:</strong><br>
-                Username: <code>admin</code><br>
-                Password: <code>admin</code>
               </div>
 
               <form @submit.prevent="handleLogin">
@@ -84,7 +78,7 @@
           </div>
 
           <div class="text-center mt-3">
-            <small class="text-muted">
+            <small class="text-white">
               © 2025 Daybook. All rights reserved.
             </small>
           </div>
@@ -147,8 +141,9 @@ onMounted(() => {
 
 <style scoped>
 .login-view {
+  margin-top: 0 !important;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: calc(100vh - 60px);
+  min-height: 100vh;
   width: 100%;
   overflow-x: hidden;
   padding: 60px 20px;

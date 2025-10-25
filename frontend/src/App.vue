@@ -1,7 +1,7 @@
 <template>
   <div id="app" :class="{ 'dark-mode': isDarkMode }">
     <!-- Top Navbar -->
-    <nav class="top-navbar">
+    <nav class="top-navbar" v-if="authStore.isAuthenticated && !isAuthPage">
       <div class="top-navbar-content">
         <!-- Mobile Menu Toggle (visible only on mobile) -->
         <button class="mobile-menu-toggle" @click="toggleMobileMenu" v-if="!isAuthPage">
@@ -505,7 +505,7 @@ body {
 
 .main-content.auth-page {
   margin-left: 0 !important;
-  margin-top: 60px !important;
+  margin-top: 0 !important;
   padding: 0 !important;
   width: 100% !important;
   max-width: 100vw !important;

@@ -7,6 +7,14 @@ import { useSavingsGoalsStore } from './savingsGoals'
 export const useTransactionsStore = defineStore('transactions', {
   state: () => ({
     transactions: [],
+    pagination: {
+      currentPage: 1,
+      limit: 20,
+      totalCount: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false
+    },
     categories: [
       // Income categories
       { id: 'salary', name: 'Salary', type: 'income', icon: '💼', color: '#10b981' },
@@ -122,10 +130,25 @@ export const useTransactionsStore = defineStore('transactions', {
   },
 
   actions: {
-    async fetchTransactions() {
+    async fetchTransactions(page = 1, limit = 20, filters = {}) {
       try {
-        const response = await apiService.get('transactions')
-        this.transactions = response.data || []
+        const params = { page, limit, ...filters }
+        const response = await apiService.get('transactions', params)
+
+        if (response.data && response.data.transactions) {
+          this.transactions = response.data.transactions || []
+          this.pagination = response.data.pagination || {
+            currentPage: page,
+            limit: limit,
+            totalCount: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false
+          }
+        } else {
+          // Fallback for old API format
+          this.transactions = response.data || []
+        }
       } catch (error) {
         console.error('Error fetching transactions:', error)
         throw error
