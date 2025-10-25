@@ -17,11 +17,11 @@ type Transaction struct {
 	CategoryID    string         `gorm:"not null;index" json:"categoryId" binding:"required"`
 	Date          time.Time      `gorm:"not null;index" json:"date" binding:"required"`
 	Description   string         `json:"description"`
-	Tags          []string       `gorm:"type:text[]" json:"tags"`
+	Tags          []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	SavingsGoalID *uuid.UUID     `gorm:"type:uuid" json:"savingsGoalId"`
 	RecurringID   *uuid.UUID     `gorm:"type:uuid" json:"recurringId"`
 	CreditCardID  *uuid.UUID     `gorm:"type:uuid" json:"creditCardId"`
-	Attachments   []string       `gorm:"type:text[]" json:"attachments"`
+	Attachments   []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`

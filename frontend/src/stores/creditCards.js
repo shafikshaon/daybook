@@ -6,6 +6,8 @@ import { useTransactionsStore } from './transactions'
 export const useCreditCardsStore = defineStore('creditCards', {
   state: () => ({
     creditCards: [],
+    transactions: [],
+    payments: [],
     statements: [],
     rewards: []
   }),
@@ -79,6 +81,24 @@ export const useCreditCardsStore = defineStore('creditCards', {
         : state.rewards
 
       return relevantRewards.reduce((sum, r) => sum + (r.amount || 0), 0)
+    },
+
+    transactionsByCard: (state) => (cardId) => {
+      return state.transactions
+        .filter(t => t.cardId === cardId)
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+    },
+
+    paymentsByCard: (state) => (cardId) => {
+      return state.payments
+        .filter(p => p.cardId === cardId)
+        .sort((a, b) => new Date(b.paymentDate) - new Date(a.paymentDate))
+    },
+
+    totalSpentByCard: (state) => (cardId) => {
+      return state.transactions
+        .filter(t => t.cardId === cardId && (t.type === 'purchase' || t.type === 'fee' || t.type === 'interest'))
+        .reduce((sum, t) => sum + t.amount, 0)
     }
   },
 
@@ -153,64 +173,76 @@ export const useCreditCardsStore = defineStore('creditCards', {
       return Math.max(interest + percentageBased, minimumFloor)
     },
 
-    async recordPayment(cardId, amount, paymentDate, paymentAccountId) {
+    // Credit Card Transactions
+    async fetchTransactions(cardId) {
       try {
-        const card = this.getCreditCardById(cardId)
-        if (!card) throw new Error('Card not found')
-
-        const newBalance = card.currentBalance - amount
-
-        // Update credit card balance
-        await this.updateCreditCard(cardId, {
-          ...card,
-          currentBalance: newBalance,
-          lastPaymentDate: paymentDate,
-          lastPaymentAmount: amount
-        })
-
-        // Create transaction record if payment account is specified
-        if (paymentAccountId) {
-          const transactionsStore = useTransactionsStore()
-          await transactionsStore.createTransaction({
-            type: 'expense',
-            amount,
-            categoryId: 'credit_card_payment',
-            accountId: paymentAccountId,
-            date: paymentDate,
-            description: `Credit card payment - ${card.name}`,
-            creditCardId: cardId,
-            tags: ['credit_card_payment'],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          })
-        }
-
-        return newBalance
+        const response = await apiService.get(`credit-cards/${cardId}/transactions`)
+        this.transactions = response.data || []
+        return response.data
       } catch (error) {
-        console.error('Error recording payment:', error)
+        console.error('Error fetching credit card transactions:', error)
         throw error
       }
     },
 
-    async addCharge(cardId, amount, description) {
+    async recordTransaction(cardId, transactionData) {
       try {
-        const card = this.getCreditCardById(cardId)
-        if (!card) throw new Error('Card not found')
+        const response = await apiService.post(`credit-cards/${cardId}/transactions`, transactionData)
+        this.transactions.push(response.data)
 
-        const newBalance = card.currentBalance + amount
+        // Update the credit card in the store
+        await this.fetchCreditCards()
 
-        if (newBalance > card.creditLimit) {
-          throw new Error('Transaction exceeds credit limit')
-        }
+        return response.data
+      } catch (error) {
+        console.error('Error recording credit card transaction:', error)
+        throw error
+      }
+    },
 
-        await this.updateCreditCard(cardId, {
-          ...card,
-          currentBalance: newBalance
+    async deleteTransaction(cardId, transactionId) {
+      try {
+        await apiService.delete(`credit-cards/${cardId}/transactions`, transactionId)
+        this.transactions = this.transactions.filter(t => t.id !== transactionId)
+
+        // Update the credit card in the store
+        await this.fetchCreditCards()
+      } catch (error) {
+        console.error('Error deleting credit card transaction:', error)
+        throw error
+      }
+    },
+
+    // Credit Card Payments
+    async fetchPayments(cardId) {
+      try {
+        const response = await apiService.get(`credit-cards/${cardId}/payments`)
+        this.payments = response.data || []
+        return response.data
+      } catch (error) {
+        console.error('Error fetching credit card payments:', error)
+        throw error
+      }
+    },
+
+    async recordPayment(cardId, amount, paymentAccountId, paymentDate = null, description = '') {
+      try {
+        const response = await apiService.post(`credit-cards/${cardId}/payment`, {
+          amount,
+          accountId: paymentAccountId,
+          paymentDate: paymentDate || new Date().toISOString(),
+          description
         })
 
-        return newBalance
+        // Update local state
+        await this.fetchCreditCards()
+        if (this.payments.length > 0) {
+          this.payments.unshift(response.data.payment)
+        }
+
+        return response.data
       } catch (error) {
-        console.error('Error adding charge:', error)
+        console.error('Error recording payment:', error)
         throw error
       }
     },

@@ -148,41 +148,7 @@ func DeleteAccount(c *gin.Context) {
 	utilities.SuccessResponse(c, nil, "Account deleted successfully")
 }
 
-// UpdateAccountBalance updates the balance of an account
-func UpdateAccountBalance(c *gin.Context) {
-	userID, err := middleware.GetUserID(c)
-	if err != nil {
-		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	accountID, err := uuid.Parse(c.Param("id"))
-	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
-		return
-	}
-
-	var balanceUpdate struct {
-		Balance float64 `json:"balance" binding:"required"`
-	}
-
-	if err := c.ShouldBindJSON(&balanceUpdate); err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
-		return
-	}
-
-	account.Balance = balanceUpdate.Balance
-
-	if err := database.DB.Save(&account).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update balance")
-		return
-	}
-
-	utilities.SuccessResponse(c, account, "Account balance updated successfully")
-}
+// NOTE: Direct balance updates are NOT allowed in the dual-balance system.
+// Balance is automatically updated by transactions only.
+// Initial balance is set once during account creation and never changes.
+// See BALANCE_SYSTEM.md for detailed documentation.

@@ -110,7 +110,12 @@
             <tbody>
               <tr v-for="transaction in paginatedTransactions" :key="transaction.id">
                 <td>{{ formatDate(transaction.date) }}</td>
-                <td>{{ transaction.description || '-' }}</td>
+                <td>
+                  <div>{{ transaction.description || '-' }}</div>
+                  <small v-if="transaction.creditCardId" class="text-muted">
+                    💳 {{ getCreditCardName(transaction.creditCardId) }}
+                  </small>
+                </td>
                 <td>
                   <span class="badge" :style="{ backgroundColor: getCategoryColor(transaction.categoryId) }">
                     {{ getCategoryName(transaction.categoryId) }}
@@ -486,6 +491,7 @@ import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
+import { useCreditCardsStore } from '@/stores/creditCards'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
 import { FileUpload } from '@/components'
@@ -494,6 +500,7 @@ const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
 const savingsGoalsStore = useSavingsGoalsStore()
 const fixedDepositsStore = useFixedDepositsStore()
+const creditCardsStore = useCreditCardsStore()
 const settingsStore = useSettingsStore()
 const { confirm, success, error } = useNotification()
 
@@ -601,6 +608,11 @@ const getCategoryColor = (categoryId) => {
 const getAccountName = (accountId) => {
   const account = accountsStore.getAccountById(accountId)
   return account ? account.name : accountId
+}
+
+const getCreditCardName = (cardId) => {
+  const card = creditCardsStore.getCreditCardById(cardId)
+  return card ? card.name : 'Credit Card'
 }
 
 const editTransaction = (transaction) => {
@@ -796,7 +808,8 @@ onMounted(async () => {
     transactionsStore.fetchTransactions(),
     accountsStore.fetchAccounts(),
     savingsGoalsStore.fetchSavingsGoals(),
-    fixedDepositsStore.fetchFixedDeposits()
+    fixedDepositsStore.fetchFixedDeposits(),
+    creditCardsStore.fetchCreditCards()
   ])
 })
 </script>

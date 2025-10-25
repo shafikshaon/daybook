@@ -43,7 +43,8 @@ func SetupRoutes(router *gin.Engine) {
 				accountRoutes.POST("", handlers.CreateAccount)
 				accountRoutes.PUT("/:id", handlers.UpdateAccount)
 				accountRoutes.DELETE("/:id", handlers.DeleteAccount)
-				accountRoutes.PATCH("/:id/balance", handlers.UpdateAccountBalance)
+				// NOTE: Direct balance updates removed - balances are updated automatically by transactions
+				// See BALANCE_SYSTEM.md for dual-balance accounting system documentation
 			}
 
 			// Account Type routes
@@ -76,7 +77,17 @@ func SetupRoutes(router *gin.Engine) {
 				creditCardRoutes.POST("", handlers.CreateCreditCard)
 				creditCardRoutes.PUT("/:id", handlers.UpdateCreditCard)
 				creditCardRoutes.DELETE("/:id", handlers.DeleteCreditCard)
+
+				// Transaction routes
+				creditCardRoutes.POST("/:id/transactions", handlers.RecordCreditCardTransaction)
+				creditCardRoutes.GET("/:id/transactions", handlers.GetCreditCardTransactions)
+				creditCardRoutes.DELETE("/:id/transactions/:transactionId", handlers.DeleteCreditCardTransaction)
+
+				// Payment routes
 				creditCardRoutes.POST("/:id/payment", handlers.RecordPayment)
+				creditCardRoutes.GET("/:id/payments", handlers.GetPayments)
+
+				// Statement routes
 				creditCardRoutes.GET("/:id/statements", handlers.GetStatements)
 			}
 
@@ -181,7 +192,7 @@ func SetupRoutes(router *gin.Engine) {
 			// File upload routes
 			uploadRoutes := protected.Group("/uploads")
 			{
-				uploadRoutes.POST("", handlers.UploadFiles)         // Multiple files
+				uploadRoutes.POST("", handlers.UploadFiles)             // Multiple files
 				uploadRoutes.POST("/single", handlers.UploadSingleFile) // Single file
 				uploadRoutes.GET("/:userId/:filename", handlers.ServeUploadedFile)
 				uploadRoutes.DELETE("/:filename", handlers.DeleteFile)

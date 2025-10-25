@@ -44,6 +44,8 @@ func InitDatabase(cfg *config.Config) error {
 		&models.RecurringTransaction{},
 		&models.Tag{},
 		&models.CreditCard{},
+		&models.CreditCardTransaction{},
+		&models.CreditCardPayment{},
 		&models.Statement{},
 		&models.Reward{},
 		&models.Investment{},

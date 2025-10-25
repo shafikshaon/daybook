@@ -83,3 +83,51 @@ func (r *Reward) BeforeCreate(tx *gorm.DB) error {
 	}
 	return nil
 }
+
+// CreditCardTransaction represents a transaction made with a credit card
+type CreditCardTransaction struct {
+	ID            uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	UserID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
+	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to main Transaction record
+	CategoryID    string         `json:"categoryId"`
+	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
+	Description   string         `json:"description"`
+	Merchant      string         `json:"merchant"`
+	Date          time.Time      `gorm:"not null" json:"date"`
+	Type          string         `gorm:"not null" json:"type"` // purchase, payment, refund, fee, interest
+	Tags          []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
+	Attachments   []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (cct *CreditCardTransaction) BeforeCreate(tx *gorm.DB) error {
+	if cct.ID == uuid.Nil {
+		cct.ID = uuid.New()
+	}
+	return nil
+}
+
+// CreditCardPayment represents a payment made to a credit card
+type CreditCardPayment struct {
+	ID            uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	UserID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
+	AccountID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"` // Account used to pay
+	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
+	PaymentDate   time.Time      `gorm:"not null" json:"paymentDate"`
+	Description   string         `json:"description"`
+	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to Transaction record
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
+func (ccp *CreditCardPayment) BeforeCreate(tx *gorm.DB) error {
+	if ccp.ID == uuid.Nil {
+		ccp.ID = uuid.New()
+	}
+	return nil
+}

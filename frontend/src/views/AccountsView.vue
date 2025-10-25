@@ -75,7 +75,12 @@
                   <span class="text-muted">{{ account.description || '-' }}</span>
                 </td>
                 <td>{{ account.currency || settingsStore.settings.currency }}</td>
-                <td class="text-end fw-bold">{{ formatCurrency(account.balance) }}</td>
+                <td class="text-end fw-bold" :title="`Initial: ${formatCurrency(account.initialBalance || account.balance)}`">
+                  {{ formatCurrency(account.balance) }}
+                  <small v-if="account.initialBalance && account.initialBalance !== account.balance" class="text-muted d-block" style="font-size: 0.75rem;">
+                    ({{ account.balance >= account.initialBalance ? '+' : '' }}{{ formatCurrency(account.balance - (account.initialBalance || 0)) }})
+                  </small>
+                </td>
                 <td class="text-center">
                   <button
                     class="btn btn-sm btn-outline-primary me-1"
@@ -135,7 +140,7 @@
               </div>
 
               <div class="mb-3">
-                <label class="form-label">Initial Balance *</label>
+                <label class="form-label">Initial Balance (Opening Balance) *</label>
                 <input
                   type="number"
                   step="0.01"
@@ -143,7 +148,12 @@
                   v-model.number="form.balance"
                   required
                   placeholder="0.00"
+                  :disabled="showEditModal"
                 />
+                <small class="text-muted">
+                  <span v-if="!showEditModal">Starting balance when creating the account. This will not change.</span>
+                  <span v-else>Initial balance cannot be changed. Current balance updates with transactions.</span>
+                </small>
               </div>
 
               <div class="mb-3">
