@@ -146,9 +146,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useBillsStore } from '@/stores/bills'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const billsStore = useBillsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 const showAddModal = ref(false)
 const form = ref({ name: '', category: 'utilities', amount: 0, frequency: 'monthly', startDate: new Date().toISOString().split('T')[0] })
 
@@ -160,19 +162,42 @@ const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
 const formatDate = (date) => date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '-'
 
 const markPaid = async (billId) => {
-  await billsStore.markAsPaid(billId)
+  try {
+    await billsStore.markAsPaid(billId)
+    success('Bill marked as paid')
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error marking bill as paid')
+  }
 }
 
 const deleteBill = async (id) => {
-  if (confirm('Delete this bill?')) {
-    await billsStore.deleteBill(id)
+  const confirmed = await confirm({
+    title: 'Delete Bill',
+    message: 'Are you sure you want to delete this bill? This action cannot be undone.',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await billsStore.deleteBill(id)
+      success('Bill deleted successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error deleting bill')
+    }
   }
 }
 
 const saveBill = async () => {
-  await billsStore.createBill(form.value)
-  showAddModal.value = false
-  form.value = { name: '', category: 'utilities', amount: 0, frequency: 'monthly', startDate: new Date().toISOString().split('T')[0] }
+  try {
+    await billsStore.createBill(form.value)
+    success('Bill created successfully')
+    showAddModal.value = false
+    form.value = { name: '', category: 'utilities', amount: 0, frequency: 'monthly', startDate: new Date().toISOString().split('T')[0] }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error creating bill')
+  }
 }
 
 onMounted(() => billsStore.fetchBills())

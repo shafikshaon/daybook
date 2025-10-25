@@ -145,9 +145,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const savingsGoalsStore = useSavingsGoalsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 const showAddModal = ref(false)
 const showContributionModal = ref(false)
 const selectedGoalId = ref(null)
@@ -165,20 +167,43 @@ const addContribution = (goalId) => {
 }
 
 const saveContribution = async () => {
-  await savingsGoalsStore.addContribution(selectedGoalId.value, contributionAmount.value)
-  showContributionModal.value = false
+  try {
+    await savingsGoalsStore.addContribution(selectedGoalId.value, contributionAmount.value)
+    success('Contribution added successfully')
+    showContributionModal.value = false
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error adding contribution')
+  }
 }
 
 const deleteGoal = async (id) => {
-  if (confirm('Delete this goal?')) {
-    await savingsGoalsStore.deleteSavingsGoal(id)
+  const confirmed = await confirm({
+    title: 'Delete Savings Goal',
+    message: 'Are you sure you want to delete this savings goal? This action cannot be undone.',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await savingsGoalsStore.deleteSavingsGoal(id)
+      success('Savings goal deleted successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error deleting savings goal')
+    }
   }
 }
 
 const saveGoal = async () => {
-  await savingsGoalsStore.createSavingsGoal(form.value)
-  showAddModal.value = false
-  form.value = { name: '', icon: '🎯', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, targetDate: '' }
+  try {
+    await savingsGoalsStore.createSavingsGoal(form.value)
+    success('Savings goal created successfully')
+    showAddModal.value = false
+    form.value = { name: '', icon: '🎯', targetAmount: 0, currentAmount: 0, monthlyContribution: 0, targetDate: '' }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error creating savings goal')
+  }
 }
 
 onMounted(() => savingsGoalsStore.fetchSavingsGoals())

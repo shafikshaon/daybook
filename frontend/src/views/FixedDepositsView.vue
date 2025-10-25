@@ -140,10 +140,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 import { FileUpload } from '@/components'
 
 const fixedDepositsStore = useFixedDepositsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 const showAddModal = ref(false)
 const fdAttachments = ref([])
 const showAttachmentsModal = ref(false)
@@ -167,26 +169,44 @@ const calculateMaturityDate = () => {
 }
 
 const withdrawFD = async (id) => {
-  if (confirm('Withdraw this FD?')) {
-    await fixedDepositsStore.withdrawFixedDeposit(id)
+  const confirmed = await confirm({
+    title: 'Withdraw Fixed Deposit',
+    message: 'Are you sure you want to withdraw this fixed deposit? This action cannot be undone.',
+    confirmText: 'Withdraw',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await fixedDepositsStore.withdrawFixedDeposit(id)
+      success('Fixed deposit withdrawn successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error withdrawing fixed deposit')
+    }
   }
 }
 
 const saveFD = async () => {
-  const data = {
-    ...form.value,
-    attachments: fdAttachments.value.map(f => f.fileUrl)
-  }
+  try {
+    const data = {
+      ...form.value,
+      attachments: fdAttachments.value.map(f => f.fileUrl)
+    }
 
-  await fixedDepositsStore.createFixedDeposit(data)
-  showAddModal.value = false
-  form.value = {
-    name: '', bank: '', principal: 0, interestRate: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    tenureMonths: 12, maturityDate: '', compounding: 'monthly',
-    attachments: []
+    await fixedDepositsStore.createFixedDeposit(data)
+    success('Fixed deposit created successfully')
+    showAddModal.value = false
+    form.value = {
+      name: '', bank: '', principal: 0, interestRate: 0,
+      startDate: new Date().toISOString().split('T')[0],
+      tenureMonths: 12, maturityDate: '', compounding: 'monthly',
+      attachments: []
+    }
+    fdAttachments.value = []
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error creating fixed deposit')
   }
-  fdAttachments.value = []
 }
 
 const viewAttachments = (fd) => {

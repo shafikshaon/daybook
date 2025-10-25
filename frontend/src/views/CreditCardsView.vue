@@ -191,10 +191,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useCreditCardsStore } from '@/stores/creditCards'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const creditCardsStore = useCreditCardsStore()
 const accountsStore = useAccountsStore()
 const settingsStore = useSettingsStore()
+const { success, error } = useNotification()
 
 const showAddModal = ref(false)
 const showPaymentModal = ref(false)
@@ -247,12 +249,12 @@ const closePaymentModal = () => {
 const savePayment = async () => {
   try {
     if (paymentForm.value.amount > paymentForm.value.currentBalance) {
-      alert('Payment amount cannot exceed current balance')
+      error('Payment amount cannot exceed current balance')
       return
     }
 
     if (!paymentForm.value.paymentAccountId) {
-      alert('Please select a payment account')
+      error('Please select a payment account')
       return
     }
 
@@ -266,16 +268,21 @@ const savePayment = async () => {
     closePaymentModal()
     // Refresh accounts to show updated balances
     await accountsStore.fetchAccounts()
-    alert('Payment recorded successfully!')
-  } catch (error) {
-    alert('Error recording payment: ' + error.message)
+    success('Payment recorded successfully')
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error recording payment')
   }
 }
 
 const saveCard = async () => {
-  await creditCardsStore.createCreditCard(form.value)
-  showAddModal.value = false
-  form.value = { name: '', lastFourDigits: '', creditLimit: 0, apr: 0, currentBalance: 0 }
+  try {
+    await creditCardsStore.createCreditCard(form.value)
+    success('Credit card added successfully')
+    showAddModal.value = false
+    form.value = { name: '', lastFourDigits: '', creditLimit: 0, apr: 0, currentBalance: 0 }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error adding credit card')
+  }
 }
 
 onMounted(async () => {

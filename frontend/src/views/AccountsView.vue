@@ -185,9 +185,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const accountsStore = useAccountsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
@@ -224,9 +226,22 @@ const editAccount = (account) => {
   showEditModal.value = true
 }
 
-const confirmDelete = (account) => {
-  if (confirm(`Are you sure you want to delete ${account.name}?`)) {
-    accountsStore.deleteAccount(account.id)
+const confirmDelete = async (account) => {
+  const confirmed = await confirm({
+    title: 'Delete Account',
+    message: `Are you sure you want to delete "${account.name}"? This action cannot be undone.`,
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await accountsStore.deleteAccount(account.id)
+      success('Account deleted successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error deleting account')
+    }
   }
 }
 
@@ -234,12 +249,14 @@ const saveAccount = async () => {
   try {
     if (showEditModal.value) {
       await accountsStore.updateAccount(editingAccount.value.id, form.value)
+      success('Account updated successfully')
     } else {
       await accountsStore.createAccount(form.value)
+      success('Account created successfully')
     }
     closeModal()
-  } catch (error) {
-    alert('Error saving account: ' + error.message)
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error saving account')
   }
 }
 
@@ -257,7 +274,10 @@ const closeModal = () => {
 }
 
 onMounted(async () => {
-  await accountsStore.fetchAccounts()
+  await Promise.all([
+    accountsStore.fetchAccounts(),
+    accountsStore.fetchAccountTypes()
+  ])
   form.value.currency = settingsStore.settings.currency
 })
 </script>

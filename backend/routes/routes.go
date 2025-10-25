@@ -46,6 +46,16 @@ func SetupRoutes(router *gin.Engine) {
 				accountRoutes.PATCH("/:id/balance", handlers.UpdateAccountBalance)
 			}
 
+			// Account Type routes
+			accountTypeRoutes := protected.Group("/account-types")
+			{
+				accountTypeRoutes.GET("", handlers.ListAccountTypes)
+				accountTypeRoutes.GET("/:id", handlers.GetAccountType)
+				accountTypeRoutes.POST("", handlers.CreateAccountType)
+				accountTypeRoutes.PUT("/:id", handlers.UpdateAccountType)
+				accountTypeRoutes.DELETE("/:id", handlers.DeleteAccountType)
+			}
+
 			// Transaction routes
 			transactionRoutes := protected.Group("/transactions")
 			{

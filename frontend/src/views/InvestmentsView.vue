@@ -282,10 +282,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useInvestmentsStore } from '@/stores/investments'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const investmentsStore = useInvestmentsStore()
 const fixedDepositsStore = useFixedDepositsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const activeTab = ref('stocks')
 const showAddInvestmentModal = ref(false)
@@ -312,9 +314,14 @@ const handleAddClick = () => {
 }
 
 const saveInvestment = async () => {
-  await investmentsStore.createInvestment(investmentForm.value)
-  showAddInvestmentModal.value = false
-  investmentForm.value = { symbol: '', name: '', assetType: 'stocks', quantity: 0, costBasis: 0, currentPrice: 0 }
+  try {
+    await investmentsStore.createInvestment(investmentForm.value)
+    success('Investment added successfully')
+    showAddInvestmentModal.value = false
+    investmentForm.value = { symbol: '', name: '', assetType: 'stocks', quantity: 0, costBasis: 0, currentPrice: 0 }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error adding investment')
+  }
 }
 
 const calculateMaturityDate = () => {
@@ -324,18 +331,36 @@ const calculateMaturityDate = () => {
 }
 
 const withdrawFD = async (id) => {
-  if (confirm('Withdraw this FD?')) {
-    await fixedDepositsStore.withdrawFixedDeposit(id)
+  const confirmed = await confirm({
+    title: 'Withdraw Fixed Deposit',
+    message: 'Are you sure you want to withdraw this fixed deposit? This action cannot be undone.',
+    confirmText: 'Withdraw',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await fixedDepositsStore.withdrawFixedDeposit(id)
+      success('Fixed deposit withdrawn successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error withdrawing fixed deposit')
+    }
   }
 }
 
 const saveFD = async () => {
-  await fixedDepositsStore.createFixedDeposit(fdForm.value)
-  showAddFDModal.value = false
-  fdForm.value = {
-    name: '', bank: '', principal: 0, interestRate: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    tenureMonths: 12, maturityDate: '', compounding: 'monthly'
+  try {
+    await fixedDepositsStore.createFixedDeposit(fdForm.value)
+    success('Fixed deposit created successfully')
+    showAddFDModal.value = false
+    fdForm.value = {
+      name: '', bank: '', principal: 0, interestRate: 0,
+      startDate: new Date().toISOString().split('T')[0],
+      tenureMonths: 12, maturityDate: '', compounding: 'monthly'
+    }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error creating fixed deposit')
   }
 }
 

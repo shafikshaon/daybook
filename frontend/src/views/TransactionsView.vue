@@ -487,6 +487,7 @@ import { useAccountsStore } from '@/stores/accounts'
 import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 import { FileUpload } from '@/components'
 
 const transactionsStore = useTransactionsStore()
@@ -494,6 +495,7 @@ const accountsStore = useAccountsStore()
 const savingsGoalsStore = useSavingsGoalsStore()
 const fixedDepositsStore = useFixedDepositsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
@@ -617,8 +619,21 @@ const editTransaction = (transaction) => {
 }
 
 const confirmDelete = async (transaction) => {
-  if (confirm('Are you sure you want to delete this transaction?')) {
-    await transactionsStore.deleteTransaction(transaction.id)
+  const confirmed = await confirm({
+    title: 'Delete Transaction',
+    message: `Are you sure you want to delete this transaction? This action cannot be undone.`,
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await transactionsStore.deleteTransaction(transaction.id)
+      success('Transaction deleted successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error deleting transaction')
+    }
   }
 }
 
@@ -632,13 +647,15 @@ const saveTransaction = async () => {
 
     if (showEditModal.value) {
       await transactionsStore.updateTransaction(editingTransaction.value.id, transactionData)
+      success('Transaction updated successfully')
     } else {
       await transactionsStore.createTransaction(transactionData)
+      success('Transaction created successfully')
     }
 
     closeModal()
-  } catch (error) {
-    alert('Error saving transaction: ' + error.message)
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error saving transaction')
   }
 }
 
@@ -665,7 +682,7 @@ const saveTransfer = async () => {
 
     if (transferForm.value.destinationType === 'account') {
       if (transferForm.value.fromAccountId === transferForm.value.toAccountId) {
-        alert('Source and destination accounts must be different')
+        error('Source and destination accounts must be different')
         return
       }
 
@@ -676,9 +693,10 @@ const saveTransfer = async () => {
         transferForm.value.description,
         dateISO
       )
+      success('Funds transferred successfully')
     } else if (transferForm.value.destinationType === 'savings_goal') {
       if (!transferForm.value.savingsGoalId) {
-        alert('Please select a savings goal')
+        error('Please select a savings goal')
         return
       }
 
@@ -691,9 +709,10 @@ const saveTransfer = async () => {
       )
 
       await savingsGoalsStore.fetchSavingsGoals()
+      success('Funds transferred to savings goal successfully')
     } else if (transferForm.value.destinationType === 'fixed_deposit') {
       if (!transferForm.value.fdName || !transferForm.value.fdInterestRate || !transferForm.value.fdTenureMonths) {
-        alert('Please fill in all fixed deposit details')
+        error('Please fill in all fixed deposit details')
         return
       }
 
@@ -727,13 +746,14 @@ const saveTransfer = async () => {
       })
 
       await fixedDepositsStore.fetchFixedDeposits()
+      success('Fixed deposit created successfully')
     }
 
     closeTransferModal()
     // Refresh accounts to show updated balances
     await accountsStore.fetchAccounts()
-  } catch (error) {
-    alert('Error transferring funds: ' + error.message)
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error transferring funds')
   }
 }
 

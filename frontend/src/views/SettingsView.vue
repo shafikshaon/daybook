@@ -199,19 +199,26 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const settingsStore = useSettingsStore()
+const { info, success, error } = useNotification()
 
 const settings = computed(() => settingsStore.settings)
 const currencies = computed(() => settingsStore.currencies)
 
 const saveSettings = async () => {
-  await settingsStore.updateSettings(settings.value)
+  try {
+    await settingsStore.updateSettings(settings.value)
+    success('Settings saved successfully')
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error saving settings')
+  }
 }
 
 const exportData = () => {
   // Export data functionality would require backend API endpoint
-  alert('Export functionality will be available in a future update.')
+  info('Export functionality will be available in a future update.')
 }
 
 onMounted(async () => {

@@ -127,10 +127,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useBudgetsStore } from '@/stores/budgets'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const budgetsStore = useBudgetsStore()
 const transactionsStore = useTransactionsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
@@ -155,18 +157,37 @@ const editBudget = (budget) => {
 }
 
 const deleteBudget = async (id) => {
-  if (confirm('Delete this budget?')) {
-    await budgetsStore.deleteBudget(id)
+  const confirmed = await confirm({
+    title: 'Delete Budget',
+    message: 'Are you sure you want to delete this budget? This action cannot be undone.',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
+    try {
+      await budgetsStore.deleteBudget(id)
+      success('Budget deleted successfully')
+    } catch (err) {
+      error(err.response?.data?.message || err.message || 'Error deleting budget')
+    }
   }
 }
 
 const saveBudget = async () => {
-  if (showEditModal.value) {
-    await budgetsStore.updateBudget(editingBudget.value.id, form.value)
-  } else {
-    await budgetsStore.createBudget(form.value)
+  try {
+    if (showEditModal.value) {
+      await budgetsStore.updateBudget(editingBudget.value.id, form.value)
+      success('Budget updated successfully')
+    } else {
+      await budgetsStore.createBudget(form.value)
+      success('Budget created successfully')
+    }
+    closeModal()
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error saving budget')
   }
-  closeModal()
 }
 
 const closeModal = () => {

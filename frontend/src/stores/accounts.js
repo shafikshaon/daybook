@@ -5,24 +5,7 @@ import { useSettingsStore } from './settings'
 export const useAccountsStore = defineStore('accounts', {
   state: () => ({
     accounts: [],
-    accountTypes: [
-      // Liquid Assets
-      { value: 'cash', label: 'Cash', icon: '💵', category: 'liquid' },
-      { value: 'checking', label: 'Checking Account', icon: '🏦', category: 'liquid' },
-      { value: 'savings', label: 'Savings Account', icon: '💰', category: 'liquid' },
-      { value: 'money_market', label: 'Money Market Account', icon: '📊', category: 'liquid' },
-
-      // Credit Accounts
-      { value: 'credit_card', label: 'Credit Card', icon: '💳', category: 'credit' },
-      { value: 'line_of_credit', label: 'Line of Credit', icon: '💳', category: 'credit' },
-
-      // Investment Related (Cash in brokerage)
-      { value: 'brokerage_cash', label: 'Brokerage Cash', icon: '🏦', category: 'investment' },
-
-      // Other
-      { value: 'prepaid', label: 'Prepaid Card', icon: '💳', category: 'liquid' },
-      { value: 'other', label: 'Other', icon: '🏦', category: 'other' }
-    ]
+    accountTypes: []
   }),
 
   getters: {
@@ -66,6 +49,23 @@ export const useAccountsStore = defineStore('accounts', {
       } catch (error) {
         console.error('Error fetching accounts:', error)
         throw error
+      }
+    },
+
+    async fetchAccountTypes() {
+      try {
+        const response = await apiService.get('account-types')
+        // Transform API response to match the format expected by the UI
+        this.accountTypes = (response.data || []).map(type => ({
+          value: type.name.toLowerCase().replace(/\s+/g, '_'),
+          label: type.name,
+          icon: type.icon || '🏦',
+          id: type.id
+        }))
+      } catch (error) {
+        console.error('Error fetching account types:', error)
+        // Keep empty array if fetch fails
+        this.accountTypes = []
       }
     },
 
