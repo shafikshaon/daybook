@@ -14,7 +14,7 @@ type Account struct {
 	Type                     string         `gorm:"not null" json:"type" binding:"required"` // cash, checking, savings, credit_card, etc
 	InitialBalance           float64        `gorm:"default:0" json:"initialBalance"`         // Opening balance - never changes
 	Balance                  float64        `gorm:"default:0" json:"balance"`                // Current balance - updated with transactions
-	Currency                 string         `gorm:"default:'USD'" json:"currency"`
+	Currency                 string         `gorm:"default:'BDT'" json:"currency"`
 	Description              string         `json:"description"`
 	Institution              string         `json:"institution"`
 	AccountNumber            string         `json:"accountNumber"`

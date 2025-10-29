@@ -212,7 +212,7 @@ const form = ref({
   name: '',
   type: '',
   balance: 0,
-  currency: 'USD',
+  currency: 'BDT',
   description: ''
 })
 

@@ -91,11 +91,48 @@ func ListTransactions(c *gin.Context) {
 		return
 	}
 
+	// Enrich transactions with account/credit card names
+	type TransactionResponse struct {
+		models.Transaction
+		AccountName    *string `json:"accountName,omitempty"`
+		CreditCardName *string `json:"creditCardName,omitempty"`
+		ToAccountName  *string `json:"toAccountName,omitempty"`
+	}
+
+	enrichedTransactions := make([]TransactionResponse, len(transactions))
+	for i, txn := range transactions {
+		enrichedTransactions[i] = TransactionResponse{Transaction: txn}
+
+		// If transaction has a credit card, the accountId is actually the credit card ID
+		// So we need to fetch the credit card name as the account name
+		if txn.CreditCardID != nil {
+			var card models.CreditCard
+			if err := database.DB.Select("name").Where("id = ?", *txn.CreditCardID).First(&card).Error; err == nil {
+				enrichedTransactions[i].CreditCardName = &card.Name
+				enrichedTransactions[i].AccountName = &card.Name // Use credit card name as account name
+			}
+		} else {
+			// For regular transactions, fetch the account name
+			var account models.Account
+			if err := database.DB.Select("name").Where("id = ?", txn.AccountID).First(&account).Error; err == nil {
+				enrichedTransactions[i].AccountName = &account.Name
+			}
+		}
+
+		// For transfers, fetch the destination account name
+		if txn.ToAccountID != nil {
+			var toAccount models.Account
+			if err := database.DB.Select("name").Where("id = ?", *txn.ToAccountID).First(&toAccount).Error; err == nil {
+				enrichedTransactions[i].ToAccountName = &toAccount.Name
+			}
+		}
+	}
+
 	// Calculate pagination metadata
 	totalPages := int((totalCount + int64(limit) - 1) / int64(limit))
 
 	response := map[string]interface{}{
-		"transactions": transactions,
+		"transactions": enrichedTransactions,
 		"pagination": map[string]interface{}{
 			"currentPage": page,
 			"limit":       limit,
@@ -129,7 +166,41 @@ func GetTransaction(c *gin.Context) {
 		return
 	}
 
-	utilities.SuccessResponse(c, transaction, "Transaction retrieved successfully")
+	// Enrich transaction with account/credit card names
+	type TransactionResponse struct {
+		models.Transaction
+		AccountName    *string `json:"accountName,omitempty"`
+		CreditCardName *string `json:"creditCardName,omitempty"`
+		ToAccountName  *string `json:"toAccountName,omitempty"`
+	}
+
+	response := TransactionResponse{Transaction: transaction}
+
+	// If transaction has a credit card, the accountId is actually the credit card ID
+	// So we need to fetch the credit card name as the account name
+	if transaction.CreditCardID != nil {
+		var card models.CreditCard
+		if err := database.DB.Select("name").Where("id = ?", *transaction.CreditCardID).First(&card).Error; err == nil {
+			response.CreditCardName = &card.Name
+			response.AccountName = &card.Name // Use credit card name as account name
+		}
+	} else {
+		// For regular transactions, fetch the account name
+		var account models.Account
+		if err := database.DB.Select("name").Where("id = ?", transaction.AccountID).First(&account).Error; err == nil {
+			response.AccountName = &account.Name
+		}
+	}
+
+	// For transfers, fetch the destination account name
+	if transaction.ToAccountID != nil {
+		var toAccount models.Account
+		if err := database.DB.Select("name").Where("id = ?", *transaction.ToAccountID).First(&toAccount).Error; err == nil {
+			response.ToAccountName = &toAccount.Name
+		}
+	}
+
+	utilities.SuccessResponse(c, response, "Transaction retrieved successfully")
 }
 
 // CreateTransaction creates a new transaction

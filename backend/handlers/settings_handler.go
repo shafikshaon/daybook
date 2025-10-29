@@ -24,7 +24,7 @@ func GetSettings(c *gin.Context) {
 		// If settings don't exist, create default settings
 		settings = models.Settings{
 			UserID:         userID,
-			Currency:       "USD",
+			Currency:       "BDT",
 			DarkMode:       false,
 			DateFormat:     "MM/DD/YYYY",
 			FirstDayOfWeek: 0,

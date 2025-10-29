@@ -4,7 +4,7 @@ import apiService from '@/services/api-backend'
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     settings: {
-      currency: 'USD',
+      currency: 'BDT',
       darkMode: false,
       notifications: {
         push: true,

@@ -10,7 +10,7 @@ import (
 type Settings struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID         uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"userId"`
-	Currency       string         `gorm:"default:'USD'" json:"currency"`
+	Currency       string         `gorm:"default:'BDT'" json:"currency"`
 	DarkMode       bool           `gorm:"default:false" json:"darkMode"`
 	DateFormat     string         `gorm:"default:'MM/DD/YYYY'" json:"dateFormat"`
 	FirstDayOfWeek int            `gorm:"default:0" json:"firstDayOfWeek"` // 0 = Sunday

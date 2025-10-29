@@ -188,9 +188,10 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	tx := database.DB.Begin()
 
 	// Create entry in main transactions table so it appears in transaction list
-	// For credit card transactions, we don't have a specific account, so we use the credit card as the source
+	// For credit card transactions, we use the credit card ID as the account_id
 	mainTransaction := models.Transaction{
 		UserID:       userID,
+		AccountID:    cardID,    // Set account_id to credit card ID so transaction list can display card name
 		Type:         "expense", // Credit card purchases are expenses
 		Amount:       ccTransaction.Amount,
 		Date:         ccTransaction.Date,

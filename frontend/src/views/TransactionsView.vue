@@ -188,9 +188,9 @@
                     </td>
                     <td style="width: 20%">
                       <span v-if="transaction.type === 'transfer'">
-                        {{ getAccountName(transaction.accountId) }} → {{ getAccountName(transaction.toAccountId) }}
+                        {{ transaction.accountName || getAccountName(transaction.accountId) }} → {{ transaction.toAccountName || getAccountName(transaction.toAccountId) }}
                       </span>
-                      <span v-else>{{ getAccountName(transaction.accountId) }}</span>
+                      <span v-else>{{ transaction.accountName || getAccountName(transaction.accountId) }}</span>
                     </td>
                     <td style="width: 10%">
                       <span
@@ -272,9 +272,9 @@
                 </td>
                 <td>
                   <span v-if="transaction.type === 'transfer'">
-                    {{ getAccountName(transaction.accountId) }} → {{ getAccountName(transaction.toAccountId) }}
+                    {{ transaction.accountName || getAccountName(transaction.accountId) }} → {{ transaction.toAccountName || getAccountName(transaction.toAccountId) }}
                   </span>
-                  <span v-else>{{ getAccountName(transaction.accountId) }}</span>
+                  <span v-else>{{ transaction.accountName || getAccountName(transaction.accountId) }}</span>
                 </td>
                 <td>
                   <span

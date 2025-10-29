@@ -51,7 +51,7 @@ func Signup(c *gin.Context) {
 	// Create default settings for the user
 	settings := models.Settings{
 		UserID:         user.ID,
-		Currency:       "USD",
+		Currency:       "BDT",
 		DarkMode:       false,
 		DateFormat:     "MM/DD/YYYY",
 		FirstDayOfWeek: 0,
@@ -94,10 +94,11 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	// Find user by username
+	// Find user by username or email
 	var user models.User
-	if err := database.DB.Where("username = ?", req.Username).First(&user).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusUnauthorized, "Invalid username or password")
+	if err := database.DB.Where("LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)",
+		req.Username, req.Username).First(&user).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusUnauthorized, "Invalid credentials")
 		return
 	}
 
