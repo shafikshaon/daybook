@@ -39,12 +39,17 @@ func SetupRoutes(router *gin.Engine) {
 			accountRoutes := protected.Group("/accounts")
 			{
 				accountRoutes.GET("", handlers.ListAccounts)
-				accountRoutes.GET("/:id", handlers.GetAccount)
 				accountRoutes.POST("", handlers.CreateAccount)
+				accountRoutes.GET("/:id", handlers.GetAccount)
 				accountRoutes.PUT("/:id", handlers.UpdateAccount)
 				accountRoutes.DELETE("/:id", handlers.DeleteAccount)
 				// NOTE: Direct balance updates removed - balances are updated automatically by transactions
 				// See BALANCE_SYSTEM.md for dual-balance accounting system documentation
+
+				// Reconciliation routes for accounts (must use same wildcard name)
+				accountRoutes.GET("/:id/reconciliations", handlers.ListReconciliations)
+				accountRoutes.GET("/:id/reconciliations/stats", handlers.GetReconciliationStats)
+				accountRoutes.GET("/:id/unreconciled-transactions", handlers.GetUnreconciledTransactions)
 			}
 
 			// Account Type routes
@@ -187,6 +192,16 @@ func SetupRoutes(router *gin.Engine) {
 			{
 				settingsRoutes.GET("", handlers.GetSettings)
 				settingsRoutes.PUT("", handlers.UpdateSettings)
+			}
+
+			// Reconciliation routes
+			reconciliationRoutes := protected.Group("/reconciliations")
+			{
+				reconciliationRoutes.GET("", handlers.ListReconciliations)
+				reconciliationRoutes.GET("/:id", handlers.GetReconciliation)
+				reconciliationRoutes.POST("", handlers.CreateReconciliation)
+				reconciliationRoutes.PUT("/:id", handlers.UpdateReconciliation)
+				reconciliationRoutes.DELETE("/:id", handlers.DeleteReconciliation)
 			}
 
 			// File upload routes

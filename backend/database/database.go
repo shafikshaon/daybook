@@ -58,6 +58,8 @@ func InitDatabase(cfg *config.Config) error {
 		&models.SavingsContribution{},
 		&models.AutomatedRule{},
 		&models.FixedDeposit{},
+		&models.Reconciliation{},
+		&models.ReconciliationTransaction{},
 		&models.Settings{},
 	)
 	if err != nil {

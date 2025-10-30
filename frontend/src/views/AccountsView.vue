@@ -60,6 +60,7 @@
               <tr>
                 <th>Account Name</th>
                 <th>Type</th>
+                <th>Status</th>
                 <th>Description</th>
                 <th>Currency</th>
                 <th class="text-end">Balance</th>
@@ -75,6 +76,9 @@
                   <span class="badge bg-secondary text-uppercase">{{ account.type.replace('_', ' ') }}</span>
                 </td>
                 <td>
+                  {{account.active ? 'Active' : 'Inactive' }}
+                </td>
+                <td>
                   <span class="text-muted">{{ account.description || '-' }}</span>
                 </td>
                 <td>{{ account.currency || settingsStore.settings.currency }}</td>
@@ -86,13 +90,27 @@
                 </td>
                 <td class="text-center">
                   <button
-                    class="btn btn-sm btn-outline-primary me-1"
+                    class="btn btn-sm btn-info me-1"
+                    @click="showReconcileModal(account)"
+                    title="Reconcile Account"
+                  >
+                    Reconcile
+                  </button>
+                  <button
+                    class="btn btn-sm btn-secondary me-1"
+                    @click="showHistoryModal(account)"
+                    title="View Reconciliation History"
+                  >
+                    History
+                  </button>
+                  <button
+                    class="btn btn-sm btn-primary me-1"
                     @click="editAccount(account)"
                   >
                     Edit
                   </button>
                   <button
-                    class="btn btn-sm btn-outline-danger"
+                    class="btn btn-sm btn-danger"
                     @click="confirmDelete(account)"
                   >
                     Delete
@@ -191,6 +209,43 @@
         </div>
       </div>
     </div>
+
+    <!-- Reconciliation Modal -->
+    <ReconciliationModal
+      :show="showReconciliation"
+      :account="reconciliationAccount"
+      @close="closeReconciliationModal"
+      @reconciled="handleReconciled"
+    />
+
+    <!-- Reconciliation History Modal -->
+    <div
+      class="modal fade"
+      :class="{ 'show d-block': showHistory }"
+      tabindex="-1"
+      style="background-color: rgba(0,0,0,0.5);"
+      v-if="showHistory"
+    >
+      <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Reconciliation History - {{ reconciliationAccount?.name }}</h5>
+            <button type="button" class="btn-close" @click="showHistory = false"></button>
+          </div>
+          <div class="modal-body">
+            <ReconciliationHistory
+              v-if="reconciliationAccount"
+              :accountId="reconciliationAccount.id"
+              @refresh="refreshAccounts"
+              ref="historyComponent"
+            />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showHistory = false">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -199,6 +254,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
+import ReconciliationModal from '@/components/ReconciliationModal.vue'
+import ReconciliationHistory from '@/components/ReconciliationHistory.vue'
 
 const accountsStore = useAccountsStore()
 const settingsStore = useSettingsStore()
@@ -207,6 +264,10 @@ const { confirm, success, error } = useNotification()
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const editingAccount = ref(null)
+const showReconciliation = ref(false)
+const showHistory = ref(false)
+const reconciliationAccount = ref(null)
+const historyComponent = ref(null)
 
 const form = ref({
   name: '',
@@ -284,6 +345,32 @@ const closeModal = () => {
     currency: settingsStore.settings.currency,
     description: ''
   }
+}
+
+const showReconcileModal = (account) => {
+  reconciliationAccount.value = account
+  showReconciliation.value = true
+}
+
+const closeReconciliationModal = () => {
+  showReconciliation.value = false
+  reconciliationAccount.value = null
+}
+
+const showHistoryModal = (account) => {
+  reconciliationAccount.value = account
+  showHistory.value = true
+}
+
+const handleReconciled = async () => {
+  success('Account reconciled successfully')
+  await refreshAccounts()
+  // Close reconciliation modal - don't show history automatically
+  closeReconciliationModal()
+}
+
+const refreshAccounts = async () => {
+  await accountsStore.fetchAccounts()
 }
 
 onMounted(async () => {

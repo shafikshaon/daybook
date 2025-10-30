@@ -213,6 +213,58 @@ const apiService = {
     return response
   },
 
+  // Reconciliation
+  reconciliation: {
+    // Get all reconciliations (optionally filtered by accountId)
+    async getAll(accountId = null) {
+      const url = accountId ? `/reconciliations?accountId=${accountId}` : '/reconciliations'
+      const response = await api.get(url)
+      return response
+    },
+
+    // Get reconciliations for a specific account
+    async getByAccount(accountId) {
+      const response = await api.get(`/accounts/${accountId}/reconciliations`)
+      return response
+    },
+
+    // Get a single reconciliation by ID
+    async getById(reconciliationId) {
+      const response = await api.get(`/reconciliations/${reconciliationId}`)
+      return response
+    },
+
+    // Create a new reconciliation
+    async create(reconciliationData) {
+      const response = await api.post('/reconciliations', reconciliationData)
+      return response
+    },
+
+    // Update a reconciliation
+    async update(reconciliationId, reconciliationData) {
+      const response = await api.put(`/reconciliations/${reconciliationId}`, reconciliationData)
+      return response
+    },
+
+    // Delete a reconciliation
+    async delete(reconciliationId) {
+      const response = await api.delete(`/reconciliations/${reconciliationId}`)
+      return response
+    },
+
+    // Get unreconciled transactions for an account
+    async getUnreconciledTransactions(accountId) {
+      const response = await api.get(`/accounts/${accountId}/unreconciled-transactions`)
+      return response
+    },
+
+    // Get reconciliation statistics for an account
+    async getStats(accountId) {
+      const response = await api.get(`/accounts/${accountId}/reconciliations/stats`)
+      return response
+    }
+  },
+
   // Utility methods
   generateId() {
     // Note: Backend generates UUIDs, so this is not used with real backend
