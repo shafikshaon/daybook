@@ -49,27 +49,11 @@ func SeedDefaultAccountTypes(tx *gorm.DB, userID uuid.UUID) error {
 		},
 		{
 			UserID:      userID,
-			Name:        "Credit",
-			Icon:        "💳",
-			Description: "Credit accounts",
-			Active:      true,
-			SortOrder:   3,
-		},
-		{
-			UserID:      userID,
 			Name:        "Digital Wallet",
 			Icon:        "📱",
 			Description: "Digital payment services",
 			Active:      true,
-			SortOrder:   4,
-		},
-		{
-			UserID:      userID,
-			Name:        "Investment",
-			Icon:        "📈",
-			Description: "Investment and asset accounts",
-			Active:      true,
-			SortOrder:   5,
+			SortOrder:   3,
 		},
 		{
 			UserID:      userID,
@@ -77,7 +61,7 @@ func SeedDefaultAccountTypes(tx *gorm.DB, userID uuid.UUID) error {
 			Icon:        "📋",
 			Description: "Other account types",
 			Active:      true,
-			SortOrder:   6,
+			SortOrder:   4,
 		},
 	}
 

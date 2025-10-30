@@ -62,7 +62,7 @@
 
             <div class="mb-3">
               <small>Current Balance</small>
-              <h3 class="mb-2">{{ formatCurrency(card.currentBalance) }}</h3>
+              <h3 class="mb-2 text-white">{{ formatCurrency(card.currentBalance) }}</h3>
               <div class="progress" style="height: 6px; background-color: rgba(255,255,255,0.3);">
                 <div
                   class="progress-bar"
@@ -358,11 +358,11 @@
                 <div class="row">
                   <div class="col-md-6">
                     <small>Current Balance</small>
-                    <h4>{{ formatCurrency(selectedCard?.currentBalance) }}</h4>
+                    <h4 class="text-white">{{ formatCurrency(selectedCard?.currentBalance) }}</h4>
                   </div>
                   <div class="col-md-6">
                     <small>Available Credit</small>
-                    <h4>{{ formatCurrency((selectedCard?.creditLimit || 0) - (selectedCard?.currentBalance || 0)) }}</h4>
+                    <h4 class="text-white">{{ formatCurrency((selectedCard?.creditLimit || 0) - (selectedCard?.currentBalance || 0)) }}</h4>
                   </div>
                 </div>
               </div>

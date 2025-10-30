@@ -193,10 +193,6 @@ const handleSignup = async () => {
       throw new Error('Password must be at least 6 characters long')
     }
 
-    if (!form.value.acceptTerms) {
-      throw new Error('You must accept the terms and conditions')
-    }
-
     await authStore.signup({
       fullName: form.value.fullName,
       username: form.value.username,
