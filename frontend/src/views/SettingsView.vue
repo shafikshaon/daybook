@@ -40,9 +40,6 @@
               <label class="form-label">Language</label>
               <select class="form-select" v-model="settings.language" @change="saveSettings">
                 <option value="en">English</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-                <option value="de">German</option>
               </select>
             </div>
           </div>
@@ -157,37 +154,6 @@
                 </button>
                 <small class="text-muted d-block mt-2">Download all your data as JSON</small>
               </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- About -->
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">About</h5>
-          </div>
-          <div class="card-body">
-            <h5>Personal Expense Tracker</h5>
-            <p class="text-muted mb-3">Version 1.0.0</p>
-            <p>
-              A comprehensive personal finance management application built with Vue.js, Bootstrap, and Pinia.
-              All data is stored locally in your browser.
-            </p>
-            <div class="mt-3">
-              <h6>Features:</h6>
-              <ul>
-                <li>Multi-account management</li>
-                <li>Transaction tracking with categories and tags</li>
-                <li>Budget management and alerts</li>
-                <li>Credit card tracking</li>
-                <li>Investment portfolio</li>
-                <li>Fixed deposits and savings goals</li>
-                <li>Bill reminders</li>
-                <li>Analytics and reporting</li>
-              </ul>
             </div>
           </div>
         </div>

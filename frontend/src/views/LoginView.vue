@@ -24,7 +24,7 @@
                     class="form-control"
                     v-model="form.username"
                     required
-                    placeholder="Enter username"
+                    placeholder="Enter username or email"
                     autocomplete="username"
                   />
                 </div>
@@ -39,18 +39,6 @@
                     placeholder="Enter password"
                     autocomplete="current-password"
                   />
-                </div>
-
-                <div class="mb-3 form-check">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    id="rememberMe"
-                    v-model="form.rememberMe"
-                  />
-                  <label class="form-check-label" for="rememberMe">
-                    Remember me
-                  </label>
                 </div>
 
                 <button
@@ -98,8 +86,7 @@ const authStore = useAuthStore()
 
 const form = ref({
   username: '',
-  password: '',
-  rememberMe: false
+  password: ''
 })
 
 const loading = ref(false)

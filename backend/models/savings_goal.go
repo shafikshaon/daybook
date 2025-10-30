@@ -38,9 +38,9 @@ func (sg *SavingsGoal) BeforeCreate(tx *gorm.DB) error {
 }
 
 type SavingsContribution struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	GoalID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
+	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	GoalID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
 	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Date        time.Time      `gorm:"not null;index" json:"date"`
 	Notes       string         `json:"notes"`

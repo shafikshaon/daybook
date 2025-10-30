@@ -32,6 +32,8 @@
                 <tr>
                   <th>Icon</th>
                   <th>Name</th>
+                  <th>Order</th>
+                  <th>Status</th>
                   <th>Description</th>
                   <th class="text-center">Actions</th>
                 </tr>
@@ -43,6 +45,12 @@
                   </td>
                   <td>
                     <strong>{{ type.name }}</strong>
+                  </td>
+                  <td>
+                    <strong>{{ type.sortOrder }}</strong>
+                  </td>
+                  <td>
+                    <strong>{{ type.active ? 'Active' : 'Inactive' }}</strong>
                   </td>
                   <td>
                     <span class="text-muted">{{ type.description || '-' }}</span>
