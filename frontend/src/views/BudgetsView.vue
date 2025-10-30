@@ -67,7 +67,7 @@
 
             <div class="d-flex justify-content-between">
               <button class="btn btn-sm btn-outline-primary" @click="editBudget(budget)">Edit</button>
-              <button class="btn btn-sm btn-outline-danger" @click="deleteBudget(budget.id)">Delete</button>
+              <button class="btn btn-sm btn-danger" @click="deleteBudget(budget.id)">Delete</button>
             </div>
           </div>
         </div>

@@ -169,7 +169,7 @@
                   <span class="fw-bold">{{ fixedDepositsStore.getDaysUntilMaturity(fd.id) }} days</span>
                 </div>
               </div>
-              <button v-if="!fd.withdrawn" class="btn btn-sm btn-outline-danger" @click="withdrawFD(fd.id)">
+              <button v-if="!fd.withdrawn" class="btn btn-sm btn-danger" @click="withdrawFD(fd.id)">
                 Withdraw
               </button>
               <span v-else class="badge bg-secondary">Withdrawn</span>

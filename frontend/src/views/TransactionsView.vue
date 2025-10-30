@@ -224,13 +224,13 @@
                     </td>
                     <td class="text-center" style="width: 5%">
                       <button
-                        class="btn btn-sm btn-outline-primary me-1"
+                        class="btn btn-sm btn-primary me-1"
                         @click="editTransaction(transaction)"
                       >
                         Edit
                       </button>
                       <button
-                        class="btn btn-sm btn-outline-danger"
+                        class="btn btn-sm btn-danger"
                         @click="confirmDelete(transaction)"
                       >
                         Delete
@@ -308,13 +308,13 @@
                 </td>
                 <td class="text-center">
                   <button
-                    class="btn btn-sm btn-outline-primary me-1"
+                    class="btn btn-sm btn-primary me-1"
                     @click="editTransaction(transaction)"
                   >
                     Edit
                   </button>
                   <button
-                    class="btn btn-sm btn-outline-danger"
+                    class="btn btn-sm btn-danger"
                     @click="confirmDelete(transaction)"
                   >
                     Delete

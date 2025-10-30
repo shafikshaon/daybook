@@ -63,7 +63,7 @@
               </div>
             </div>
             <div class="d-flex gap-2 align-items-center">
-              <button v-if="!fd.withdrawn" class="btn btn-sm btn-outline-danger" @click="withdrawFD(fd.id)">
+              <button v-if="!fd.withdrawn" class="btn btn-sm btn-danger" @click="withdrawFD(fd.id)">
                 Withdraw
               </button>
               <span v-else class="badge bg-secondary">Withdrawn</span>

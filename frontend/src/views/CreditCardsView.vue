@@ -396,7 +396,7 @@
                       {{ transaction.type === 'payment' || transaction.type === 'refund' ? '-' : '+' }}{{ formatCurrency(transaction.amount) }}
                     </strong>
                     <button
-                      class="btn btn-sm btn-outline-danger mt-2"
+                      class="btn btn-sm btn-danger mt-2"
                       @click="deleteCardTransaction(transaction.id)"
                       v-if="transaction.type !== 'payment'"
                     >

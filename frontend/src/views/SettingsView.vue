@@ -149,7 +149,7 @@
           <div class="card-body">
             <div class="row g-3">
               <div class="col-12 col-md-4">
-                <button class="btn btn-outline-primary w-100" @click="exportData">
+                <button class="btn btn-primary w-100" @click="exportData">
                   📤 Export Data
                 </button>
                 <small class="text-muted d-block mt-2">Download all your data as JSON</small>

@@ -93,7 +93,7 @@
             </td>
             <td class="text-center">
               <button
-                class="btn btn-sm btn-outline-primary me-1"
+                class="btn btn-sm btn-primary me-1"
                 @click="viewDetails(reconciliation)"
                 title="View Details"
               >
@@ -103,7 +103,7 @@
                 </svg>
               </button>
               <button
-                class="btn btn-sm btn-outline-danger"
+                class="btn btn-sm btn-danger"
                 @click="deleteReconciliation(reconciliation)"
                 title="Delete"
               >
