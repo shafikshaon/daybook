@@ -33,35 +33,20 @@ fi
 
 log_info "Deploying backend application..."
 
-# Get the project root directory (2 levels up from scripts)
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-BACKEND_SOURCE="${PROJECT_ROOT}/backend"
-
-if [ ! -d "$BACKEND_SOURCE" ]; then
-    log_error "Backend source directory not found: $BACKEND_SOURCE"
+# Verify backend directory exists (should be cloned from git)
+if [ ! -d "$BACKEND_DIR" ]; then
+    log_error "Backend directory not found: $BACKEND_DIR"
+    log_error "Please clone the repository to $BACKEND_DIR first"
     exit 1
 fi
 
-log_info "Backend source: $BACKEND_SOURCE"
-log_info "Backend destination: $BACKEND_DIR"
+log_info "Backend directory: $BACKEND_DIR"
 
 # Stop the service if it's running
 if systemctl is-active --quiet daybook-backend; then
     log_info "Stopping daybook-backend service..."
     sudo systemctl stop daybook-backend
 fi
-
-# Copy backend files
-log_info "Copying backend files..."
-sudo rsync -av --delete \
-    --exclude='.git' \
-    --exclude='.idea' \
-    --exclude='.claude' \
-    --exclude='node_modules' \
-    --exclude='*.log' \
-    --exclude='.env' \
-    --exclude='daybook-backend' \
-    "${BACKEND_SOURCE}/" "${BACKEND_DIR}/"
 
 # Ensure uploads directory exists and has correct permissions
 sudo mkdir -p "${BACKEND_DIR}/uploads"

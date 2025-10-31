@@ -33,45 +33,20 @@ fi
 
 log_info "Deploying frontend application..."
 
-# Get the project root directory (2 levels up from scripts)
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-FRONTEND_SOURCE="${PROJECT_ROOT}/frontend"
-
-if [ ! -d "$FRONTEND_SOURCE" ]; then
-    log_error "Frontend source directory not found: $FRONTEND_SOURCE"
+# Verify frontend directory exists (should be cloned from git)
+if [ ! -d "$FRONTEND_DIR" ]; then
+    log_error "Frontend directory not found: $FRONTEND_DIR"
+    log_error "Please clone the repository to $FRONTEND_DIR first"
     exit 1
 fi
 
-log_info "Frontend source: $FRONTEND_SOURCE"
-log_info "Frontend destination: $FRONTEND_DIR"
+log_info "Frontend directory: $FRONTEND_DIR"
 
-# Create a temporary directory for building
-TEMP_BUILD_DIR="/tmp/daybook-frontend-build"
-rm -rf "$TEMP_BUILD_DIR"
-mkdir -p "$TEMP_BUILD_DIR"
-
-# Copy frontend files to temp directory
-log_info "Copying frontend files to temporary build directory..."
-rsync -av \
-    --exclude='.git' \
-    --exclude='.idea' \
-    --exclude='.claude' \
-    --exclude='node_modules' \
-    --exclude='dist' \
-    --exclude='*.log' \
-    "${FRONTEND_SOURCE}/" "${TEMP_BUILD_DIR}/"
-
-# Copy the .env file if it exists in the destination
-if [ -f "${FRONTEND_DIR}/.env" ]; then
-    log_info "Using existing .env file"
-    cp "${FRONTEND_DIR}/.env" "${TEMP_BUILD_DIR}/.env"
-elif [ -f "${FRONTEND_DIR}/.env.production" ]; then
-    log_info "Using existing .env.production file"
-    cp "${FRONTEND_DIR}/.env.production" "${TEMP_BUILD_DIR}/.env"
-else
-    log_warn "No .env file found, using template"
-    if [ -f "${TEMP_BUILD_DIR}/.env.example" ]; then
-        cp "${TEMP_BUILD_DIR}/.env.example" "${TEMP_BUILD_DIR}/.env"
+# Setup .env file if needed
+if [ ! -f "${FRONTEND_DIR}/.env" ] && [ ! -f "${FRONTEND_DIR}/.env.production" ]; then
+    log_warn "No .env file found, creating from template"
+    if [ -f "${FRONTEND_DIR}/.env.example" ]; then
+        cp "${FRONTEND_DIR}/.env.example" "${FRONTEND_DIR}/.env"
 
         # Update VITE_API_URL
         if [[ "$DOMAIN_OR_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -79,12 +54,14 @@ else
         else
             API_URL="http://${DOMAIN_OR_IP}/api/v1"
         fi
-        sed -i "s|^VITE_API_URL=.*|VITE_API_URL=${API_URL}|" "${TEMP_BUILD_DIR}/.env"
+        sed -i "s|^VITE_API_URL=.*|VITE_API_URL=${API_URL}|" "${FRONTEND_DIR}/.env"
     fi
+else
+    log_info "Using existing .env file"
 fi
 
 # Build the frontend
-cd "$TEMP_BUILD_DIR"
+cd "$FRONTEND_DIR"
 
 log_info "Installing npm dependencies..."
 npm ci --production=false
@@ -93,22 +70,12 @@ log_info "Building frontend application..."
 npm run build
 
 # Verify dist directory was created
-if [ ! -d "${TEMP_BUILD_DIR}/dist" ]; then
+if [ ! -d "${FRONTEND_DIR}/dist" ]; then
     log_error "Build failed: dist directory not found"
     exit 1
 fi
 
 log_info "Frontend build completed successfully"
-
-# Copy dist to destination
-log_info "Deploying built files..."
-sudo mkdir -p "${FRONTEND_DIR}/dist"
-sudo rsync -av --delete "${TEMP_BUILD_DIR}/dist/" "${FRONTEND_DIR}/dist/"
-
-# Copy .env file to destination
-if [ -f "${TEMP_BUILD_DIR}/.env" ]; then
-    sudo cp "${TEMP_BUILD_DIR}/.env" "${FRONTEND_DIR}/.env"
-fi
 
 # Set ownership
 log_info "Setting file ownership..."
@@ -116,10 +83,6 @@ sudo chown -R "$APP_USER:$APP_GROUP" "$FRONTEND_DIR"
 
 # Set permissions
 sudo chmod -R 755 "${FRONTEND_DIR}/dist"
-
-# Clean up temp directory
-log_info "Cleaning up temporary files..."
-rm -rf "$TEMP_BUILD_DIR"
 
 # Test Nginx configuration
 log_info "Testing Nginx configuration..."

@@ -49,11 +49,15 @@ ssh ubuntu@13.228.221.238
 
 ### Step 3: Clone Repository on Server
 
+**Important:** The deployment scripts expect your code to be cloned from git on the server. They do **not** copy files from your local machine. All code must be in the `/opt/daybook` directory (or your configured `APP_DIR`).
+
 Clone the repository to the server (first time only):
 
 ```bash
-# Clone the repository
-cd ~
+# Clone the repository to the deployment directory
+sudo mkdir -p /opt/daybook
+sudo chown $USER:$USER /opt/daybook
+cd /opt
 git clone YOUR_REPOSITORY_URL daybook
 cd daybook
 ```
@@ -61,7 +65,7 @@ cd daybook
 For subsequent deployments, just pull the latest changes:
 
 ```bash
-cd ~/daybook
+cd /opt/daybook
 git pull origin master
 ```
 
@@ -127,31 +131,36 @@ For subsequent updates after the initial setup:
 ### Option 1: Quick Update (Recommended)
 
 ```bash
-cd ~/daybook
+# Pull latest code from git
+cd /opt/daybook
 git pull origin master
-cd deploy
 
-# Update both backend and frontend (skips infrastructure setup)
+# Run deployment
+cd deploy
 sudo ./deploy.sh --skip-deps --skip-db
 ```
 
 ### Option 2: Update Backend Only
 
 ```bash
-cd ~/daybook
+# Pull latest code from git
+cd /opt/daybook
 git pull origin master
-cd deploy
 
+# Deploy backend only
+cd deploy
 sudo ./scripts/update_backend.sh
 ```
 
 ### Option 3: Update Frontend Only
 
 ```bash
-cd ~/daybook
+# Pull latest code from git
+cd /opt/daybook
 git pull origin master
-cd deploy
 
+# Deploy frontend only
+cd deploy
 sudo ./scripts/update_frontend.sh
 ```
 
@@ -267,7 +276,7 @@ Installs:
 ```bash
 ./scripts/06_deploy_backend.sh
 ```
-- Copies backend source
+- Verifies backend source (from git clone)
 - Builds Go application
 - Creates systemd service
 - Starts backend service
@@ -276,10 +285,10 @@ Installs:
 ```bash
 ./scripts/07_deploy_frontend.sh
 ```
-- Copies frontend source
+- Verifies frontend source (from git clone)
 - Installs npm dependencies
 - Builds production bundle
-- Deploys to Nginx
+- Serves via Nginx
 
 #### 8. Run Migrations
 ```bash
@@ -539,7 +548,7 @@ cat /tmp/go-download.log
 
 5. **If build failed, re-run just the backend deployment:**
 ```bash
-cd ~/projects/daybook/deploy
+cd /opt/daybook/deploy
 sudo ./scripts/06_deploy_backend.sh
 ```
 
@@ -552,7 +561,7 @@ sudo apt-get install screen -y
 screen -S deploy
 
 # Run deployment
-cd ~/projects/daybook/deploy
+cd /opt/daybook/deploy
 sudo ./deploy.sh --fresh
 
 # Detach: Press Ctrl+A then D
@@ -658,7 +667,7 @@ To automate deployments from CI/CD:
       cd /opt/daybook &&
       git pull origin master &&
       cd deploy &&
-      ./deploy.sh --skip-deps --skip-db
+      sudo ./deploy.sh --skip-deps --skip-db
     "
 ```
 
@@ -666,17 +675,30 @@ To automate deployments from CI/CD:
 
 To rollback to a previous version:
 
-1. Restore database backup:
+1. Restore database backup (if needed):
 ```bash
-./scripts/restore_database.sh /opt/daybook/backups/daybook_backup_TIMESTAMP.sql.gz
+cd /opt/daybook/deploy
+sudo ./scripts/restore_database.sh /opt/daybook/backups/daybook_backup_TIMESTAMP.sql.gz
 ```
 
-2. Deploy previous code version:
+2. Checkout previous code version from git:
 ```bash
 cd /opt/daybook
-git checkout <previous-commit>
+git log --oneline -n 10  # Find the commit you want
+git checkout <previous-commit-hash>
+```
+
+3. Redeploy:
+```bash
 cd deploy
-./deploy.sh --skip-deps --skip-db
+sudo ./deploy.sh --skip-deps --skip-db
+```
+
+4. Return to latest (when ready):
+```bash
+cd /opt/daybook
+git checkout master
+git pull origin master
 ```
 
 ## Support
