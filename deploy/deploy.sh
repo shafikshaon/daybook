@@ -1,259 +1,336 @@
 #!/bin/bash
 set -e
 
-# Color codes for output
+# ============================================================================
+# Daybook Simple Deployment Script
+# ============================================================================
+# Just run: ./deploy.sh
+# That's it!
+# ============================================================================
+
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Logging functions
-log_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_step() { echo -e "\n${BLUE}==== $1 ====${NC}\n"; }
 
-log_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+# ============================================================================
+# CONFIGURATION - Edit these values
+# ============================================================================
 
-log_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
+DOMAIN="daybook.shafik.xyz"              # Your domain or server IP
+DB_PASSWORD="change_me_$(openssl rand -hex 16)"  # Auto-generated secure password
+APP_PORT=8080                            # Backend port
 
-log_step() {
-    echo -e "\n${BLUE}========================================${NC}"
-    echo -e "${BLUE}$1${NC}"
-    echo -e "${BLUE}========================================${NC}\n"
-}
+# ============================================================================
+# DO NOT EDIT BELOW THIS LINE
+# ============================================================================
 
-# Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPTS_DIR="${SCRIPT_DIR}/scripts"
-CONFIG_FILE="${SCRIPT_DIR}/config/deploy.conf"
-
-# Display banner
-cat << "EOF"
-╔═══════════════════════════════════════════════════════╗
-║                                                       ║
-║           Daybook Application Deployment             ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
-EOF
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then
-    log_error "Do not run this script as root. It will use sudo when needed."
+    log_error "Do not run as root. Script will use sudo when needed."
     exit 1
 fi
 
-# Check if config file exists
-if [ ! -f "$CONFIG_FILE" ]; then
-    log_error "Configuration file not found: $CONFIG_FILE"
-    log_error "Please copy deploy/config/deploy.conf and configure it"
-    exit 1
+log_step "Starting Daybook Deployment"
+
+# ============================================================================
+# Step 1: Install System Dependencies
+# ============================================================================
+
+log_step "Installing System Dependencies"
+
+# Update system
+log_info "Updating system packages..."
+sudo apt-get update -qq
+
+# Install basic tools
+log_info "Installing basic tools..."
+sudo apt-get install -y curl wget git build-essential openssl postgresql redis-server nginx
+
+# Install Go
+log_info "Installing Go 1.23..."
+GO_VERSION="1.23.3"
+if ! command -v go &> /dev/null || ! go version | grep -q "go1.23"; then
+    wget -q https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+    sudo rm -rf /usr/local/go
+    sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
+    rm go${GO_VERSION}.linux-amd64.tar.gz
+    export PATH=$PATH:/usr/local/go/bin
+    echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh
 fi
+log_info "Go version: $(go version)"
 
-# Source configuration
-source "$CONFIG_FILE"
-
-# Validate configuration
-log_info "Validating configuration..."
-if [ "$DOMAIN_OR_IP" == "YOUR_DOMAIN_OR_IP" ]; then
-    log_error "Please configure DOMAIN_OR_IP in $CONFIG_FILE"
-    exit 1
+# Install Node.js
+log_info "Installing Node.js 22..."
+if ! command -v node &> /dev/null || ! node --version | grep -q "v22"; then
+    curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    sudo apt-get install -y nodejs
 fi
+log_info "Node version: $(node --version)"
+log_info "NPM version: $(npm --version)"
 
-# Display configuration
-log_info "Deployment Configuration:"
-echo "  App Name: $APP_NAME"
-echo "  Source Directory: $SOURCE_DIR (git repository)"
-echo "  Build Directory: $BUILD_DIR (temporary)"
-echo "  App Directory: $APP_DIR (deployment)"
-echo "  Domain/IP: $DOMAIN_OR_IP"
-echo "  Backend Port: $BACKEND_PORT"
-echo "  Database: $DB_NAME"
-echo ""
+# ============================================================================
+# Step 2: Setup PostgreSQL Database
+# ============================================================================
 
-# Verify source directory exists
-if [ ! -d "$SOURCE_DIR" ]; then
-    log_error "Source directory not found: $SOURCE_DIR"
-    log_error "Please ensure the repository is cloned at $SOURCE_DIR"
-    exit 1
-fi
+log_step "Setting up PostgreSQL"
 
-# Parse command line arguments
-FRESH_INSTALL=false
-SKIP_DEPS=false
-SKIP_DB=false
-SKIP_BACKEND=false
-SKIP_FRONTEND=false
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --fresh)
-            FRESH_INSTALL=true
-            shift
-            ;;
-        --skip-deps)
-            SKIP_DEPS=true
-            shift
-            ;;
-        --skip-db)
-            SKIP_DB=true
-            shift
-            ;;
-        --skip-backend)
-            SKIP_BACKEND=true
-            shift
-            ;;
-        --skip-frontend)
-            SKIP_FRONTEND=true
-            shift
-            ;;
-        --help)
-            echo "Usage: $0 [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  --fresh          Fresh installation (install all dependencies)"
-            echo "  --skip-deps      Skip dependency installation"
-            echo "  --skip-db        Skip database setup"
-            echo "  --skip-backend   Skip backend deployment"
-            echo "  --skip-frontend  Skip frontend deployment"
-            echo "  --help           Show this help message"
-            exit 0
-            ;;
-        *)
-            log_error "Unknown option: $1"
-            log_info "Use --help for usage information"
-            exit 1
-            ;;
-    esac
-done
+# Create database and user
+log_info "Creating database and user..."
+sudo -u postgres psql -c "CREATE DATABASE daybook_prod;" 2>/dev/null || log_warn "Database already exists"
+sudo -u postgres psql -c "CREATE USER daybook_user WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || log_warn "User already exists"
+sudo -u postgres psql -c "ALTER DATABASE daybook_prod OWNER TO daybook_user;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE daybook_prod TO daybook_user;"
 
-# Confirm deployment
-echo ""
-read -p "Do you want to proceed with deployment? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    log_info "Deployment cancelled"
-    exit 0
-fi
+log_info "Database setup complete"
 
-# Start deployment
-START_TIME=$(date +%s)
-
-# Step 1: Install dependencies
-if [ "$FRESH_INSTALL" = true ] || [ "$SKIP_DEPS" = false ]; then
-    log_step "Step 1: Installing System Dependencies"
-    bash "${SCRIPTS_DIR}/01_install_dependencies.sh"
-else
-    log_warn "Skipping dependency installation"
-fi
-
-# Step 2: Setup PostgreSQL
-if [ "$FRESH_INSTALL" = true ] || [ "$SKIP_DB" = false ]; then
-    log_step "Step 2: Setting up PostgreSQL"
-    bash "${SCRIPTS_DIR}/02_setup_postgres.sh"
-else
-    log_warn "Skipping PostgreSQL setup"
-fi
-
+# ============================================================================
 # Step 3: Setup Redis
-if [ "$FRESH_INSTALL" = true ] || [ "$SKIP_DB" = false ]; then
-    log_step "Step 3: Setting up Redis"
-    bash "${SCRIPTS_DIR}/03_setup_redis.sh"
-else
-    log_warn "Skipping Redis setup"
-fi
+# ============================================================================
 
-# Step 4: Setup Nginx
-if [ "$FRESH_INSTALL" = true ]; then
-    log_step "Step 4: Setting up Nginx"
-    bash "${SCRIPTS_DIR}/04_setup_nginx.sh"
-fi
+log_step "Setting up Redis"
 
-# Step 5: Setup environment
-log_step "Step 5: Setting up Application Environment"
-bash "${SCRIPTS_DIR}/05_setup_environment.sh"
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+log_info "Redis is running"
 
-# Step 6: Deploy backend
-if [ "$SKIP_BACKEND" = false ]; then
-    log_step "Step 6: Deploying Backend"
-    bash "${SCRIPTS_DIR}/06_deploy_backend.sh"
-else
-    log_warn "Skipping backend deployment"
-fi
+# ============================================================================
+# Step 4: Build Backend
+# ============================================================================
 
-# Step 7: Run migrations
-if [ "$SKIP_DB" = false ]; then
-    log_step "Step 7: Running Database Migrations"
-    bash "${SCRIPTS_DIR}/08_run_migrations.sh"
-else
-    log_warn "Skipping database migrations"
-fi
+log_step "Building Backend"
 
-# Step 8: Deploy frontend
-if [ "$SKIP_FRONTEND" = false ]; then
-    log_step "Step 8: Deploying Frontend"
-    bash "${SCRIPTS_DIR}/07_deploy_frontend.sh"
-else
-    log_warn "Skipping frontend deployment"
-fi
+cd "$PROJECT_ROOT/backend"
 
-# Restart Nginx if needed
-if [ "$FRESH_INSTALL" = false ]; then
-    log_step "Reloading Nginx"
-    bash "${SCRIPTS_DIR}/04_setup_nginx.sh"
-fi
+# Create .env file
+log_info "Creating backend .env file..."
+cat > .env <<EOF
+# Server Configuration
+SERVER_HOST=0.0.0.0
+SERVER_PORT=$APP_PORT
+ENVIRONMENT=production
 
-# Calculate deployment time
-END_TIME=$(date +%s)
-DURATION=$((END_TIME - START_TIME))
-MINUTES=$((DURATION / 60))
-SECONDS=$((DURATION % 60))
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=daybook_prod
+DB_USER=daybook_user
+DB_PASSWORD=$DB_PASSWORD
+DB_SSLMODE=disable
 
-# Display success message
-cat << EOF
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
 
-╔═══════════════════════════════════════════════════════╗
-║                                                       ║
-║          Deployment Completed Successfully!          ║
-║                                                       ║
-╚═══════════════════════════════════════════════════════╝
+# JWT Configuration
+JWT_SECRET=$(openssl rand -base64 64 | tr -d '\n')
+JWT_EXPIRATION=24h
 
-Deployment took: ${MINUTES}m ${SECONDS}s
+# CORS Configuration
+CORS_ALLOWED_ORIGINS=http://$DOMAIN,http://localhost:3000
 
-Application URLs:
-  Frontend: http://${DOMAIN_OR_IP}
-  Backend API: http://${DOMAIN_OR_IP}/api/v1
-  Health Check: http://${DOMAIN_OR_IP}/health
+# Rate Limiting
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_DURATION=1m
 
-Useful Commands:
-  Backend Service:
-    - Status: sudo systemctl status daybook-backend
-    - Logs: sudo journalctl -u daybook-backend -f
-    - Restart: sudo systemctl restart daybook-backend
-
-  Nginx:
-    - Status: sudo systemctl status nginx
-    - Logs: sudo tail -f /var/log/nginx/daybook-*.log
-    - Reload: sudo systemctl reload nginx
-
-  Database:
-    - Connect: PGPASSWORD=${DB_PASSWORD} psql -h localhost -U ${DB_USER} -d ${DB_NAME}
-
-  Log Files:
-    - Backend: ${LOG_DIR}/backend.log
-    - Nginx Access: /var/log/nginx/daybook-access.log
-    - Nginx Error: /var/log/nginx/daybook-error.log
-
-Next Steps:
-  1. Test the application by visiting http://${DOMAIN_OR_IP}
-  2. Configure SSL/TLS for HTTPS (recommended for production)
-  3. Set up backups for database and uploads
-  4. Configure monitoring and alerts
-
+# File Upload
+MAX_UPLOAD_SIZE=10485760
+UPLOAD_PATH=./uploads
 EOF
+
+chmod 600 .env
+
+# Build backend
+log_info "Downloading Go dependencies..."
+go mod download
+
+log_info "Building backend..."
+CGO_ENABLED=0 go build -ldflags="-s -w" -o daybook-backend main.go
+
+if [ ! -f "daybook-backend" ]; then
+    log_error "Backend build failed!"
+    exit 1
+fi
+
+chmod +x daybook-backend
+mkdir -p uploads
+
+log_info "Backend built successfully"
+
+# ============================================================================
+# Step 5: Create Backend Service
+# ============================================================================
+
+log_step "Setting up Backend Service"
+
+sudo tee /etc/systemd/system/daybook-backend.service > /dev/null <<EOF
+[Unit]
+Description=Daybook Backend Service
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$PROJECT_ROOT/backend
+ExecStart=$PROJECT_ROOT/backend/daybook-backend
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable daybook-backend
+sudo systemctl restart daybook-backend
+
+sleep 2
+
+if ! systemctl is-active --quiet daybook-backend; then
+    log_error "Backend service failed to start!"
+    log_error "Check logs: sudo journalctl -u daybook-backend -n 50"
+    exit 1
+fi
+
+log_info "Backend service is running"
+
+# ============================================================================
+# Step 6: Build Frontend
+# ============================================================================
+
+log_step "Building Frontend"
+
+cd "$PROJECT_ROOT/frontend"
+
+# Create .env file
+log_info "Creating frontend .env file..."
+cat > .env <<EOF
+VITE_API_URL=http://$DOMAIN/api/v1
+EOF
+
+# Install dependencies and build
+log_info "Installing npm dependencies..."
+npm install
+
+log_info "Building frontend..."
+npm run build
+
+if [ ! -d "dist" ]; then
+    log_error "Frontend build failed!"
+    exit 1
+fi
+
+log_info "Frontend built successfully"
+
+# ============================================================================
+# Step 7: Setup Nginx
+# ============================================================================
+
+log_step "Setting up Nginx"
+
+sudo tee /etc/nginx/sites-available/daybook > /dev/null <<EOF
+upstream backend {
+    server 127.0.0.1:$APP_PORT;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name $DOMAIN;
+
+    client_max_body_size 10M;
+
+    # Frontend
+    location / {
+        root $PROJECT_ROOT/frontend/dist;
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Backend API
+    location /api/ {
+        proxy_pass http://backend;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Connection "";
+    }
+
+    # Health check
+    location /health {
+        proxy_pass http://backend;
+        access_log off;
+    }
+
+    # Uploads
+    location /uploads/ {
+        alias $PROJECT_ROOT/backend/uploads/;
+    }
+}
+EOF
+
+# Enable site
+sudo ln -sf /etc/nginx/sites-available/daybook /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+
+# Test and reload nginx
+log_info "Testing Nginx configuration..."
+if sudo nginx -t; then
+    sudo systemctl restart nginx
+    sudo systemctl enable nginx
+    log_info "Nginx configured and running"
+else
+    log_error "Nginx configuration failed!"
+    exit 1
+fi
+
+# ============================================================================
+# DONE!
+# ============================================================================
+
+log_step "Deployment Complete!"
+
+echo ""
+echo "=========================================="
+echo "  ✅ Daybook is now deployed!"
+echo "=========================================="
+echo ""
+echo "🌐 Frontend: http://$DOMAIN"
+echo "🔌 Backend API: http://$DOMAIN/api/v1"
+echo "❤️  Health: http://$DOMAIN/health"
+echo ""
+echo "📊 Services:"
+echo "   Backend: sudo systemctl status daybook-backend"
+echo "   Logs: sudo journalctl -u daybook-backend -f"
+echo ""
+echo "🔒 Database:"
+echo "   Name: daybook_prod"
+echo "   User: daybook_user"
+echo "   Password: $DB_PASSWORD"
+echo "   (Password saved in: $PROJECT_ROOT/backend/.env)"
+echo ""
+echo "🔄 To update:"
+echo "   cd $PROJECT_ROOT"
+echo "   git pull"
+echo "   cd deploy"
+echo "   ./deploy.sh"
+echo ""
+echo "=========================================="
 
 exit 0
