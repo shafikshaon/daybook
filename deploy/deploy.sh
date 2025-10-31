@@ -25,7 +25,7 @@ log_step() { echo -e "\n${BLUE}==== $1 ====${NC}\n"; }
 # ============================================================================
 
 DOMAIN="daybook.shafik.xyz"              # Your domain or server IP
-DB_PASSWORD="change_me_$(openssl rand -hex 16)"  # Auto-generated secure password
+DB_PASSWORD="VtPuqR1er16VFI5F5CPrYtlX4bmsBavZ"  # Auto-generated secure password
 APP_PORT=8080                            # Backend port
 
 # ============================================================================
