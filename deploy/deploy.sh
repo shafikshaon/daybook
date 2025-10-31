@@ -112,9 +112,8 @@ ENVIRONMENT=production
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=daybook_prod
-DB_USER=daybook_user
-DB_PASSWORD=$DB_PASSWORD
+DB_NAME=daybook
+DB_USER=postgresDB_PASSWORD=$DB_PASSWORD
 DB_SSLMODE=disable
 
 # Redis Configuration
