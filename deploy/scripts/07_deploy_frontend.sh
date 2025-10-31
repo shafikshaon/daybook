@@ -64,7 +64,13 @@ fi
 cd "$FRONTEND_DIR"
 
 log_info "Installing npm dependencies..."
-npm ci --production=false
+if [ -f "package-lock.json" ]; then
+    npm ci --production=false
+else
+    log_warn "No package-lock.json found, running npm install (not recommended for production)"
+    npm install --production=false
+    log_warn "Consider committing the generated package-lock.json to your repository"
+fi
 
 log_info "Building frontend application..."
 npm run build

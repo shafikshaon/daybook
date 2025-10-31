@@ -42,64 +42,97 @@ fi
 
 log_info "Backend directory: $BACKEND_DIR"
 
-# Stop the service if it's running
-if systemctl is-active --quiet daybook-backend; then
-    log_info "Stopping daybook-backend service..."
-    sudo systemctl stop daybook-backend
-fi
-
-# Ensure uploads directory exists and has correct permissions
-sudo mkdir -p "${BACKEND_DIR}/uploads"
-
-# Build the backend
-log_info "Building backend application..."
-cd "$BACKEND_DIR"
-
 # Set Go environment for the app user
 APP_USER_HOME=$(eval echo ~$APP_USER)
 GOPATH_DIR="${APP_USER_HOME}/go"
+GOCACHE_DIR="${GOPATH_DIR}/cache"
 
 # Create Go cache directory for app user
-sudo mkdir -p "${GOPATH_DIR}"
+sudo mkdir -p "${GOPATH_DIR}" "${GOCACHE_DIR}"
 sudo chown -R "$APP_USER:$APP_GROUP" "${GOPATH_DIR}"
 
-# Download dependencies
-log_info "Downloading Go dependencies..."
-sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go mod download 2>&1 | tee /tmp/go-download.log
-if [ ${PIPESTATUS[0]} -ne 0 ]; then
-    log_error "Failed to download Go dependencies"
-    cat /tmp/go-download.log
-    exit 1
+cd "$BACKEND_DIR"
+
+# Check if rebuild is needed (skip if no source changes)
+LAST_BUILD_HASH_FILE="${BACKEND_DIR}/.last_build_hash"
+CURRENT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "no-git")
+
+if [ -f "$LAST_BUILD_HASH_FILE" ] && [ -f "${BACKEND_DIR}/daybook-backend" ]; then
+    LAST_HASH=$(cat "$LAST_BUILD_HASH_FILE")
+    if [ "$LAST_HASH" = "$CURRENT_HASH" ]; then
+        log_info "No source changes detected (hash: ${CURRENT_HASH}), skipping rebuild"
+        log_info "To force rebuild, delete: $LAST_BUILD_HASH_FILE"
+        SKIP_BUILD=true
+    fi
 fi
 
-# Build the application with verbose output
-log_info "Compiling Go application (this may take a few minutes)..."
-sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} GOCACHE=${GOPATH_DIR}/cache go build -v -o daybook-backend -ldflags="-s -w" main.go 2>&1 | tee /tmp/go-build.log
-BUILD_EXIT_CODE=${PIPESTATUS[0]}
+if [ "$SKIP_BUILD" != "true" ]; then
+    # Download dependencies (only if go.mod changed)
+    log_info "Checking dependencies..."
+    sudo -u "$APP_USER" env \
+        PATH=/usr/local/go/bin:$PATH \
+        HOME=${APP_USER_HOME} \
+        GOPATH=${GOPATH_DIR} \
+        GOCACHE=${GOCACHE_DIR} \
+        go mod download -x
 
-if [ $BUILD_EXIT_CODE -ne 0 ]; then
-    log_error "Failed to build Go application (exit code: $BUILD_EXIT_CODE)"
-    cat /tmp/go-build.log
-    exit 1
+    # Build the application with optimizations
+    log_info "Compiling Go application..."
+
+    # Stop the service before building (to avoid binary in-use issues)
+    if systemctl is-active --quiet daybook-backend; then
+        log_info "Stopping daybook-backend service..."
+        sudo systemctl stop daybook-backend
+    fi
+
+    # Optimized build flags:
+    # -p N: Use N parallel builds (defaults to GOMAXPROCS)
+    # -ldflags="-s -w": Strip debug info and symbol table
+    # -trimpath: Remove file system paths for reproducible builds
+    # -buildvcs=false: Skip VCS info (faster)
+    # CGO_ENABLED=0: Static binary (faster, no CGO overhead)
+    sudo -u "$APP_USER" env \
+        PATH=/usr/local/go/bin:$PATH \
+        HOME=${APP_USER_HOME} \
+        GOPATH=${GOPATH_DIR} \
+        GOCACHE=${GOCACHE_DIR} \
+        CGO_ENABLED=0 \
+        go build \
+        -p 4 \
+        -trimpath \
+        -buildvcs=false \
+        -ldflags="-s -w -extldflags '-static'" \
+        -o daybook-backend \
+        main.go
+
+    # Verify the binary was created
+    if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then
+        log_error "Failed to build backend application"
+        exit 1
+    fi
+
+    # Save current hash
+    echo "$CURRENT_HASH" > "$LAST_BUILD_HASH_FILE"
+
+    log_info "Backend application built successfully (hash: ${CURRENT_HASH})"
+else
+    # Still stop the service for restart
+    if systemctl is-active --quiet daybook-backend; then
+        log_info "Stopping daybook-backend service..."
+        sudo systemctl stop daybook-backend
+    fi
 fi
-
-# Verify the binary was created
-if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then
-    log_error "Failed to build backend application"
-    exit 1
-fi
-
-log_info "Backend application built successfully"
 
 # Make the binary executable
 sudo chmod +x "${BACKEND_DIR}/daybook-backend"
 
+# Ensure uploads directory exists and has correct permissions
+sudo mkdir -p "${BACKEND_DIR}/uploads"
+sudo chmod 775 "${BACKEND_DIR}/uploads"
+
 # Set ownership
 log_info "Setting file ownership..."
 sudo chown -R "$APP_USER:$APP_GROUP" "$BACKEND_DIR"
-
-# Set proper permissions for uploads directory
-sudo chmod 775 "${BACKEND_DIR}/uploads"
 
 # Create systemd service from template
 log_info "Creating systemd service..."
