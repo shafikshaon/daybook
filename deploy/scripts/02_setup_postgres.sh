@@ -47,7 +47,7 @@ sleep 3
 
 # Generate random password if not set
 if [ -z "$DB_PASSWORD" ]; then
-    DB_PASSWORD=$(openssl rand -base64 32)
+    DB_PASSWORD=$(openssl rand -base64 32 | tr -d '/+=' | head -c 32)
     log_info "Generated database password: $DB_PASSWORD"
     log_warn "IMPORTANT: Save this password! It will be written to the backend .env file"
 
