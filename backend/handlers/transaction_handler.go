@@ -219,19 +219,30 @@ func CreateTransaction(c *gin.Context) {
 
 	transaction.UserID = userID
 
-	// Verify account belongs to user
-	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", transaction.AccountID, userID).First(&account).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
-		return
-	}
+	// Determine if this is a credit card transaction or account transaction
+	isCreditCardTransaction := transaction.CreditCardID != nil
 
-	// For transfers, verify the destination account
-	if transaction.Type == "transfer" && transaction.ToAccountID != nil {
-		var toAccount models.Account
-		if err := database.DB.Where("id = ? AND user_id = ?", *transaction.ToAccountID, userID).First(&toAccount).Error; err != nil {
-			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid destination account ID")
+	// Verify account or credit card belongs to user
+	if isCreditCardTransaction {
+		var creditCard models.CreditCard
+		if err := database.DB.Where("id = ? AND user_id = ?", transaction.CreditCardID, userID).First(&creditCard).Error; err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 			return
+		}
+	} else {
+		var account models.Account
+		if err := database.DB.Where("id = ? AND user_id = ?", transaction.AccountID, userID).First(&account).Error; err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+			return
+		}
+
+		// For transfers, verify the destination account
+		if transaction.Type == "transfer" && transaction.ToAccountID != nil {
+			var toAccount models.Account
+			if err := database.DB.Where("id = ? AND user_id = ?", *transaction.ToAccountID, userID).First(&toAccount).Error; err != nil {
+				utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid destination account ID")
+				return
+			}
 		}
 	}
 
@@ -250,23 +261,53 @@ func CreateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Update account balance
-	if transaction.Type == "income" {
-		account.Balance += transaction.Amount
-	} else if transaction.Type == "expense" {
-		account.Balance -= transaction.Amount
-	} else if transaction.Type == "transfer" && transaction.ToAccountID != nil {
-		// Deduct from source account
-		account.Balance -= transaction.Amount
-		// Add to destination account
-		tx.Model(&models.Account{}).Where("id = ?", *transaction.ToAccountID).
-			UpdateColumn("balance", database.DB.Raw("balance + ?", transaction.Amount))
-	}
+	// Update balance
+	if isCreditCardTransaction {
+		// Update credit card balance
+		var creditCard models.CreditCard
+		if err := tx.Where("id = ?", transaction.CreditCardID).First(&creditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch credit card")
+			return
+		}
 
-	if err := tx.Save(&account).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
-		return
+		if transaction.Type == "income" {
+			creditCard.CurrentBalance += transaction.Amount
+		} else if transaction.Type == "expense" {
+			creditCard.CurrentBalance += transaction.Amount
+		}
+
+		if err := tx.Save(&creditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update credit card balance")
+			return
+		}
+	} else {
+		// Update account balance
+		var account models.Account
+		if err := tx.Where("id = ?", transaction.AccountID).First(&account).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account")
+			return
+		}
+
+		if transaction.Type == "income" {
+			account.Balance += transaction.Amount
+		} else if transaction.Type == "expense" {
+			account.Balance -= transaction.Amount
+		} else if transaction.Type == "transfer" && transaction.ToAccountID != nil {
+			// Deduct from source account
+			account.Balance -= transaction.Amount
+			// Add to destination account
+			tx.Model(&models.Account{}).Where("id = ?", *transaction.ToAccountID).
+				UpdateColumn("balance", database.DB.Raw("balance + ?", transaction.Amount))
+		}
+
+		if err := tx.Save(&account).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
+			return
+		}
 	}
 
 	tx.Commit()
@@ -300,11 +341,23 @@ func UpdateTransaction(c *gin.Context) {
 		return
 	}
 
-	// Verify account belongs to user
-	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", updateData.AccountID, userID).First(&account).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
-		return
+	// Determine if this is a credit card transaction or account transaction
+	isCreditCardTransaction := updateData.CreditCardID != nil
+	wasOldCreditCardTransaction := existingTransaction.CreditCardID != nil
+
+	// Verify account or credit card belongs to user
+	if isCreditCardTransaction {
+		var creditCard models.CreditCard
+		if err := database.DB.Where("id = ? AND user_id = ?", updateData.CreditCardID, userID).First(&creditCard).Error; err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
+			return
+		}
+	} else {
+		var account models.Account
+		if err := database.DB.Where("id = ? AND user_id = ?", updateData.AccountID, userID).First(&account).Error; err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+			return
+		}
 	}
 
 	// Start transaction
@@ -316,31 +369,55 @@ func UpdateTransaction(c *gin.Context) {
 	}()
 
 	// Revert old balance changes
-	var oldAccount models.Account
-	if err := tx.Where("id = ?", existingTransaction.AccountID).First(&oldAccount).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch old account")
-		return
-	}
+	if wasOldCreditCardTransaction {
+		// Revert credit card balance
+		var oldCreditCard models.CreditCard
+		if err := tx.Where("id = ?", existingTransaction.CreditCardID).First(&oldCreditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch old credit card")
+			return
+		}
 
-	if existingTransaction.Type == "income" {
-		oldAccount.Balance -= existingTransaction.Amount
-	} else if existingTransaction.Type == "expense" {
-		oldAccount.Balance += existingTransaction.Amount
-	} else if existingTransaction.Type == "transfer" && existingTransaction.ToAccountID != nil {
-		oldAccount.Balance += existingTransaction.Amount
-		tx.Model(&models.Account{}).Where("id = ?", *existingTransaction.ToAccountID).
-			UpdateColumn("balance", database.DB.Raw("balance - ?", existingTransaction.Amount))
-	}
+		if existingTransaction.Type == "income" {
+			oldCreditCard.CurrentBalance -= existingTransaction.Amount
+		} else if existingTransaction.Type == "expense" {
+			oldCreditCard.CurrentBalance -= existingTransaction.Amount
+		}
 
-	if err := tx.Save(&oldAccount).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to revert old balance")
-		return
+		if err := tx.Save(&oldCreditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to revert old credit card balance")
+			return
+		}
+	} else {
+		// Revert account balance
+		var oldAccount models.Account
+		if err := tx.Where("id = ?", existingTransaction.AccountID).First(&oldAccount).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch old account")
+			return
+		}
+
+		if existingTransaction.Type == "income" {
+			oldAccount.Balance -= existingTransaction.Amount
+		} else if existingTransaction.Type == "expense" {
+			oldAccount.Balance += existingTransaction.Amount
+		} else if existingTransaction.Type == "transfer" && existingTransaction.ToAccountID != nil {
+			oldAccount.Balance += existingTransaction.Amount
+			tx.Model(&models.Account{}).Where("id = ?", *existingTransaction.ToAccountID).
+				UpdateColumn("balance", database.DB.Raw("balance - ?", existingTransaction.Amount))
+		}
+
+		if err := tx.Save(&oldAccount).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to revert old balance")
+			return
+		}
 	}
 
 	// Update transaction
 	existingTransaction.AccountID = updateData.AccountID
+	existingTransaction.CreditCardID = updateData.CreditCardID
 	existingTransaction.ToAccountID = updateData.ToAccountID
 	existingTransaction.Type = updateData.Type
 	existingTransaction.Amount = updateData.Amount
@@ -348,6 +425,7 @@ func UpdateTransaction(c *gin.Context) {
 	existingTransaction.Date = updateData.Date
 	existingTransaction.Description = updateData.Description
 	existingTransaction.Tags = updateData.Tags
+	existingTransaction.Attachments = updateData.Attachments
 
 	if err := tx.Save(&existingTransaction).Error; err != nil {
 		tx.Rollback()
@@ -356,27 +434,50 @@ func UpdateTransaction(c *gin.Context) {
 	}
 
 	// Apply new balance changes
-	var newAccount models.Account
-	if err := tx.Where("id = ?", updateData.AccountID).First(&newAccount).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch new account")
-		return
-	}
+	if isCreditCardTransaction {
+		// Update credit card balance
+		var newCreditCard models.CreditCard
+		if err := tx.Where("id = ?", updateData.CreditCardID).First(&newCreditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch new credit card")
+			return
+		}
 
-	if updateData.Type == "income" {
-		newAccount.Balance += updateData.Amount
-	} else if updateData.Type == "expense" {
-		newAccount.Balance -= updateData.Amount
-	} else if updateData.Type == "transfer" && updateData.ToAccountID != nil {
-		newAccount.Balance -= updateData.Amount
-		tx.Model(&models.Account{}).Where("id = ?", *updateData.ToAccountID).
-			UpdateColumn("balance", database.DB.Raw("balance + ?", updateData.Amount))
-	}
+		if updateData.Type == "income" {
+			newCreditCard.CurrentBalance += updateData.Amount
+		} else if updateData.Type == "expense" {
+			newCreditCard.CurrentBalance += updateData.Amount
+		}
 
-	if err := tx.Save(&newAccount).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update new balance")
-		return
+		if err := tx.Save(&newCreditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update new credit card balance")
+			return
+		}
+	} else {
+		// Update account balance
+		var newAccount models.Account
+		if err := tx.Where("id = ?", updateData.AccountID).First(&newAccount).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch new account")
+			return
+		}
+
+		if updateData.Type == "income" {
+			newAccount.Balance += updateData.Amount
+		} else if updateData.Type == "expense" {
+			newAccount.Balance -= updateData.Amount
+		} else if updateData.Type == "transfer" && updateData.ToAccountID != nil {
+			newAccount.Balance -= updateData.Amount
+			tx.Model(&models.Account{}).Where("id = ?", *updateData.ToAccountID).
+				UpdateColumn("balance", database.DB.Raw("balance + ?", updateData.Amount))
+		}
+
+		if err := tx.Save(&newAccount).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update new balance")
+			return
+		}
 	}
 
 	tx.Commit()
@@ -412,28 +513,54 @@ func DeleteTransaction(c *gin.Context) {
 		}
 	}()
 
+	// Determine if this is a credit card transaction or account transaction
+	isCreditCardTransaction := transaction.CreditCardID != nil
+
 	// Revert balance changes
-	var account models.Account
-	if err := tx.Where("id = ?", transaction.AccountID).First(&account).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account")
-		return
-	}
+	if isCreditCardTransaction {
+		// Revert credit card balance
+		var creditCard models.CreditCard
+		if err := tx.Where("id = ?", transaction.CreditCardID).First(&creditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch credit card")
+			return
+		}
 
-	if transaction.Type == "income" {
-		account.Balance -= transaction.Amount
-	} else if transaction.Type == "expense" {
-		account.Balance += transaction.Amount
-	} else if transaction.Type == "transfer" && transaction.ToAccountID != nil {
-		account.Balance += transaction.Amount
-		tx.Model(&models.Account{}).Where("id = ?", *transaction.ToAccountID).
-			UpdateColumn("balance", database.DB.Raw("balance - ?", transaction.Amount))
-	}
+		if transaction.Type == "income" {
+			creditCard.CurrentBalance -= transaction.Amount
+		} else if transaction.Type == "expense" {
+			creditCard.CurrentBalance -= transaction.Amount
+		}
 
-	if err := tx.Save(&account).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
-		return
+		if err := tx.Save(&creditCard).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update credit card balance")
+			return
+		}
+	} else {
+		// Revert account balance
+		var account models.Account
+		if err := tx.Where("id = ?", transaction.AccountID).First(&account).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account")
+			return
+		}
+
+		if transaction.Type == "income" {
+			account.Balance -= transaction.Amount
+		} else if transaction.Type == "expense" {
+			account.Balance += transaction.Amount
+		} else if transaction.Type == "transfer" && transaction.ToAccountID != nil {
+			account.Balance += transaction.Amount
+			tx.Model(&models.Account{}).Where("id = ?", *transaction.ToAccountID).
+				UpdateColumn("balance", database.DB.Raw("balance - ?", transaction.Amount))
+		}
+
+		if err := tx.Save(&account).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
+			return
+		}
 	}
 
 	// Delete transaction (soft delete)

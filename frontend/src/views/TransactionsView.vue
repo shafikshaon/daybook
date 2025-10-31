@@ -405,7 +405,7 @@
                 <label class="form-label">Account *</label>
                 <select class="form-select" v-model="form.accountId" required>
                   <option value="">Select account...</option>
-                  <option v-for="acc in accounts" :key="acc.id" :value="acc.id">
+                  <option v-for="acc in accountsAndCreditCards" :key="acc.id" :value="acc.id">
                     {{ acc.name }}
                   </option>
                 </select>
@@ -732,6 +732,25 @@ const savingsGoals = computed(() => savingsGoalsStore.activeSavingsGoals)
 const allCategories = computed(() => transactionsStore.categories)
 const pagination = computed(() => transactionsStore.pagination)
 
+// Combined accounts and credit cards for dropdowns
+const accountsAndCreditCards = computed(() => {
+  const regularAccounts = accounts.value.map(acc => ({
+    id: acc.id,
+    name: acc.name,
+    type: 'account',
+    balance: acc.balance
+  }))
+
+  const creditCardAccounts = creditCardsStore.allCreditCards.map(card => ({
+    id: card.id,
+    name: `💳 ${card.name}`,
+    type: 'credit_card',
+    balance: card.currentBalance
+  }))
+
+  return [...regularAccounts, ...creditCardAccounts]
+})
+
 const filteredCategories = computed(() => {
   return transactionsStore.categories.filter(c => c.type === form.value.type)
 })
@@ -972,7 +991,9 @@ const editTransaction = (transaction) => {
   editingTransaction.value = transaction
   form.value = {
     ...transaction,
-    date: new Date(transaction.date).toISOString().split('T')[0]
+    date: new Date(transaction.date).toISOString().split('T')[0],
+    // If transaction has creditCardId, use it as accountId for the dropdown
+    accountId: transaction.creditCardId || transaction.accountId
   }
   // Load existing attachments
   transactionAttachments.value = (transaction.attachments || []).map(url => ({
@@ -1005,10 +1026,22 @@ const confirmDelete = async (transaction) => {
 
 const saveTransaction = async () => {
   try {
+    // Check if selected account is a credit card
+    const isCreditCard = creditCardsStore.allCreditCards.some(card => card.id === form.value.accountId)
+
     const transactionData = {
       ...form.value,
       date: new Date(form.value.date).toISOString(),
       attachments: transactionAttachments.value.map(f => f.fileUrl)
+    }
+
+    // Set the correct ID field based on whether it's a credit card or account
+    if (isCreditCard) {
+      transactionData.creditCardId = form.value.accountId
+      transactionData.accountId = null
+    } else {
+      transactionData.accountId = form.value.accountId
+      transactionData.creditCardId = null
     }
 
     if (showEditModal.value) {
