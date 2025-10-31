@@ -106,21 +106,21 @@ sudo systemctl reload nginx
 ### Update Application
 ```bash
 # Update backend only
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 ./scripts/update_backend.sh
 
 # Update frontend only
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 ./scripts/update_frontend.sh
 
 # Update both
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 ./deploy.sh --skip-deps --skip-db
 ```
 
 ### Backup Database
 ```bash
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 ./scripts/backup_database.sh
 ```
 
@@ -132,10 +132,10 @@ cd /opt/daybook/deploy
 sudo journalctl -u daybook-backend -n 50
 
 # Check environment
-cat /opt/daybook/backend/.env
+cat /home/ubuntu/projects/opt/daybook/backend/.env
 
 # Test manually
-cd /opt/daybook/backend
+cd /home/ubuntu/projects/opt/daybook/backend
 sudo -u daybook ./daybook-backend
 ```
 
@@ -148,7 +148,7 @@ sudo nginx -t
 sudo systemctl status nginx
 
 # Check frontend files exist
-ls -la /opt/daybook/frontend/dist/
+ls -la /home/ubuntu/projects/opt/daybook/frontend/dist/
 ```
 
 ### Database connection error
@@ -199,11 +199,11 @@ sudo systemctl restart sshd
 ## Important Files and Locations
 
 ```
-/opt/daybook/          - Application root
-/opt/daybook/backend/  - Backend application and binary
-/opt/daybook/frontend/ - Frontend built files
+/home/ubuntu/projects/opt/daybook/          - Application root
+/home/ubuntu/projects/opt/daybook/backend/  - Backend application and binary
+/home/ubuntu/projects/opt/daybook/frontend/ - Frontend built files
 /var/log/daybook/      - Application logs
-/opt/daybook/backups/  - Database backups
+/home/ubuntu/projects/opt/daybook/backups/  - Database backups
 ```
 
 ## Need More Details?

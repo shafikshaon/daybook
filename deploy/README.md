@@ -49,14 +49,14 @@ ssh ubuntu@13.228.221.238
 
 ### Step 3: Clone Repository on Server
 
-**Important:** The deployment scripts expect your code to be cloned from git on the server. They do **not** copy files from your local machine. All code must be in the `/opt/daybook` directory (or your configured `APP_DIR`).
+**Important:** The deployment scripts expect your code to be cloned from git on the server. They do **not** copy files from your local machine. All code must be in the `/home/ubuntu/projects/opt/daybook` directory (or your configured `APP_DIR`).
 
 Clone the repository to the server (first time only):
 
 ```bash
 # Clone the repository to the deployment directory
-sudo mkdir -p /opt/daybook
-sudo chown $USER:$USER /opt/daybook
+sudo mkdir -p /home/ubuntu/projects/opt/daybook
+sudo chown $USER:$USER /home/ubuntu/projects/opt/daybook
 cd /opt
 git clone YOUR_REPOSITORY_URL daybook
 cd daybook
@@ -65,7 +65,7 @@ cd daybook
 For subsequent deployments, just pull the latest changes:
 
 ```bash
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git pull origin master
 ```
 
@@ -132,7 +132,7 @@ For subsequent updates after the initial setup:
 
 ```bash
 # Pull latest code from git
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git pull origin master
 
 # Run deployment
@@ -144,7 +144,7 @@ sudo ./deploy.sh --skip-deps --skip-db
 
 ```bash
 # Pull latest code from git
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git pull origin master
 
 # Deploy backend only
@@ -156,7 +156,7 @@ sudo ./scripts/update_backend.sh
 
 ```bash
 # Pull latest code from git
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git pull origin master
 
 # Deploy frontend only
@@ -344,7 +344,7 @@ DOMAIN_OR_IP="YOUR_DOMAIN_OR_IP"
 # Application
 APP_NAME="daybook"
 APP_USER="daybook"
-APP_DIR="/opt/daybook"
+APP_DIR="/home/ubuntu/projects/opt/daybook"
 
 # Database
 DB_NAME="daybook_prod"
@@ -450,7 +450,7 @@ Application logs:
 ### File Locations
 
 ```
-/opt/daybook/
+/home/ubuntu/projects/opt/daybook/
 ├── backend/
 │   ├── daybook-backend     # Binary
 │   ├── .env                # Backend environment
@@ -499,7 +499,7 @@ sudo apt-get update && sudo apt-get upgrade -y
 4. **Disk Space Monitoring**
 ```bash
 df -h
-du -sh /opt/daybook/*
+du -sh /home/ubuntu/projects/opt/daybook/*
 ```
 
 ### Monitoring
@@ -548,7 +548,7 @@ cat /tmp/go-download.log
 
 5. **If build failed, re-run just the backend deployment:**
 ```bash
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 sudo ./scripts/06_deploy_backend.sh
 ```
 
@@ -561,7 +561,7 @@ sudo apt-get install screen -y
 screen -S deploy
 
 # Run deployment
-cd /opt/daybook/deploy
+cd /home/ubuntu/projects/opt/daybook/deploy
 sudo ./deploy.sh --fresh
 
 # Detach: Press Ctrl+A then D
@@ -577,12 +577,12 @@ sudo journalctl -u daybook-backend -n 100 --no-pager
 
 2. Check configuration:
 ```bash
-cat /opt/daybook/backend/.env
+cat /home/ubuntu/projects/opt/daybook/backend/.env
 ```
 
 3. Test database connection:
 ```bash
-cd /opt/daybook/backend
+cd /home/ubuntu/projects/opt/daybook/backend
 sudo -u daybook ./daybook-backend
 ```
 
@@ -596,7 +596,7 @@ sudo systemctl status nginx
 
 2. Check files exist:
 ```bash
-ls -la /opt/daybook/frontend/dist/
+ls -la /home/ubuntu/projects/opt/daybook/frontend/dist/
 ```
 
 3. Check Nginx logs:
@@ -625,9 +625,9 @@ sudo nano /etc/postgresql/*/main/pg_hba.conf
 
 Fix ownership:
 ```bash
-sudo chown -R daybook:daybook /opt/daybook
+sudo chown -R daybook:daybook /home/ubuntu/projects/opt/daybook
 sudo chown -R daybook:daybook /var/log/daybook
-sudo chmod 775 /opt/daybook/backend/uploads
+sudo chmod 775 /home/ubuntu/projects/opt/daybook/backend/uploads
 ```
 
 ## Security Recommendations
@@ -664,7 +664,7 @@ To automate deployments from CI/CD:
 - name: Deploy to Production
   run: |
     ssh ubuntu@${{ secrets.SERVER_IP }} "
-      cd /opt/daybook &&
+      cd /home/ubuntu/projects/opt/daybook &&
       git pull origin master &&
       cd deploy &&
       sudo ./deploy.sh --skip-deps --skip-db
@@ -677,13 +677,13 @@ To rollback to a previous version:
 
 1. Restore database backup (if needed):
 ```bash
-cd /opt/daybook/deploy
-sudo ./scripts/restore_database.sh /opt/daybook/backups/daybook_backup_TIMESTAMP.sql.gz
+cd /home/ubuntu/projects/opt/daybook/deploy
+sudo ./scripts/restore_database.sh /home/ubuntu/projects/opt/daybook/backups/daybook_backup_TIMESTAMP.sql.gz
 ```
 
 2. Checkout previous code version from git:
 ```bash
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git log --oneline -n 10  # Find the commit you want
 git checkout <previous-commit-hash>
 ```
@@ -696,7 +696,7 @@ sudo ./deploy.sh --skip-deps --skip-db
 
 4. Return to latest (when ready):
 ```bash
-cd /opt/daybook
+cd /home/ubuntu/projects/opt/daybook
 git checkout master
 git pull origin master
 ```
@@ -706,7 +706,7 @@ git pull origin master
 For issues or questions:
 1. Check logs in `/var/log/daybook/` and `/var/log/nginx/`
 2. Review service status: `sudo systemctl status daybook-backend`
-3. Verify configurations in `/opt/daybook/`
+3. Verify configurations in `/home/ubuntu/projects/opt/daybook/`
 
 ## License
 
