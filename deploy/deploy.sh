@@ -51,29 +51,33 @@ log_step "Installing System Dependencies"
 
 # Update system
 log_info "Updating system packages..."
-sudo apt-get update -qq
+sudo apt-get update
 
 # Install basic tools
-log_info "Installing basic tools..."
+log_info "Installing basic tools (this may take 5-10 minutes on first run)..."
 sudo apt-get install -y curl wget git build-essential openssl postgresql redis-server nginx
 
 # Install Go
 log_info "Installing Go 1.25..."
 GO_VERSION="1.25.3"
-if ! command -v go &> /dev/null || ! go version | grep -q "go1.23"; then
-    wget -q https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+if ! command -v go &> /dev/null || ! go version | grep -q "go1.25"; then
+    log_info "Downloading Go ${GO_VERSION}..."
+    wget --progress=bar:force https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
+    log_info "Installing Go..."
     sudo rm -rf /usr/local/go
     sudo tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz
     rm go${GO_VERSION}.linux-amd64.tar.gz
     export PATH=$PATH:/usr/local/go/bin
-    echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh
+    echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh > /dev/null
 fi
 log_info "Go version: $(go version)"
 
 # Install Node.js
 log_info "Installing Node.js 22..."
 if ! command -v node &> /dev/null || ! node --version | grep -q "v22"; then
+    log_info "Adding Node.js repository..."
     curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+    log_info "Installing Node.js..."
     sudo apt-get install -y nodejs
 fi
 log_info "Node version: $(node --version)"
@@ -156,11 +160,11 @@ EOF
 chmod 600 .env
 
 # Build backend
-log_info "Downloading Go dependencies..."
-go mod download
+log_info "Downloading Go dependencies (this may take a few minutes)..."
+go mod download -x
 
-log_info "Building backend..."
-CGO_ENABLED=0 go build -ldflags="-s -w" -o daybook-backend main.go
+log_info "Compiling backend application (this may take 1-2 minutes)..."
+CGO_ENABLED=0 go build -v -ldflags="-s -w" -o daybook-backend main.go
 
 if [ ! -f "daybook-backend" ]; then
     log_error "Backend build failed!"
@@ -197,9 +201,12 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl enable daybook-backend
+
+log_info "Starting backend service..."
 sudo systemctl restart daybook-backend
 
-sleep 2
+log_info "Waiting for backend to start..."
+sleep 3
 
 if ! systemctl is-active --quiet daybook-backend; then
     log_error "Backend service failed to start!"
@@ -224,10 +231,10 @@ VITE_API_URL=http://$DOMAIN/api/v1
 EOF
 
 # Install dependencies and build
-log_info "Installing npm dependencies..."
-npm install
+log_info "Installing npm dependencies (this may take 3-5 minutes)..."
+npm install --progress=true
 
-log_info "Building frontend..."
+log_info "Building frontend application (this may take 2-3 minutes)..."
 npm run build
 
 if [ ! -d "dist" ]; then
@@ -291,7 +298,8 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 # Test and reload nginx
 log_info "Testing Nginx configuration..."
-if sudo nginx -t; then
+if sudo nginx -t 2>&1 | grep -q "successful"; then
+    log_info "Starting Nginx..."
     sudo systemctl restart nginx
     sudo systemctl enable nginx
     log_info "Nginx configured and running"
