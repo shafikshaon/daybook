@@ -270,30 +270,15 @@ const saveContribution = async () => {
 
     // Get the savings goal to include in description
     const goal = savingsGoals.value.find(g => g.id === selectedGoalId.value)
-    const description = contributionForm.value.description || `Contribution to ${goal?.name || 'Savings Goal'}`
+    const notes = contributionForm.value.description || `Contribution to ${goal?.name || 'Savings Goal'}`
 
-    // Create transaction record (expense type as money is leaving the account)
-    // Parse the date properly - date input gives YYYY-MM-DD, we need to add time
-    const dateObj = new Date(contributionForm.value.date + 'T12:00:00')
-
-    const transactionData = {
-      type: 'expense',
-      amount: contributionForm.value.amount,
-      categoryId: 'other_expense',
-      accountId: contributionForm.value.accountId,
-      date: dateObj.toISOString(),
-      description: description,
-      tags: ['savings_goal', selectedGoalId.value]
-    }
-
-    // Create the transaction (this will also update account balance in backend)
-    await transactionsStore.createTransaction(transactionData)
-
-    // Add contribution to savings goal
+    // Add contribution to savings goal (backend will create transaction and update account)
     await savingsGoalsStore.addContribution(
       selectedGoalId.value,
       contributionForm.value.amount,
-      contributionForm.value.date
+      contributionForm.value.accountId,
+      contributionForm.value.date,
+      notes
     )
 
     success('Contribution added successfully')
@@ -302,7 +287,8 @@ const saveContribution = async () => {
     // Refresh data
     await Promise.all([
       accountsStore.fetchAccounts(),
-      savingsGoalsStore.fetchSavingsGoals()
+      savingsGoalsStore.fetchSavingsGoals(),
+      transactionsStore.fetchTransactions(1, 20) // Refresh transactions to show new entry
     ])
   } catch (err) {
     error(err.response?.data?.message || err.message || 'Error adding contribution')

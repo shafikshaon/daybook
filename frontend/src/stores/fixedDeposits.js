@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
+import { toISOString } from '@/utils/dateUtils'
 import { useSettingsStore } from './settings'
 
 export const useFixedDepositsStore = defineStore('fixedDeposits', {
@@ -65,21 +66,36 @@ export const useFixedDepositsStore = defineStore('fixedDeposits', {
       }
     },
 
-    async createFixedDeposit(fdData) {
+    async createFixedDeposit(fdData, accountId) {
       try {
+        if (!accountId) {
+          throw new Error('Account ID is required')
+        }
+
         const maturityAmount = this.calculateFutureValue(
           fdData.principal,
           fdData.interestRate,
           fdData.tenureMonths
         )
 
-        const response = await apiService.post('fixed-deposits', {
+        const dataToSend = {
           ...fdData,
+          accountId,
           maturityAmount,
           withdrawn: false
-        })
+        }
+        if (dataToSend.startDate) {
+          dataToSend.startDate = toISOString(dataToSend.startDate)
+        }
+        if (dataToSend.maturityDate) {
+          dataToSend.maturityDate = toISOString(dataToSend.maturityDate)
+        }
 
-        this.fixedDeposits.push(response.data)
+        const response = await apiService.post('fixed-deposits', dataToSend)
+
+        // Response may contain fixedDeposit and transaction
+        const fdResult = response.data.fixedDeposit || response.data
+        this.fixedDeposits.push(fdResult)
         return response.data
       } catch (error) {
         console.error('Error creating fixed deposit:', error)
@@ -89,7 +105,14 @@ export const useFixedDepositsStore = defineStore('fixedDeposits', {
 
     async updateFixedDeposit(id, fdData) {
       try {
-        const response = await apiService.put('fixed-deposits', id, fdData)
+        const dataToSend = { ...fdData }
+        if (dataToSend.startDate) {
+          dataToSend.startDate = toISOString(dataToSend.startDate)
+        }
+        if (dataToSend.maturityDate) {
+          dataToSend.maturityDate = toISOString(dataToSend.maturityDate)
+        }
+        const response = await apiService.put('fixed-deposits', id, dataToSend)
         const index = this.fixedDeposits.findIndex(fd => fd.id === id)
         if (index !== -1) {
           this.fixedDeposits[index] = response.data
@@ -111,20 +134,28 @@ export const useFixedDepositsStore = defineStore('fixedDeposits', {
       }
     },
 
-    async withdrawFixedDeposit(id) {
-      const fd = this.getFixedDepositById(id)
-      if (!fd) throw new Error('Fixed deposit not found')
+    async withdrawFixedDeposit(id, accountId, actualMaturityAmount, withdrawnDate = null) {
+      try {
+        if (!accountId) {
+          throw new Error('Account ID is required')
+        }
 
-      const maturityAmount = this.calculateMaturityAmount(id)
+        const dataToSend = {
+          accountId,
+          actualMaturityAmount,
+          withdrawnDate: withdrawnDate ? toISOString(withdrawnDate) : null
+        }
 
-      await this.updateFixedDeposit(id, {
-        ...fd,
-        withdrawn: true,
-        withdrawnDate: new Date().toISOString(),
-        actualMaturityAmount: maturityAmount
-      })
+        const response = await apiService.post(`fixed-deposits/${id}/withdraw`, dataToSend)
 
-      return maturityAmount
+        // Refresh fixed deposits
+        await this.fetchFixedDeposits()
+
+        return response.data
+      } catch (error) {
+        console.error('Error withdrawing fixed deposit:', error)
+        throw error
+      }
     },
 
     calculateMaturityAmount(fdId) {

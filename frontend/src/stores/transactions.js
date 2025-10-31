@@ -17,27 +17,41 @@ export const useTransactionsStore = defineStore('transactions', {
     },
     categories: [
       // Income categories
-      { id: 'salary', name: 'Salary', type: 'income', icon: '💼', color: '#10b981' },
-      { id: 'freelance', name: 'Freelance', type: 'income', icon: '💻', color: '#10b981' },
-      { id: 'investment_income', name: 'Investment Income', type: 'income', icon: '📈', color: '#10b981' },
-      { id: 'other_income', name: 'Other Income', type: 'income', icon: '💰', color: '#10b981' },
+      { id: 'opening_balance', name: 'Opening Balance', type: 'income', group: 'income', icon: '🏁', color: '#10b981' },
+      { id: 'salary', name: 'Salary', type: 'income', group: 'income', icon: '💼', color: '#10b981' },
+      { id: 'freelance', name: 'Freelance', type: 'income', group: 'income', icon: '💻', color: '#10b981' },
+      { id: 'investment_income', name: 'Investment Income', type: 'income', group: 'income', icon: '📈', color: '#10b981' },
+      { id: 'dividend_income', name: 'Dividend', type: 'income', group: 'income', icon: '💰', color: '#10b981' },
+      { id: 'investment_sale', name: 'Investment Sale', type: 'income', group: 'income', icon: '📊', color: '#10b981' },
+      { id: 'fixed_deposit_maturity', name: 'FD Maturity', type: 'income', group: 'income', icon: '🏦', color: '#10b981' },
+      { id: 'savings_withdrawal', name: 'Savings Withdrawal', type: 'income', group: 'income', icon: '🎯', color: '#10b981' },
+      { id: 'goal_withdrawal', name: 'Goal Withdrawal', type: 'income', group: 'income', icon: '🎯', color: '#10b981' },
+      { id: 'goal_holding_removed', name: 'Goal Holding Sold', type: 'income', group: 'income', icon: '💹', color: '#10b981' },
+      { id: 'other_income', name: 'Other Income', type: 'income', group: 'income', icon: '💵', color: '#10b981' },
 
-      // Expense categories
-      { id: 'food', name: 'Food & Dining', type: 'expense', icon: '🍔', color: '#ef4444' },
-      { id: 'transport', name: 'Transportation', type: 'expense', icon: '🚗', color: '#ef4444' },
-      { id: 'shopping', name: 'Shopping', type: 'expense', icon: '🛍️', color: '#ef4444' },
-      { id: 'entertainment', name: 'Entertainment', type: 'expense', icon: '🎬', color: '#ef4444' },
-      { id: 'utilities', name: 'Utilities', type: 'expense', icon: '💡', color: '#ef4444' },
-      { id: 'healthcare', name: 'Healthcare', type: 'expense', icon: '🏥', color: '#ef4444' },
-      { id: 'education', name: 'Education', type: 'expense', icon: '📚', color: '#ef4444' },
-      { id: 'housing', name: 'Housing', type: 'expense', icon: '🏠', color: '#ef4444' },
-      { id: 'insurance', name: 'Insurance', type: 'expense', icon: '🛡️', color: '#ef4444' },
-      { id: 'subscriptions', name: 'Subscriptions', type: 'expense', icon: '📱', color: '#ef4444' },
-      { id: 'credit_card_payment', name: 'Credit Card Payment', type: 'expense', icon: '💳', color: '#ef4444' },
-      { id: 'other_expense', name: 'Other Expense', type: 'expense', icon: '💸', color: '#ef4444' },
+      // Regular Expense categories (consumption)
+      { id: 'food', name: 'Food & Dining', type: 'expense', group: 'expense', icon: '🍔', color: '#ef4444' },
+      { id: 'transport', name: 'Transportation', type: 'expense', group: 'expense', icon: '🚗', color: '#ef4444' },
+      { id: 'shopping', name: 'Shopping', type: 'expense', group: 'expense', icon: '🛍️', color: '#ef4444' },
+      { id: 'entertainment', name: 'Entertainment', type: 'expense', group: 'expense', icon: '🎬', color: '#ef4444' },
+      { id: 'utilities', name: 'Utilities', type: 'expense', group: 'expense', icon: '💡', color: '#ef4444' },
+      { id: 'healthcare', name: 'Healthcare', type: 'expense', group: 'expense', icon: '🏥', color: '#ef4444' },
+      { id: 'education', name: 'Education', type: 'expense', group: 'expense', icon: '📚', color: '#ef4444' },
+      { id: 'housing', name: 'Housing', type: 'expense', group: 'expense', icon: '🏠', color: '#ef4444' },
+      { id: 'insurance', name: 'Insurance', type: 'expense', group: 'expense', icon: '🛡️', color: '#ef4444' },
+      { id: 'subscriptions', name: 'Subscriptions', type: 'expense', group: 'expense', icon: '📱', color: '#ef4444' },
+      { id: 'credit_card_payment', name: 'Credit Card Payment', type: 'expense', group: 'expense', icon: '💳', color: '#ef4444' },
+      { id: 'other_expense', name: 'Other Expense', type: 'expense', group: 'expense', icon: '💸', color: '#ef4444' },
+
+      // Savings & Investment categories (wealth building)
+      { id: 'savings_contribution', name: 'Savings Contribution', type: 'expense', group: 'savings', icon: '🎯', color: '#8b5cf6' },
+      { id: 'fixed_deposit_investment', name: 'Fixed Deposit', type: 'expense', group: 'savings', icon: '🏦', color: '#3b82f6' },
+      { id: 'investment_purchase', name: 'Investment Purchase', type: 'expense', group: 'savings', icon: '📈', color: '#6366f1' },
+      { id: 'goal_contribution', name: 'Goal Contribution', type: 'expense', group: 'savings', icon: '🎯', color: '#8b5cf6' },
+      { id: 'goal_holding_added', name: 'Goal Holding Added', type: 'expense', group: 'savings', icon: '💹', color: '#6366f1' },
 
       // Transfer category
-      { id: 'transfer', name: 'Transfer', type: 'transfer', icon: '🔄', color: '#3b82f6' }
+      { id: 'transfer', name: 'Transfer', type: 'transfer', group: 'transfer', icon: '🔄', color: '#3b82f6' }
     ],
     tags: [],
     recurringTransactions: []
@@ -118,6 +132,52 @@ export const useTransactionsStore = defineStore('transactions', {
       })
 
       return Object.values(breakdown)
+    },
+
+    // Group-based breakdowns for better reporting
+    groupBreakdown: (state) => (group = 'expense', startDate = null, endDate = null) => {
+      let transactions = state.transactions.filter(t => {
+        const category = state.categories.find(c => c.id === t.categoryId)
+        return category && category.group === group
+      })
+
+      if (startDate && endDate) {
+        transactions = transactions.filter(t => {
+          const date = new Date(t.date)
+          return date >= new Date(startDate) && date <= new Date(endDate)
+        })
+      }
+
+      const breakdown = {}
+      transactions.forEach(t => {
+        if (!breakdown[t.categoryId]) {
+          breakdown[t.categoryId] = {
+            categoryId: t.categoryId,
+            amount: 0,
+            count: 0
+          }
+        }
+        breakdown[t.categoryId].amount += t.amount
+        breakdown[t.categoryId].count++
+      })
+
+      return Object.values(breakdown)
+    },
+
+    totalByGroup: (state) => (group, startDate = null, endDate = null) => {
+      let transactions = state.transactions.filter(t => {
+        const category = state.categories.find(c => c.id === t.categoryId)
+        return category && category.group === group
+      })
+
+      if (startDate && endDate) {
+        transactions = transactions.filter(t => {
+          const date = new Date(t.date)
+          return date >= new Date(startDate) && date <= new Date(endDate)
+        })
+      }
+
+      return transactions.reduce((total, t) => total + t.amount, 0)
     },
 
     incomeCategories: (state) => state.categories.filter(c => c.type === 'income'),

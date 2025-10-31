@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
+import { toISOString } from '@/utils/dateUtils'
 import { useSettingsStore } from './settings'
 
 export const useSavingsGoalsStore = defineStore('savingsGoals', {
@@ -92,6 +93,7 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
         const response = await apiService.post('savings-goals', {
           ...goalData,
           currentAmount: goalData.currentAmount || 0,
+          targetDate: toISOString(goalData.targetDate),
           achieved: false,
           archived: false
         })
@@ -106,7 +108,11 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
 
     async updateSavingsGoal(id, goalData) {
       try {
-        const response = await apiService.put('savings-goals', id, goalData)
+        const dataToSend = { ...goalData }
+        if (dataToSend.targetDate) {
+          dataToSend.targetDate = toISOString(dataToSend.targetDate)
+        }
+        const response = await apiService.put('savings-goals', id, dataToSend)
         const index = this.savingsGoals.findIndex(goal => goal.id === id)
         if (index !== -1) {
           this.savingsGoals[index] = response.data
@@ -128,7 +134,7 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
       }
     },
 
-    async addContribution(goalId, amount, date = null) {
+    async addContribution(goalId, amount, accountId, date = null, notes = '') {
       try {
         // Ensure date is in proper ISO format
         let formattedDate
@@ -145,8 +151,9 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
 
         const contribution = {
           amount,
+          accountId,
           date: formattedDate,
-          notes: 'Contribution to savings goal'
+          notes: notes || 'Contribution to savings goal'
         }
 
         const response = await apiService.contributeToGoal(goalId, contribution)
@@ -161,11 +168,26 @@ export const useSavingsGoalsStore = defineStore('savingsGoals', {
       }
     },
 
-    async withdrawFromGoal(goalId, amount) {
+    async withdrawFromGoal(goalId, amount, accountId, date = null, notes = '') {
       try {
+        // Ensure date is in proper ISO format
+        let formattedDate
+        if (date) {
+          // If date is a string like "2025-10-25", convert to full ISO format
+          if (typeof date === 'string' && date.length === 10) {
+            formattedDate = new Date(date + 'T12:00:00').toISOString()
+          } else {
+            formattedDate = new Date(date).toISOString()
+          }
+        } else {
+          formattedDate = new Date().toISOString()
+        }
+
         const withdrawal = {
           amount,
-          notes: 'Withdrawal from savings goal'
+          accountId,
+          date: formattedDate,
+          notes: notes || 'Withdrawal from savings goal'
         }
 
         const response = await apiService.withdrawFromGoal(goalId, withdrawal)

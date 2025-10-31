@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
+import { toISOString } from '@/utils/dateUtils'
 import { useSettingsStore } from './settings'
 import { useTransactionsStore } from './transactions'
 
@@ -115,11 +116,21 @@ export const useCreditCardsStore = defineStore('creditCards', {
 
     async createCreditCard(cardData) {
       try {
-        const response = await apiService.post('credit-cards', {
+        const dataToSend = {
           ...cardData,
           active: true,
           currentBalance: cardData.currentBalance || 0
-        })
+        }
+        if (dataToSend.dueDate) {
+          dataToSend.dueDate = toISOString(dataToSend.dueDate)
+        }
+        if (dataToSend.statementDate) {
+          dataToSend.statementDate = toISOString(dataToSend.statementDate)
+        }
+        if (dataToSend.lastPaymentDate) {
+          dataToSend.lastPaymentDate = toISOString(dataToSend.lastPaymentDate)
+        }
+        const response = await apiService.post('credit-cards', dataToSend)
         this.creditCards.push(response.data)
         return response.data
       } catch (error) {
@@ -130,7 +141,17 @@ export const useCreditCardsStore = defineStore('creditCards', {
 
     async updateCreditCard(id, cardData) {
       try {
-        const response = await apiService.put('credit-cards', id, cardData)
+        const dataToSend = { ...cardData }
+        if (dataToSend.dueDate) {
+          dataToSend.dueDate = toISOString(dataToSend.dueDate)
+        }
+        if (dataToSend.statementDate) {
+          dataToSend.statementDate = toISOString(dataToSend.statementDate)
+        }
+        if (dataToSend.lastPaymentDate) {
+          dataToSend.lastPaymentDate = toISOString(dataToSend.lastPaymentDate)
+        }
+        const response = await apiService.put('credit-cards', id, dataToSend)
         const index = this.creditCards.findIndex(cc => cc.id === id)
         if (index !== -1) {
           this.creditCards[index] = response.data
@@ -187,7 +208,11 @@ export const useCreditCardsStore = defineStore('creditCards', {
 
     async recordTransaction(cardId, transactionData) {
       try {
-        const response = await apiService.post(`credit-cards/${cardId}/transactions`, transactionData)
+        const dataToSend = { ...transactionData }
+        if (dataToSend.date) {
+          dataToSend.date = toISOString(dataToSend.date)
+        }
+        const response = await apiService.post(`credit-cards/${cardId}/transactions`, dataToSend)
         this.transactions.push(response.data)
 
         // Update the credit card in the store
@@ -261,7 +286,17 @@ export const useCreditCardsStore = defineStore('creditCards', {
 
     async createStatement(statementData) {
       try {
-        const response = await apiService.post('statements', statementData)
+        const dataToSend = { ...statementData }
+        if (dataToSend.statementDate) {
+          dataToSend.statementDate = toISOString(dataToSend.statementDate)
+        }
+        if (dataToSend.dueDate) {
+          dataToSend.dueDate = toISOString(dataToSend.dueDate)
+        }
+        if (dataToSend.paidDate) {
+          dataToSend.paidDate = toISOString(dataToSend.paidDate)
+        }
+        const response = await apiService.post('statements', dataToSend)
         this.statements.push(response.data)
         return response.data
       } catch (error) {
@@ -283,7 +318,11 @@ export const useCreditCardsStore = defineStore('creditCards', {
 
     async recordReward(rewardData) {
       try {
-        const response = await apiService.post('rewards', rewardData)
+        const dataToSend = { ...rewardData }
+        if (dataToSend.earnedDate) {
+          dataToSend.earnedDate = toISOString(dataToSend.earnedDate)
+        }
+        const response = await apiService.post('rewards', dataToSend)
         this.rewards.push(response.data)
         return response.data
       } catch (error) {

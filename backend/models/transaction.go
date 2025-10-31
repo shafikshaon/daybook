@@ -18,7 +18,9 @@ type Transaction struct {
 	Date             time.Time      `gorm:"not null;index" json:"date" binding:"required"`
 	Description      string         `json:"description"`
 	Tags             []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
-	SavingsGoalID    *uuid.UUID     `gorm:"type:uuid" json:"savingsGoalId"`
+	SavingsGoalID    *uuid.UUID     `gorm:"type:uuid;index" json:"savingsGoalId"`
+	FixedDepositID   *uuid.UUID     `gorm:"type:uuid;index" json:"fixedDepositId"`
+	InvestmentID     *uuid.UUID     `gorm:"type:uuid;index" json:"investmentId"`
 	RecurringID      *uuid.UUID     `gorm:"type:uuid" json:"recurringId"`
 	CreditCardID     *uuid.UUID     `gorm:"type:uuid" json:"creditCardId"`
 	Attachments      []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`

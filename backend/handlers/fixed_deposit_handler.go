@@ -117,31 +117,92 @@ func CreateFixedDeposit(c *gin.Context) {
 		return
 	}
 
-	var deposit models.FixedDeposit
-	if err := c.ShouldBindJSON(&deposit); err != nil {
+	var depositData struct {
+		models.FixedDeposit
+		AccountID uuid.UUID `json:"accountId" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&depositData); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	deposit.UserID = userID
+	depositData.FixedDeposit.UserID = userID
+
+	// Verify account belongs to user
+	var account models.Account
+	if err := database.DB.Where("id = ? AND user_id = ?", depositData.AccountID, userID).First(&account).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+		return
+	}
+
+	// Check sufficient balance
+	if account.Balance < depositData.Principal {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Insufficient account balance")
+		return
+	}
 
 	// Calculate maturity date from start date and tenure
-	deposit.MaturityDate = deposit.StartDate.AddDate(0, deposit.TenureMonths, 0)
+	depositData.MaturityDate = depositData.StartDate.AddDate(0, depositData.TenureMonths, 0)
 
 	// Calculate maturity amount
-	deposit.MaturityAmount = calculateMaturityAmount(
-		deposit.Principal,
-		deposit.InterestRate,
-		deposit.TenureMonths,
-		deposit.Compounding,
+	depositData.MaturityAmount = calculateMaturityAmount(
+		depositData.Principal,
+		depositData.InterestRate,
+		depositData.TenureMonths,
+		depositData.Compounding,
 	)
 
-	if err := database.DB.Create(&deposit).Error; err != nil {
+	// Start transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// Create fixed deposit
+	if err := tx.Create(&depositData.FixedDeposit).Error; err != nil {
+		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create fixed deposit")
 		return
 	}
 
-	utilities.CreatedResponse(c, deposit, "Fixed deposit created successfully")
+	// Create transaction record
+	transaction := models.Transaction{
+		UserID:         userID,
+		AccountID:      depositData.AccountID,
+		Type:           "expense",
+		Amount:         depositData.Principal,
+		CategoryID:     "fixed_deposit_investment",
+		Date:           depositData.StartDate,
+		Description:    "Fixed Deposit: " + depositData.Institution + " - " + depositData.AccountNumber,
+		FixedDepositID: &depositData.FixedDeposit.ID,
+		Tags:           []string{"fixed_deposit"},
+	}
+
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
+		return
+	}
+
+	// Update account balance (debit)
+	account.Balance -= depositData.Principal
+	if err := tx.Save(&account).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
+		return
+	}
+
+	tx.Commit()
+
+	result := map[string]interface{}{
+		"fixedDeposit": depositData.FixedDeposit,
+		"transaction":  transaction,
+	}
+
+	utilities.CreatedResponse(c, result, "Fixed deposit created successfully")
 }
 
 // UpdateFixedDeposit updates an existing fixed deposit
@@ -248,6 +309,7 @@ func WithdrawFixedDeposit(c *gin.Context) {
 	}
 
 	var withdrawalData struct {
+		AccountID            uuid.UUID  `json:"accountId" binding:"required"`
 		WithdrawnDate        *time.Time `json:"withdrawnDate"`
 		ActualMaturityAmount float64    `json:"actualMaturityAmount" binding:"required,gt=0"`
 	}
@@ -269,20 +331,67 @@ func WithdrawFixedDeposit(c *gin.Context) {
 		return
 	}
 
+	// Verify account belongs to user
+	var account models.Account
+	if err := database.DB.Where("id = ? AND user_id = ?", withdrawalData.AccountID, userID).First(&account).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+		return
+	}
+
+	withdrawnDate := func() time.Time {
+		if withdrawalData.WithdrawnDate != nil {
+			return *withdrawalData.WithdrawnDate
+		}
+		return time.Now()
+	}()
+
+	// Start transaction
+	tx := database.DB.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// Mark as withdrawn
 	deposit.Withdrawn = true
-	if withdrawalData.WithdrawnDate != nil {
-		deposit.WithdrawnDate = withdrawalData.WithdrawnDate
-	} else {
-		now := time.Now()
-		deposit.WithdrawnDate = &now
-	}
+	deposit.WithdrawnDate = &withdrawnDate
 	deposit.ActualMaturityAmount = withdrawalData.ActualMaturityAmount
 
-	if err := database.DB.Save(&deposit).Error; err != nil {
+	if err := tx.Save(&deposit).Error; err != nil {
+		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to withdraw fixed deposit")
 		return
 	}
+
+	// Create transaction record (income as money returns to account)
+	transaction := models.Transaction{
+		UserID:         userID,
+		AccountID:      withdrawalData.AccountID,
+		Type:           "income",
+		Amount:         withdrawalData.ActualMaturityAmount,
+		CategoryID:     "fixed_deposit_maturity",
+		Date:           withdrawnDate,
+		Description:    "FD Maturity: " + deposit.Institution + " - " + deposit.AccountNumber,
+		FixedDepositID: &depositID,
+		Tags:           []string{"fixed_deposit", "maturity"},
+	}
+
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
+		return
+	}
+
+	// Update account balance (credit)
+	account.Balance += withdrawalData.ActualMaturityAmount
+	if err := tx.Save(&account).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
+		return
+	}
+
+	tx.Commit()
 
 	// Calculate interest earned and penalty (if withdrawn early)
 	interestEarned := deposit.ActualMaturityAmount - deposit.Principal
@@ -297,6 +406,7 @@ func WithdrawFixedDeposit(c *gin.Context) {
 
 	result := map[string]interface{}{
 		"deposit":           deposit,
+		"transaction":       transaction,
 		"interestEarned":    interestEarned,
 		"isEarlyWithdrawal": isEarlyWithdrawal,
 		"penalty":           penalty,

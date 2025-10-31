@@ -186,9 +186,10 @@ func AddContribution(c *gin.Context) {
 	}
 
 	var contributionData struct {
-		Amount float64    `json:"amount" binding:"required,gt=0"`
-		Date   *time.Time `json:"date"`
-		Notes  string     `json:"notes"`
+		Amount    float64    `json:"amount" binding:"required,gt=0"`
+		AccountID uuid.UUID  `json:"accountId" binding:"required"`
+		Date      *time.Time `json:"date"`
+		Notes     string     `json:"notes"`
 	}
 
 	if err := c.ShouldBindJSON(&contributionData); err != nil {
@@ -202,6 +203,13 @@ func AddContribution(c *gin.Context) {
 		return
 	}
 
+	// Verify account belongs to user
+	var account models.Account
+	if err := database.DB.Where("id = ? AND user_id = ?", contributionData.AccountID, userID).First(&account).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+		return
+	}
+
 	// Start transaction
 	tx := database.DB.Begin()
 	defer func() {
@@ -210,23 +218,52 @@ func AddContribution(c *gin.Context) {
 		}
 	}()
 
+	contributionDate := func() time.Time {
+		if contributionData.Date != nil {
+			return *contributionData.Date
+		}
+		return time.Now()
+	}()
+
 	// Create contribution record
 	contribution := models.SavingsContribution{
 		UserID: userID,
 		GoalID: goalID,
 		Amount: contributionData.Amount,
-		Date: func() time.Time {
-			if contributionData.Date != nil {
-				return *contributionData.Date
-			}
-			return time.Now()
-		}(),
-		Notes: contributionData.Notes,
+		Date:   contributionDate,
+		Notes:  contributionData.Notes,
 	}
 
 	if err := tx.Create(&contribution).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create contribution")
+		return
+	}
+
+	// Create transaction record to track the expense
+	transaction := models.Transaction{
+		UserID:        userID,
+		AccountID:     contributionData.AccountID,
+		Type:          "expense",
+		Amount:        contributionData.Amount,
+		CategoryID:    "savings_contribution",
+		Date:          contributionDate,
+		Description:   "Contribution to " + goal.Name,
+		SavingsGoalID: &goalID,
+		Tags:          []string{"savings_goal"},
+	}
+
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
+		return
+	}
+
+	// Update account balance (debit)
+	account.Balance -= contributionData.Amount
+	if err := tx.Save(&account).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 		return
 	}
 
@@ -253,6 +290,7 @@ func AddContribution(c *gin.Context) {
 	result := map[string]interface{}{
 		"goal":         goal,
 		"contribution": contribution,
+		"transaction":  transaction,
 	}
 
 	utilities.SuccessResponse(c, result, "Contribution added successfully")
@@ -273,9 +311,10 @@ func WithdrawFromGoal(c *gin.Context) {
 	}
 
 	var withdrawalData struct {
-		Amount float64    `json:"amount" binding:"required,gt=0"`
-		Date   *time.Time `json:"date"`
-		Notes  string     `json:"notes"`
+		Amount    float64    `json:"amount" binding:"required,gt=0"`
+		AccountID uuid.UUID  `json:"accountId" binding:"required"`
+		Date      *time.Time `json:"date"`
+		Notes     string     `json:"notes"`
 	}
 
 	if err := c.ShouldBindJSON(&withdrawalData); err != nil {
@@ -295,6 +334,13 @@ func WithdrawFromGoal(c *gin.Context) {
 		return
 	}
 
+	// Verify account belongs to user
+	var account models.Account
+	if err := database.DB.Where("id = ? AND user_id = ?", withdrawalData.AccountID, userID).First(&account).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+		return
+	}
+
 	// Start transaction
 	tx := database.DB.Begin()
 	defer func() {
@@ -303,23 +349,52 @@ func WithdrawFromGoal(c *gin.Context) {
 		}
 	}()
 
+	withdrawalDate := func() time.Time {
+		if withdrawalData.Date != nil {
+			return *withdrawalData.Date
+		}
+		return time.Now()
+	}()
+
 	// Create withdrawal record (as negative contribution)
 	withdrawal := models.SavingsContribution{
 		UserID: userID,
 		GoalID: goalID,
 		Amount: -withdrawalData.Amount, // Negative amount indicates withdrawal
-		Date: func() time.Time {
-			if withdrawalData.Date != nil {
-				return *withdrawalData.Date
-			}
-			return time.Now()
-		}(),
-		Notes: withdrawalData.Notes,
+		Date:   withdrawalDate,
+		Notes:  withdrawalData.Notes,
 	}
 
 	if err := tx.Create(&withdrawal).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create withdrawal record")
+		return
+	}
+
+	// Create transaction record to track the income (money coming back)
+	transaction := models.Transaction{
+		UserID:        userID,
+		AccountID:     withdrawalData.AccountID,
+		Type:          "income",
+		Amount:        withdrawalData.Amount,
+		CategoryID:    "savings_withdrawal",
+		Date:          withdrawalDate,
+		Description:   "Withdrawal from " + goal.Name,
+		SavingsGoalID: &goalID,
+		Tags:          []string{"savings_goal"},
+	}
+
+	if err := tx.Create(&transaction).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
+		return
+	}
+
+	// Update account balance (credit)
+	account.Balance += withdrawalData.Amount
+	if err := tx.Save(&account).Error; err != nil {
+		tx.Rollback()
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 		return
 	}
 
@@ -341,8 +416,9 @@ func WithdrawFromGoal(c *gin.Context) {
 	tx.Commit()
 
 	result := map[string]interface{}{
-		"goal":       goal,
-		"withdrawal": withdrawal,
+		"goal":        goal,
+		"withdrawal":  withdrawal,
+		"transaction": transaction,
 	}
 
 	utilities.SuccessResponse(c, result, "Withdrawal completed successfully")

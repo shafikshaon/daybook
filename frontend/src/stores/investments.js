@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
+import { toISOString } from '@/utils/dateUtils'
 import { useSettingsStore } from './settings'
 
 export const useInvestmentsStore = defineStore('investments', {
@@ -154,7 +155,11 @@ export const useInvestmentsStore = defineStore('investments', {
 
     async createInvestment(investmentData) {
       try {
-        const response = await apiService.post('investments', investmentData)
+        const dataToSend = { ...investmentData }
+        if (dataToSend.purchaseDate) {
+          dataToSend.purchaseDate = toISOString(dataToSend.purchaseDate)
+        }
+        const response = await apiService.post('investments', dataToSend)
         this.investments.push(response.data)
         return response.data
       } catch (error) {
@@ -165,7 +170,11 @@ export const useInvestmentsStore = defineStore('investments', {
 
     async updateInvestment(id, investmentData) {
       try {
-        const response = await apiService.put('investments', id, investmentData)
+        const dataToSend = { ...investmentData }
+        if (dataToSend.purchaseDate) {
+          dataToSend.purchaseDate = toISOString(dataToSend.purchaseDate)
+        }
+        const response = await apiService.put('investments', id, dataToSend)
         const index = this.investments.findIndex(inv => inv.id === id)
         if (index !== -1) {
           this.investments[index] = response.data
@@ -261,7 +270,11 @@ export const useInvestmentsStore = defineStore('investments', {
 
     async recordDividend(dividendData) {
       try {
-        const response = await apiService.post('dividends', dividendData)
+        const dataToSend = { ...dividendData }
+        if (dataToSend.paymentDate) {
+          dataToSend.paymentDate = toISOString(dataToSend.paymentDate)
+        }
+        const response = await apiService.post('dividends', dataToSend)
         this.dividends.push(response.data)
         return response.data
       } catch (error) {

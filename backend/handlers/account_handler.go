@@ -68,8 +68,42 @@ func CreateAccount(c *gin.Context) {
 
 	account.UserID = userID
 
-	if err := database.DB.Create(&account).Error; err != nil {
+	// Start transaction to ensure atomicity
+	tx := database.DB.Begin()
+	if tx.Error != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to start transaction")
+		return
+	}
+
+	// Create the account
+	if err := tx.Create(&account).Error; err != nil {
+		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create account")
+		return
+	}
+
+	// If there's an initial balance, create an opening balance transaction
+	if account.InitialBalance > 0 {
+		transaction := models.Transaction{
+			UserID:      userID,
+			AccountID:   account.ID,
+			Type:        "income",
+			CategoryID:  "opening_balance",
+			Amount:      account.InitialBalance,
+			Date:        account.CreatedAt,
+			Description: "Opening balance for " + account.Name,
+		}
+
+		if err := tx.Create(&transaction).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create opening balance transaction")
+			return
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit().Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
 		return
 	}
 

@@ -106,31 +106,9 @@ func SetupRoutes(router *gin.Engine) {
 				rewardRoutes.POST("", handlers.RecordReward)
 			}
 
-			// Investment routes
-			investmentRoutes := protected.Group("/investments")
-			{
-				investmentRoutes.GET("", handlers.ListInvestments)
-				investmentRoutes.GET("/:id", handlers.GetInvestment)
-				investmentRoutes.POST("", handlers.CreateInvestment)
-				investmentRoutes.PUT("/:id", handlers.UpdateInvestment)
-				investmentRoutes.DELETE("/:id", handlers.DeleteInvestment)
-				investmentRoutes.POST("/:id/buy", handlers.BuyShares)
-				investmentRoutes.POST("/:id/sell", handlers.SellShares)
-			}
-
-			// Portfolio routes
-			portfolioRoutes := protected.Group("/portfolios")
-			{
-				portfolioRoutes.GET("", handlers.ListPortfolios)
-				portfolioRoutes.POST("", handlers.CreatePortfolio)
-			}
-
-			// Dividend routes
-			dividendRoutes := protected.Group("/dividends")
-			{
-				dividendRoutes.GET("", handlers.ListDividends)
-				dividendRoutes.POST("", handlers.RecordDividend)
-			}
+			// OLD Investment routes - REMOVED
+			// Replaced by unified Goals system at /goals
+			// Investment, Portfolio, and Dividend functionality now available as Goal Holdings
 
 			// Bill routes
 			billRoutes := protected.Group("/bills")
@@ -157,34 +135,22 @@ func SetupRoutes(router *gin.Engine) {
 				budgetRoutes.DELETE("/:id", handlers.DeleteBudget)
 			}
 
-			// Savings goal routes
-			savingsGoalRoutes := protected.Group("/savings-goals")
+			// Goal routes (Unified savings, investments, and fixed deposits)
+			goalRoutes := protected.Group("/goals")
 			{
-				savingsGoalRoutes.GET("", handlers.ListSavingsGoals)
-				savingsGoalRoutes.GET("/:id", handlers.GetSavingsGoal)
-				savingsGoalRoutes.POST("", handlers.CreateSavingsGoal)
-				savingsGoalRoutes.PUT("/:id", handlers.UpdateSavingsGoal)
-				savingsGoalRoutes.DELETE("/:id", handlers.DeleteSavingsGoal)
-				savingsGoalRoutes.POST("/:id/contribute", handlers.AddContribution)
-				savingsGoalRoutes.POST("/:id/withdraw", handlers.WithdrawFromGoal)
-			}
+				goalRoutes.GET("", handlers.ListGoals)
+				goalRoutes.GET("/:id", handlers.GetGoal)
+				goalRoutes.POST("", handlers.CreateGoal)
+				goalRoutes.PUT("/:id", handlers.UpdateGoal)
+				goalRoutes.DELETE("/:id", handlers.DeleteGoal)
 
-			// Automated rule routes
-			automatedRuleRoutes := protected.Group("/automated-rules")
-			{
-				automatedRuleRoutes.GET("", handlers.ListAutomatedRules)
-				automatedRuleRoutes.POST("", handlers.CreateAutomatedRule)
-			}
+				// Holdings management
+				goalRoutes.POST("/:id/holdings", handlers.AddHolding)
+				goalRoutes.PUT("/holdings/:holdingId", handlers.UpdateHolding)
+				goalRoutes.DELETE("/holdings/:holdingId", handlers.RemoveHolding)
 
-			// Fixed deposit routes
-			fixedDepositRoutes := protected.Group("/fixed-deposits")
-			{
-				fixedDepositRoutes.GET("", handlers.ListFixedDeposits)
-				fixedDepositRoutes.GET("/:id", handlers.GetFixedDeposit)
-				fixedDepositRoutes.POST("", handlers.CreateFixedDeposit)
-				fixedDepositRoutes.PUT("/:id", handlers.UpdateFixedDeposit)
-				fixedDepositRoutes.DELETE("/:id", handlers.DeleteFixedDeposit)
-				fixedDepositRoutes.POST("/:id/withdraw", handlers.WithdrawFixedDeposit)
+				// Utility endpoints
+				goalRoutes.GET("/holding-types", handlers.GetHoldingTypes)
 			}
 
 			// Settings routes

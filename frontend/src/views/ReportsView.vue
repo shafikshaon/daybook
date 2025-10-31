@@ -28,8 +28,8 @@
       <div class="col-12 col-md-3">
         <div class="stat-card">
           <div class="stat-icon blue">💰</div>
-          <div class="stat-value">{{ formatCurrency(cashFlow) }}</div>
-          <div class="stat-label">Cash Flow (Monthly)</div>
+          <div class="stat-value">{{ savingsRate }}%</div>
+          <div class="stat-label">Savings Rate</div>
         </div>
       </div>
     </div>
@@ -55,62 +55,147 @@
     </div>
 
     <div class="row g-3">
-      <!-- Income vs Expenses -->
+      <!-- Cash Flow Summary -->
       <div class="col-12 col-lg-6">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0">Income vs Expenses</h5>
+            <h5 class="mb-0">Cash Flow Summary</h5>
           </div>
           <div class="card-body">
             <div class="mb-3">
               <div class="d-flex justify-content-between mb-2">
-                <span class="text-success">Income</span>
+                <span class="text-success">💰 Income</span>
                 <span class="fw-bold text-success">{{ formatCurrency(periodIncome) }}</span>
               </div>
               <div class="progress mb-3" style="height: 20px;">
-                <div class="progress-bar bg-success" :style="{ width: '50%' }"></div>
+                <div class="progress-bar bg-success" :style="{ width: '100%' }">100%</div>
               </div>
 
               <div class="d-flex justify-content-between mb-2">
-                <span class="text-danger">Expenses</span>
-                <span class="fw-bold text-danger">{{ formatCurrency(periodExpense) }}</span>
+                <span class="text-danger">🛍️ Regular Expenses</span>
+                <span class="fw-bold text-danger">{{ formatCurrency(periodRegularExpense) }}</span>
               </div>
-              <div class="progress" style="height: 20px;">
-                <div class="progress-bar bg-danger" :style="{ width: '50%' }"></div>
+              <div class="progress mb-3" style="height: 20px;">
+                <div class="progress-bar bg-danger" :style="{ width: calcPercentage(periodRegularExpense, periodIncome) + '%' }">
+                  {{ calcPercentage(periodRegularExpense, periodIncome) }}%
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between mb-2">
+                <span class="text-primary">💎 Savings & Investments</span>
+                <span class="fw-bold text-primary">{{ formatCurrency(periodSavings) }}</span>
+              </div>
+              <div class="progress mb-3" style="height: 20px;">
+                <div class="progress-bar bg-primary" :style="{ width: calcPercentage(periodSavings, periodIncome) + '%' }">
+                  {{ calcPercentage(periodSavings, periodIncome) }}%
+                </div>
               </div>
             </div>
             <div class="text-center p-3 bg-light rounded">
               <div class="fw-bold">Net Cash Flow</div>
-              <div :class="periodIncome - periodExpense >= 0 ? 'text-success' : 'text-danger'" style="font-size: 1.5rem;">
-                {{ formatCurrency(periodIncome - periodExpense) }}
+              <div :class="periodIncome - periodRegularExpense - periodSavings >= 0 ? 'text-success' : 'text-danger'" style="font-size: 1.5rem;">
+                {{ formatCurrency(periodIncome - periodRegularExpense - periodSavings) }}
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Category Breakdown -->
+      <!-- Savings Rate Chart -->
       <div class="col-12 col-lg-6">
         <div class="card">
           <div class="card-header">
-            <h5 class="mb-0">Expense by Category</h5>
+            <h5 class="mb-0">Money Allocation</h5>
           </div>
           <div class="card-body">
-            <div v-for="breakdown in categoryBreakdown" :key="breakdown.categoryId" class="mb-3">
-              <div class="d-flex justify-content-between mb-1">
-                <span>{{ getCategoryName(breakdown.categoryId) }}</span>
-                <span class="fw-bold">{{ formatCurrency(breakdown.amount) }}</span>
+            <div class="text-center mb-3">
+              <div style="font-size: 3rem; font-weight: bold;" :class="savingsRate >= 20 ? 'text-success' : savingsRate >= 10 ? 'text-warning' : 'text-danger'">
+                {{ savingsRate }}%
               </div>
-              <div class="progress" style="height: 8px;">
-                <div
-                  class="progress-bar"
-                  :style="{
-                    width: (breakdown.amount / totalCategoryExpenses * 100) + '%',
-                    backgroundColor: getCategoryColor(breakdown.categoryId)
-                  }"
-                ></div>
+              <div class="text-muted">Savings Rate</div>
+              <small class="text-muted">
+                {{ savingsRate >= 20 ? '🎉 Excellent!' : savingsRate >= 10 ? '👍 Good' : '⚠️ Consider saving more' }}
+              </small>
+            </div>
+            <div class="mb-3">
+              <div class="d-flex justify-content-between mb-2">
+                <span>Savings & Investments</span>
+                <span class="fw-bold text-primary">{{ calcPercentage(periodSavings, periodIncome) }}%</span>
               </div>
-              <small class="text-muted">{{ Math.round(breakdown.amount / totalCategoryExpenses * 100) }}% of total</small>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Regular Expenses</span>
+                <span class="fw-bold text-danger">{{ calcPercentage(periodRegularExpense, periodIncome) }}%</span>
+              </div>
+              <div class="d-flex justify-content-between mb-2">
+                <span>Remaining</span>
+                <span class="fw-bold text-muted">
+                  {{ Math.max(0, 100 - calcPercentage(periodSavings, periodIncome) - calcPercentage(periodRegularExpense, periodIncome)) }}%
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Regular Expenses Breakdown -->
+      <div class="col-12 col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">🛍️ Regular Expenses by Category</h5>
+          </div>
+          <div class="card-body">
+            <div v-if="regularExpenseBreakdown.length > 0">
+              <div v-for="breakdown in regularExpenseBreakdown" :key="breakdown.categoryId" class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span>{{ getCategoryName(breakdown.categoryId) }}</span>
+                  <span class="fw-bold">{{ formatCurrency(breakdown.amount) }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div
+                    class="progress-bar"
+                    :style="{
+                      width: (breakdown.amount / totalRegularExpenses * 100) + '%',
+                      backgroundColor: getCategoryColor(breakdown.categoryId)
+                    }"
+                  ></div>
+                </div>
+                <small class="text-muted">{{ Math.round(breakdown.amount / totalRegularExpenses * 100) }}% of regular expenses</small>
+              </div>
+            </div>
+            <div v-else class="text-center text-muted py-4">
+              <p>No regular expenses in this period</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savings & Investments Breakdown -->
+      <div class="col-12 col-lg-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">💎 Savings & Investments by Category</h5>
+          </div>
+          <div class="card-body">
+            <div v-if="savingsBreakdown.length > 0">
+              <div v-for="breakdown in savingsBreakdown" :key="breakdown.categoryId" class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span>{{ getCategoryName(breakdown.categoryId) }}</span>
+                  <span class="fw-bold">{{ formatCurrency(breakdown.amount) }}</span>
+                </div>
+                <div class="progress" style="height: 8px;">
+                  <div
+                    class="progress-bar"
+                    :style="{
+                      width: (breakdown.amount / totalSavings * 100) + '%',
+                      backgroundColor: getCategoryColor(breakdown.categoryId)
+                    }"
+                  ></div>
+                </div>
+                <small class="text-muted">{{ Math.round(breakdown.amount / totalSavings * 100) }}% of savings</small>
+              </div>
+            </div>
+            <div v-else class="text-center text-muted py-4">
+              <p>No savings or investments in this period</p>
             </div>
           </div>
         </div>
@@ -129,7 +214,8 @@
                   <tr>
                     <th>Month</th>
                     <th class="text-end">Income</th>
-                    <th class="text-end">Expenses</th>
+                    <th class="text-end">Regular Expenses</th>
+                    <th class="text-end">Savings</th>
                     <th class="text-end">Net</th>
                   </tr>
                 </thead>
@@ -137,7 +223,8 @@
                   <tr v-for="month in monthlyTrend" :key="month.month">
                     <td>{{ month.month }}</td>
                     <td class="text-end text-success">{{ formatCurrency(month.income) }}</td>
-                    <td class="text-end text-danger">{{ formatCurrency(month.expenses) }}</td>
+                    <td class="text-end text-danger">{{ formatCurrency(month.regularExpenses) }}</td>
+                    <td class="text-end text-primary">{{ formatCurrency(month.savings) }}</td>
                     <td class="text-end" :class="month.net >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold'">
                       {{ formatCurrency(month.net) }}
                     </td>
@@ -172,7 +259,8 @@ const dateRange = ref({
 })
 
 const periodIncome = ref(0)
-const periodExpense = ref(0)
+const periodRegularExpense = ref(0)
+const periodSavings = ref(0)
 
 const netWorth = computed(() => {
   return accountsStore.totalBalance + investmentsStore.totalCurrentValue - creditCardsStore.totalOutstanding
@@ -186,22 +274,31 @@ const totalLiabilities = computed(() => {
   return creditCardsStore.totalOutstanding
 })
 
-const cashFlow = computed(() => {
-  const now = new Date()
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-  const income = transactionsStore.totalIncome(startOfMonth, endOfMonth)
-  const expense = transactionsStore.totalExpense(startOfMonth, endOfMonth)
-  return income - expense
+const savingsRate = computed(() => {
+  if (periodIncome.value === 0) return 0
+  return Math.round((periodSavings.value / periodIncome.value) * 100)
 })
 
-const categoryBreakdown = computed(() => {
-  return transactionsStore.categoryBreakdown('expense')
+const regularExpenseBreakdown = computed(() => {
+  return transactionsStore.groupBreakdown('expense', dateRange.value.start, dateRange.value.end)
 })
 
-const totalCategoryExpenses = computed(() => {
-  return categoryBreakdown.value.reduce((sum, cat) => sum + cat.amount, 0)
+const savingsBreakdown = computed(() => {
+  return transactionsStore.groupBreakdown('savings', dateRange.value.start, dateRange.value.end)
 })
+
+const totalRegularExpenses = computed(() => {
+  return regularExpenseBreakdown.value.reduce((sum, cat) => sum + cat.amount, 0)
+})
+
+const totalSavings = computed(() => {
+  return savingsBreakdown.value.reduce((sum, cat) => sum + cat.amount, 0)
+})
+
+const calcPercentage = (amount, total) => {
+  if (total === 0) return 0
+  return Math.round((amount / total) * 100)
+}
 
 const monthlyTrend = computed(() => {
   const trends = []
@@ -209,17 +306,19 @@ const monthlyTrend = computed(() => {
 
   for (let i = 5; i >= 0; i--) {
     const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const startOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
-    const endOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0)
+    const startOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).toISOString().split('T')[0]
+    const endOfMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).toISOString().split('T')[0]
 
-    const income = transactionsStore.totalIncome(startOfMonth, endOfMonth)
-    const expenses = transactionsStore.totalExpense(startOfMonth, endOfMonth)
+    const income = transactionsStore.totalByGroup('income', startOfMonth, endOfMonth)
+    const regularExpenses = transactionsStore.totalByGroup('expense', startOfMonth, endOfMonth)
+    const savings = transactionsStore.totalByGroup('savings', startOfMonth, endOfMonth)
 
     trends.push({
       month: monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
       income,
-      expenses,
-      net: income - expenses
+      regularExpenses,
+      savings,
+      net: income - regularExpenses - savings
     })
   }
 
@@ -239,8 +338,9 @@ const getCategoryColor = (id) => {
 }
 
 const applyDateRange = () => {
-  periodIncome.value = transactionsStore.totalIncome(dateRange.value.start, dateRange.value.end)
-  periodExpense.value = transactionsStore.totalExpense(dateRange.value.start, dateRange.value.end)
+  periodIncome.value = transactionsStore.totalByGroup('income', dateRange.value.start, dateRange.value.end)
+  periodRegularExpense.value = transactionsStore.totalByGroup('expense', dateRange.value.start, dateRange.value.end)
+  periodSavings.value = transactionsStore.totalByGroup('savings', dateRange.value.start, dateRange.value.end)
 }
 
 onMounted(async () => {

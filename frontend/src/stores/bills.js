@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
+import { toISOString } from '@/utils/dateUtils'
 import { useSettingsStore } from './settings'
 
 export const useBillsStore = defineStore('bills', {
@@ -156,10 +157,17 @@ export const useBillsStore = defineStore('bills', {
 
     async createBill(billData) {
       try {
-        const response = await apiService.post('bills', {
+        const dataToSend = {
           ...billData,
           active: true
-        })
+        }
+        if (dataToSend.startDate) {
+          dataToSend.startDate = toISOString(dataToSend.startDate)
+        }
+        if (dataToSend.nextDueDate) {
+          dataToSend.nextDueDate = toISOString(dataToSend.nextDueDate)
+        }
+        const response = await apiService.post('bills', dataToSend)
 
         this.bills.push(response.data)
         return response.data
@@ -171,7 +179,14 @@ export const useBillsStore = defineStore('bills', {
 
     async updateBill(id, billData) {
       try {
-        const response = await apiService.put('bills', id, billData)
+        const dataToSend = { ...billData }
+        if (dataToSend.startDate) {
+          dataToSend.startDate = toISOString(dataToSend.startDate)
+        }
+        if (dataToSend.nextDueDate) {
+          dataToSend.nextDueDate = toISOString(dataToSend.nextDueDate)
+        }
+        const response = await apiService.put('bills', id, dataToSend)
         const index = this.bills.findIndex(bill => bill.id === id)
         if (index !== -1) {
           this.bills[index] = response.data
