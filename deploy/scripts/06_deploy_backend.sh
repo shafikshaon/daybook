@@ -80,11 +80,23 @@ sudo chown -R "$APP_USER:$APP_GROUP" "${GOPATH_DIR}"
 
 # Download dependencies
 log_info "Downloading Go dependencies..."
-sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go mod download
+sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go mod download 2>&1 | tee /tmp/go-download.log
+if [ ${PIPESTATUS[0]} -ne 0 ]; then
+    log_error "Failed to download Go dependencies"
+    cat /tmp/go-download.log
+    exit 1
+fi
 
-# Build the application
-log_info "Compiling Go application..."
-sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go build -o daybook-backend -ldflags="-s -w" main.go
+# Build the application with verbose output
+log_info "Compiling Go application (this may take a few minutes)..."
+sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} GOCACHE=${GOPATH_DIR}/cache go build -v -o daybook-backend -ldflags="-s -w" main.go 2>&1 | tee /tmp/go-build.log
+BUILD_EXIT_CODE=${PIPESTATUS[0]}
+
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+    log_error "Failed to build Go application (exit code: $BUILD_EXIT_CODE)"
+    cat /tmp/go-build.log
+    exit 1
+fi
 
 # Verify the binary was created
 if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then

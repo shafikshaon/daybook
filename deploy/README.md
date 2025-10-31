@@ -512,6 +512,53 @@ sudo -u postgres psql -c "SELECT pg_size_pretty(pg_database_size('daybook_prod')
 
 ## Troubleshooting
 
+### SSH Connection Dropped During Deployment
+
+If your SSH connection drops during deployment (especially during Go build):
+
+1. **Reconnect to the server:**
+```bash
+ssh ubuntu@13.228.221.238
+```
+
+2. **Check if the build is still running:**
+```bash
+ps aux | grep "go build"
+```
+
+3. **Check if backend service was created:**
+```bash
+sudo systemctl status daybook-backend
+```
+
+4. **Check build logs:**
+```bash
+cat /tmp/go-build.log
+cat /tmp/go-download.log
+```
+
+5. **If build failed, re-run just the backend deployment:**
+```bash
+cd ~/projects/daybook/deploy
+sudo ./scripts/06_deploy_backend.sh
+```
+
+6. **To prevent SSH timeout, use screen or tmux:**
+```bash
+# Install screen
+sudo apt-get install screen -y
+
+# Start a screen session
+screen -S deploy
+
+# Run deployment
+cd ~/projects/daybook/deploy
+sudo ./deploy.sh --fresh
+
+# Detach: Press Ctrl+A then D
+# Reattach later: screen -r deploy
+```
+
 ### Backend Service Won't Start
 
 1. Check logs:
