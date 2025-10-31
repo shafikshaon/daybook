@@ -84,6 +84,18 @@ log_info "Node version: $(node --version)"
 log_info "NPM version: $(npm --version)"
 
 # ============================================================================
+# Step 2: Setup PostgreSQL Database
+# ============================================================================
+
+log_step "Setting up PostgreSQL"
+
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+
+log_info "PostgreSQL is running"
+log_info "Using existing database: daybook with user: postgres"
+
+# ============================================================================
 # Step 3: Setup Redis
 # ============================================================================
 
@@ -113,7 +125,8 @@ ENVIRONMENT=production
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=daybook
-DB_USER=postgresDB_PASSWORD=$DB_PASSWORD
+DB_USER=postgres
+DB_PASSWORD=$DB_PASSWORD
 DB_SSLMODE=disable
 
 # Redis Configuration
@@ -315,8 +328,8 @@ echo "   Backend: sudo systemctl status daybook-backend"
 echo "   Logs: sudo journalctl -u daybook-backend -f"
 echo ""
 echo "🔒 Database:"
-echo "   Name: daybook_prod"
-echo "   User: daybook_user"
+echo "   Name: daybook"
+echo "   User: postgres"
 echo "   Password: $DB_PASSWORD"
 echo "   (Password saved in: $PROJECT_ROOT/backend/.env)"
 echo ""
