@@ -25,6 +25,7 @@ func InitDatabase(cfg *config.Config) error {
 
 	// Initialize PostgreSQL
 	dsn := cfg.Database.GetDSN()
+	fmt.Println(dsn)
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	})
