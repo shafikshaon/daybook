@@ -45,3 +45,4 @@ Thumbs.db
 # Uploads (user files)
 /uploads/*
 !/uploads/.gitkeep
+daybook-backend
