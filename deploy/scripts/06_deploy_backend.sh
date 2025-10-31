@@ -77,11 +77,11 @@ export PATH=$PATH:$GOPATH/bin
 
 # Download dependencies
 log_info "Downloading Go dependencies..."
-sudo -u "$APP_USER" go mod download
+sudo -u "$APP_USER" env PATH=$PATH:/usr/local/go/bin GOPATH=$HOME/go go mod download
 
 # Build the application
 log_info "Compiling Go application..."
-sudo -u "$APP_USER" go build -o daybook-backend -ldflags="-s -w" main.go
+sudo -u "$APP_USER" env PATH=$PATH:/usr/local/go/bin GOPATH=$HOME/go go build -o daybook-backend -ldflags="-s -w" main.go
 
 # Verify the binary was created
 if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then
