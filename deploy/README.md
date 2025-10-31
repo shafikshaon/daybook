@@ -1,6 +1,10 @@
 # Daybook Deployment Guide
 
-This directory contains automated deployment scripts for deploying the Daybook application (frontend and backend) on an Ubuntu server running on AWS with PostgreSQL and Redis.
+This directory contains automated deployment scripts for deploying the Daybook application (frontend and backend) on an Ubuntu server running on AWS EC2 with PostgreSQL and Redis.
+
+**Server Details:**
+- **EC2 IP:** 13.228.221.238
+- **Domain:** daybook.shafik.xyz
 
 ## Overview
 
@@ -9,8 +13,8 @@ The deployment system is modular and automated, requiring minimal manual interve
 ## Prerequisites
 
 ### Local Machine
-- SSH access to your Ubuntu server
-- Git repository cloned
+- Git repository with latest code
+- Ability to push to remote git repository
 
 ### Ubuntu Server (AWS EC2)
 - Ubuntu 20.04 LTS or later
@@ -22,55 +26,134 @@ The deployment system is modular and automated, requiring minimal manual interve
   - Port 80 (HTTP)
   - Port 443 (HTTPS) - optional, for SSL
 
-## Quick Start
+## Deployment Steps (In Order)
 
-### 1. Configure Deployment
+### Step 1: Prepare Local Repository
 
-Edit the configuration file with your server details:
+Ensure all your changes are committed and pushed to git:
 
 ```bash
+# Commit your changes
+git add .
+git commit -m "Update deployment configuration"
+git push origin master
+```
+
+### Step 2: Connect to EC2 Server
+
+SSH into your EC2 instance:
+
+```bash
+ssh ubuntu@13.228.221.238
+```
+
+### Step 3: Clone Repository on Server
+
+Clone the repository to the server (first time only):
+
+```bash
+# Clone the repository
+cd ~
+git clone YOUR_REPOSITORY_URL daybook
+cd daybook
+```
+
+For subsequent deployments, just pull the latest changes:
+
+```bash
+cd ~/daybook
+git pull origin master
+```
+
+### Step 4: Run Fresh Installation
+
+For the first deployment, run a fresh installation:
+
+```bash
+cd ~/daybook/deploy
+chmod +x deploy.sh scripts/*.sh
+
+# Run fresh installation (installs all dependencies and services)
+sudo ./deploy.sh --fresh
+```
+
+This will:
+1. Install Go 1.21.5 and Node.js 20
+2. Install and configure PostgreSQL
+3. Install and configure Redis
+4. Install and configure Nginx
+5. Create application user and directories
+6. Build and deploy backend
+7. Build and deploy frontend
+8. Run database migrations
+
+### Step 5: Verify Deployment
+
+After deployment completes, verify the application is running:
+
+```bash
+# Check backend service status
+sudo systemctl status daybook-backend
+
+# Check Nginx status
+sudo systemctl status nginx
+
+# Test health endpoint
+curl http://localhost/health
+
+# Test API endpoint
+curl http://localhost/api/v1/health
+```
+
+### Step 6: Access Your Application
+
+Once deployment completes successfully, access your application at:
+- **Frontend:** http://daybook.shafik.xyz
+- **Backend API:** http://daybook.shafik.xyz/api/v1
+- **Health Check:** http://daybook.shafik.xyz/health
+
+### Step 7: Configure DNS (If Not Already Done)
+
+Ensure your domain points to your EC2 IP:
+
+```
+A Record: daybook.shafik.xyz → 13.228.221.238
+```
+
+## Subsequent Deployments
+
+For subsequent updates after the initial setup:
+
+### Option 1: Quick Update (Recommended)
+
+```bash
+cd ~/daybook
+git pull origin master
 cd deploy
-cp config/deploy.conf config/deploy.conf.local
-nano config/deploy.conf
+
+# Update both backend and frontend (skips infrastructure setup)
+sudo ./deploy.sh --skip-deps --skip-db
 ```
 
-**Important:** Update these values in `deploy.conf`:
-- `DOMAIN_OR_IP`: Your server's IP address or domain name
-- `DB_PASSWORD`: A strong database password (leave empty to auto-generate)
-- `GO_VERSION`: Go version to install (default: 1.21.5)
-- `NODE_VERSION`: Node.js major version (default: 20)
-
-### 2. Copy Files to Server
-
-Copy the entire project to your server:
+### Option 2: Update Backend Only
 
 ```bash
-# From your local machine
-rsync -avz --exclude 'node_modules' --exclude '.git' \
-  /path/to/daybook ubuntu@YOUR_SERVER_IP:/tmp/daybook
+cd ~/daybook
+git pull origin master
+cd deploy
+
+sudo ./scripts/update_backend.sh
 ```
 
-### 3. Run Deployment
-
-SSH into your server and run the deployment:
+### Option 3: Update Frontend Only
 
 ```bash
-ssh ubuntu@YOUR_SERVER_IP
-cd /tmp/daybook/deploy
+cd ~/daybook
+git pull origin master
+cd deploy
 
-# For fresh installation (first time)
-./deploy.sh --fresh
-
-# For updates (when infrastructure is already set up)
-./deploy.sh --skip-deps --skip-db
+sudo ./scripts/update_frontend.sh
 ```
-
-### 4. Access Your Application
-
-Once deployment completes:
-- Frontend: `http://YOUR_SERVER_IP`
-- Backend API: `http://YOUR_SERVER_IP/api/v1`
-- Health Check: `http://YOUR_SERVER_IP/health`
 
 ## Directory Structure
 
