@@ -10,6 +10,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Copy environment file
+COPY .env.docker .env
+
 # Build the application
 RUN npm run build
 
