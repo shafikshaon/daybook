@@ -8,7 +8,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 5Gi
+      storage: 0.5Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -16,7 +16,7 @@ metadata:
   name: backend
   namespace: daybook
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: backend
