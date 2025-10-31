@@ -58,8 +58,8 @@ log_info "Installing basic tools..."
 sudo apt-get install -y curl wget git build-essential openssl postgresql redis-server nginx
 
 # Install Go
-log_info "Installing Go 1.23..."
-GO_VERSION="1.23.3"
+log_info "Installing Go 1.25..."
+GO_VERSION="1.25.3"
 if ! command -v go &> /dev/null || ! go version | grep -q "go1.23"; then
     wget -q https://golang.org/dl/go${GO_VERSION}.linux-amd64.tar.gz
     sudo rm -rf /usr/local/go
