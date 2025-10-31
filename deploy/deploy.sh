@@ -67,11 +67,20 @@ fi
 # Display configuration
 log_info "Deployment Configuration:"
 echo "  App Name: $APP_NAME"
-echo "  App Directory: $APP_DIR"
+echo "  Source Directory: $SOURCE_DIR (git repository)"
+echo "  Build Directory: $BUILD_DIR (temporary)"
+echo "  App Directory: $APP_DIR (deployment)"
 echo "  Domain/IP: $DOMAIN_OR_IP"
 echo "  Backend Port: $BACKEND_PORT"
 echo "  Database: $DB_NAME"
 echo ""
+
+# Verify source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+    log_error "Source directory not found: $SOURCE_DIR"
+    log_error "Please ensure the repository is cloned at $SOURCE_DIR"
+    exit 1
+fi
 
 # Parse command line arguments
 FRESH_INSTALL=false

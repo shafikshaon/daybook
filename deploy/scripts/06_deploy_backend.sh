@@ -33,14 +33,25 @@ fi
 
 log_info "Deploying backend application..."
 
-# Verify backend directory exists (should be cloned from git)
-if [ ! -d "$BACKEND_DIR" ]; then
-    log_error "Backend directory not found: $BACKEND_DIR"
-    log_error "Please clone the repository to $BACKEND_DIR first"
+# Verify source directory exists
+if [ ! -d "$SOURCE_DIR/backend" ]; then
+    log_error "Source backend directory not found: $SOURCE_DIR/backend"
+    log_error "Please ensure the repository is cloned at $SOURCE_DIR"
     exit 1
 fi
 
-log_info "Backend directory: $BACKEND_DIR"
+log_info "Source directory: $SOURCE_DIR/backend"
+log_info "Build directory: $BUILD_BACKEND_DIR"
+log_info "Deploy directory: $BACKEND_DIR"
+
+# Create build directory
+log_info "Preparing build directory..."
+sudo rm -rf "$BUILD_BACKEND_DIR"
+sudo mkdir -p "$BUILD_BACKEND_DIR"
+
+# Copy backend source to build directory
+log_info "Copying source code to build directory..."
+sudo cp -r "$SOURCE_DIR/backend"/* "$BUILD_BACKEND_DIR/"
 
 # Set Go environment for the app user
 APP_USER_HOME=$(eval echo ~$APP_USER)
@@ -50,89 +61,70 @@ GOCACHE_DIR="${GOPATH_DIR}/cache"
 # Create Go cache directory for app user
 sudo mkdir -p "${GOPATH_DIR}" "${GOCACHE_DIR}"
 sudo chown -R "$APP_USER:$APP_GROUP" "${GOPATH_DIR}"
+sudo chown -R "$APP_USER:$APP_GROUP" "$BUILD_BACKEND_DIR"
 
-cd "$BACKEND_DIR"
+cd "$BUILD_BACKEND_DIR"
 
-# Check if rebuild is needed (skip if no source changes)
-LAST_BUILD_HASH_FILE="${BACKEND_DIR}/.last_build_hash"
-CURRENT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "no-git")
+# Download dependencies
+log_info "Downloading Go dependencies..."
+sudo -u "$APP_USER" env \
+    PATH=/usr/local/go/bin:$PATH \
+    HOME=${APP_USER_HOME} \
+    GOPATH=${GOPATH_DIR} \
+    GOCACHE=${GOCACHE_DIR} \
+    go mod download
 
-if [ -f "$LAST_BUILD_HASH_FILE" ] && [ -f "${BACKEND_DIR}/daybook-backend" ]; then
-    LAST_HASH=$(cat "$LAST_BUILD_HASH_FILE")
-    if [ "$LAST_HASH" = "$CURRENT_HASH" ]; then
-        log_info "No source changes detected (hash: ${CURRENT_HASH}), skipping rebuild"
-        log_info "To force rebuild, delete: $LAST_BUILD_HASH_FILE"
-        SKIP_BUILD=true
-    fi
+# Build the application
+log_info "Building Go application..."
+
+# Stop the service before building (to avoid binary in-use issues on deploy dir)
+if systemctl is-active --quiet daybook-backend; then
+    log_info "Stopping daybook-backend service..."
+    sudo systemctl stop daybook-backend
 fi
 
-if [ "$SKIP_BUILD" != "true" ]; then
-    # Download dependencies (only if go.mod changed)
-    log_info "Checking dependencies..."
-    sudo -u "$APP_USER" env \
-        PATH=/usr/local/go/bin:$PATH \
-        HOME=${APP_USER_HOME} \
-        GOPATH=${GOPATH_DIR} \
-        GOCACHE=${GOCACHE_DIR} \
-        go mod download -x
+# Build with optimizations
+sudo -u "$APP_USER" env \
+    PATH=/usr/local/go/bin:$PATH \
+    HOME=${APP_USER_HOME} \
+    GOPATH=${GOPATH_DIR} \
+    GOCACHE=${GOCACHE_DIR} \
+    CGO_ENABLED=0 \
+    go build \
+    -p 4 \
+    -trimpath \
+    -buildvcs=false \
+    -ldflags="-s -w -extldflags '-static'" \
+    -o daybook-backend \
+    main.go
 
-    # Build the application with optimizations
-    log_info "Compiling Go application..."
-
-    # Stop the service before building (to avoid binary in-use issues)
-    if systemctl is-active --quiet daybook-backend; then
-        log_info "Stopping daybook-backend service..."
-        sudo systemctl stop daybook-backend
-    fi
-
-    # Optimized build flags:
-    # -p N: Use N parallel builds (defaults to GOMAXPROCS)
-    # -ldflags="-s -w": Strip debug info and symbol table
-    # -trimpath: Remove file system paths for reproducible builds
-    # -buildvcs=false: Skip VCS info (faster)
-    # CGO_ENABLED=0: Static binary (faster, no CGO overhead)
-    sudo -u "$APP_USER" env \
-        PATH=/usr/local/go/bin:$PATH \
-        HOME=${APP_USER_HOME} \
-        GOPATH=${GOPATH_DIR} \
-        GOCACHE=${GOCACHE_DIR} \
-        CGO_ENABLED=0 \
-        go build \
-        -p 4 \
-        -trimpath \
-        -buildvcs=false \
-        -ldflags="-s -w -extldflags '-static'" \
-        -o daybook-backend \
-        main.go
-
-    # Verify the binary was created
-    if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then
-        log_error "Failed to build backend application"
-        exit 1
-    fi
-
-    # Save current hash
-    echo "$CURRENT_HASH" > "$LAST_BUILD_HASH_FILE"
-
-    log_info "Backend application built successfully (hash: ${CURRENT_HASH})"
-else
-    # Still stop the service for restart
-    if systemctl is-active --quiet daybook-backend; then
-        log_info "Stopping daybook-backend service..."
-        sudo systemctl stop daybook-backend
-    fi
+# Verify the binary was created
+if [ ! -f "${BUILD_BACKEND_DIR}/daybook-backend" ]; then
+    log_error "Failed to build backend application"
+    exit 1
 fi
 
-# Make the binary executable
+log_info "Build successful!"
+
+# Create deployment directory
+log_info "Preparing deployment directory..."
+sudo mkdir -p "$BACKEND_DIR"
+sudo mkdir -p "${BACKEND_DIR}/uploads"
+
+# Copy binary to deployment directory
+log_info "Deploying binary..."
+sudo cp "${BUILD_BACKEND_DIR}/daybook-backend" "$BACKEND_DIR/"
 sudo chmod +x "${BACKEND_DIR}/daybook-backend"
 
-# Ensure uploads directory exists and has correct permissions
-sudo mkdir -p "${BACKEND_DIR}/uploads"
-sudo chmod 775 "${BACKEND_DIR}/uploads"
+# Copy .env file if it exists in build directory
+if [ -f "${BUILD_BACKEND_DIR}/.env" ]; then
+    sudo cp "${BUILD_BACKEND_DIR}/.env" "$BACKEND_DIR/"
+fi
 
-# Set ownership
-log_info "Setting file ownership..."
+# Set ownership and permissions
+log_info "Setting ownership and permissions..."
 sudo chown -R "$APP_USER:$APP_GROUP" "$BACKEND_DIR"
+sudo chmod 775 "${BACKEND_DIR}/uploads"
 
 # Create systemd service from template
 log_info "Creating systemd service..."
@@ -172,6 +164,10 @@ else
     log_error "Check logs with: sudo journalctl -u daybook-backend -n 50"
     exit 1
 fi
+
+# Clean up build directory (optional, comment out if you want to keep it for debugging)
+log_info "Cleaning up build directory..."
+sudo rm -rf "$BUILD_BACKEND_DIR"
 
 log_info "Backend deployment completed successfully!"
 log_info "Service: daybook-backend"

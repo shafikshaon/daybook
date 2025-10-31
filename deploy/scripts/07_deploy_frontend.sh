@@ -33,20 +33,36 @@ fi
 
 log_info "Deploying frontend application..."
 
-# Verify frontend directory exists (should be cloned from git)
-if [ ! -d "$FRONTEND_DIR" ]; then
-    log_error "Frontend directory not found: $FRONTEND_DIR"
-    log_error "Please clone the repository to $FRONTEND_DIR first"
+# Verify source directory exists
+if [ ! -d "$SOURCE_DIR/frontend" ]; then
+    log_error "Source frontend directory not found: $SOURCE_DIR/frontend"
+    log_error "Please ensure the repository is cloned at $SOURCE_DIR"
     exit 1
 fi
 
-log_info "Frontend directory: $FRONTEND_DIR"
+log_info "Source directory: $SOURCE_DIR/frontend"
+log_info "Build directory: $BUILD_FRONTEND_DIR"
+log_info "Deploy directory: $FRONTEND_DIR"
+
+# Create build directory
+log_info "Preparing build directory..."
+sudo rm -rf "$BUILD_FRONTEND_DIR"
+sudo mkdir -p "$BUILD_FRONTEND_DIR"
+
+# Copy frontend source to build directory
+log_info "Copying source code to build directory..."
+sudo cp -r "$SOURCE_DIR/frontend"/* "$BUILD_FRONTEND_DIR/"
+
+# Set ownership
+sudo chown -R "$APP_USER:$APP_GROUP" "$BUILD_FRONTEND_DIR"
+
+cd "$BUILD_FRONTEND_DIR"
 
 # Setup .env file if needed
-if [ ! -f "${FRONTEND_DIR}/.env" ] && [ ! -f "${FRONTEND_DIR}/.env.production" ]; then
+if [ ! -f "${BUILD_FRONTEND_DIR}/.env" ] && [ ! -f "${BUILD_FRONTEND_DIR}/.env.production" ]; then
     log_warn "No .env file found, creating from template"
-    if [ -f "${FRONTEND_DIR}/.env.example" ]; then
-        cp "${FRONTEND_DIR}/.env.example" "${FRONTEND_DIR}/.env"
+    if [ -f "${BUILD_FRONTEND_DIR}/.env.example" ]; then
+        sudo -u "$APP_USER" cp "${BUILD_FRONTEND_DIR}/.env.example" "${BUILD_FRONTEND_DIR}/.env"
 
         # Update VITE_API_URL
         if [[ "$DOMAIN_OR_IP" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -54,40 +70,41 @@ if [ ! -f "${FRONTEND_DIR}/.env" ] && [ ! -f "${FRONTEND_DIR}/.env.production" ]
         else
             API_URL="http://${DOMAIN_OR_IP}/api/v1"
         fi
-        sed -i "s|^VITE_API_URL=.*|VITE_API_URL=${API_URL}|" "${FRONTEND_DIR}/.env"
+        sudo sed -i "s|^VITE_API_URL=.*|VITE_API_URL=${API_URL}|" "${BUILD_FRONTEND_DIR}/.env"
     fi
 else
     log_info "Using existing .env file"
 fi
 
-# Build the frontend
-cd "$FRONTEND_DIR"
-
+# Install npm dependencies
 log_info "Installing npm dependencies..."
-if [ -f "package-lock.json" ]; then
-    npm ci --production=false
-else
-    log_warn "No package-lock.json found, running npm install (not recommended for production)"
-    npm install --production=false
-    log_warn "Consider committing the generated package-lock.json to your repository"
-fi
+# Use npm install to handle missing package-lock.json gracefully
+sudo -u "$APP_USER" npm install --production=false
 
+# Build the frontend
 log_info "Building frontend application..."
-npm run build
+sudo -u "$APP_USER" npm run build
 
 # Verify dist directory was created
-if [ ! -d "${FRONTEND_DIR}/dist" ]; then
+if [ ! -d "${BUILD_FRONTEND_DIR}/dist" ]; then
     log_error "Build failed: dist directory not found"
     exit 1
 fi
 
-log_info "Frontend build completed successfully"
+log_info "Build successful!"
 
-# Set ownership
-log_info "Setting file ownership..."
+# Create deployment directory
+log_info "Preparing deployment directory..."
+sudo mkdir -p "$FRONTEND_DIR"
+
+# Deploy the built files
+log_info "Deploying built files..."
+sudo rm -rf "${FRONTEND_DIR}/dist"
+sudo cp -r "${BUILD_FRONTEND_DIR}/dist" "$FRONTEND_DIR/"
+
+# Set ownership and permissions
+log_info "Setting ownership and permissions..."
 sudo chown -R "$APP_USER:$APP_GROUP" "$FRONTEND_DIR"
-
-# Set permissions
 sudo chmod -R 755 "${FRONTEND_DIR}/dist"
 
 # Test Nginx configuration
@@ -99,6 +116,10 @@ else
     log_error "Nginx configuration test failed!"
     exit 1
 fi
+
+# Clean up build directory (optional, comment out if you want to keep it for debugging)
+log_info "Cleaning up build directory..."
+sudo rm -rf "$BUILD_FRONTEND_DIR"
 
 log_info "Frontend deployment completed successfully!"
 log_info "Frontend URL: http://${DOMAIN_OR_IP}"
