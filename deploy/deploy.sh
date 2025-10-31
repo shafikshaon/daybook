@@ -25,7 +25,7 @@ log_step() { echo -e "\n${BLUE}==== $1 ====${NC}\n"; }
 # ============================================================================
 
 DOMAIN="daybook.shafik.xyz"              # Your domain or server IP
-DB_PASSWORD="VtPuqR1er16VFI5F5CPrYtlX4bmsBavZ"  # Auto-generated secure password
+DB_PASSWORD="123456"  # Auto-generated secure password
 APP_PORT=8080                            # Backend port
 
 # ============================================================================
@@ -82,24 +82,6 @@ if ! command -v node &> /dev/null || ! node --version | grep -q "v22"; then
 fi
 log_info "Node version: $(node --version)"
 log_info "NPM version: $(npm --version)"
-
-# ============================================================================
-# Step 2: Setup PostgreSQL Database
-# ============================================================================
-
-log_step "Setting up PostgreSQL"
-
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Create database and user
-log_info "Creating database and user..."
-sudo -u postgres psql -c "CREATE DATABASE daybook_prod;" 2>/dev/null || log_warn "Database already exists"
-sudo -u postgres psql -c "CREATE USER daybook_user WITH PASSWORD '$DB_PASSWORD';" 2>/dev/null || log_warn "User already exists"
-sudo -u postgres psql -c "ALTER DATABASE daybook_prod OWNER TO daybook_user;"
-sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE daybook_prod TO daybook_user;"
-
-log_info "Database setup complete"
 
 # ============================================================================
 # Step 3: Setup Redis
