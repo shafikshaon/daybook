@@ -159,22 +159,28 @@ EOF
 
 chmod 600 .env
 
-# Build backend
-log_info "Downloading Go dependencies (this may take a few minutes)..."
-go mod download -x
+# Build backend (skip if pre-built binary exists)
+if [ -f "daybook-backend" ]; then
+    log_info "Using pre-built backend binary (skipping compilation)"
+    chmod +x daybook-backend
+else
+    log_info "No pre-built binary found, building from source..."
+    log_info "Downloading Go dependencies (this may take a few minutes)..."
+    go mod download -x
 
-log_info "Compiling backend application (this may take 1-2 minutes)..."
-CGO_ENABLED=0 go build -v -ldflags="-s -w" -o daybook-backend main.go
+    log_info "Compiling backend application (this may take 1-2 minutes)..."
+    CGO_ENABLED=0 go build -v -ldflags="-s -w" -o daybook-backend main.go
 
-if [ ! -f "daybook-backend" ]; then
-    log_error "Backend build failed!"
-    exit 1
+    if [ ! -f "daybook-backend" ]; then
+        log_error "Backend build failed!"
+        exit 1
+    fi
+
+    chmod +x daybook-backend
+    log_info "Backend built successfully"
 fi
 
-chmod +x daybook-backend
 mkdir -p uploads
-
-log_info "Backend built successfully"
 
 # ============================================================================
 # Step 5: Create Backend Service

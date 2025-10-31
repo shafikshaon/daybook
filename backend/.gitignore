@@ -5,6 +5,9 @@
 *.so
 *.dylib
 
+# ALLOW pre-built production binary (for faster deployment)
+!daybook-backend
+
 # Test binary, built with `go test -c`
 *.test
 
