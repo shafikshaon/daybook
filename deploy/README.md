@@ -346,7 +346,7 @@ DB_PASSWORD=""  # Auto-generated if empty
 BACKEND_PORT=8080
 
 # Versions
-GO_VERSION="1.21.5"
+GO_VERSION="1.25.3"
 NODE_VERSION="20"
 ```
 
