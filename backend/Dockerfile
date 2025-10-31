@@ -1,10 +1,7 @@
 # Build stage
 FROM golang:1.25.3-alpine AS builder
 
-WORKDIR /app
-
-# Install build dependencies
-RUN apk add --no-cache git
+WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -14,21 +11,21 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o daybook-backend main.go
 
-# Final stage
+# Runtime stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates
 
-WORKDIR /root/
+WORKDIR /app
 
-# Copy the binary from builder
-COPY --from=builder /app/main .
-COPY --from=builder /app/config.yaml .
+# Copy binary from builder
+COPY --from=builder /build/daybook-backend .
 
-# Expose port
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
 EXPOSE 8080
 
-# Run the application
-CMD ["./main"]
+CMD ["./daybook-backend"]
