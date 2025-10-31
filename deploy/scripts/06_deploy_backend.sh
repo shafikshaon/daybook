@@ -70,18 +70,21 @@ sudo mkdir -p "${BACKEND_DIR}/uploads"
 log_info "Building backend application..."
 cd "$BACKEND_DIR"
 
-# Set Go environment
-export PATH=$PATH:/usr/local/go/bin
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
+# Set Go environment for the app user
+APP_USER_HOME=$(eval echo ~$APP_USER)
+GOPATH_DIR="${APP_USER_HOME}/go"
+
+# Create Go cache directory for app user
+sudo mkdir -p "${GOPATH_DIR}"
+sudo chown -R "$APP_USER:$APP_GROUP" "${GOPATH_DIR}"
 
 # Download dependencies
 log_info "Downloading Go dependencies..."
-sudo -u "$APP_USER" env PATH=$PATH:/usr/local/go/bin GOPATH=$HOME/go go mod download
+sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go mod download
 
 # Build the application
 log_info "Compiling Go application..."
-sudo -u "$APP_USER" env PATH=$PATH:/usr/local/go/bin GOPATH=$HOME/go go build -o daybook-backend -ldflags="-s -w" main.go
+sudo -u "$APP_USER" env PATH=/usr/local/go/bin:$PATH HOME=${APP_USER_HOME} GOPATH=${GOPATH_DIR} go build -o daybook-backend -ldflags="-s -w" main.go
 
 # Verify the binary was created
 if [ ! -f "${BACKEND_DIR}/daybook-backend" ]; then
