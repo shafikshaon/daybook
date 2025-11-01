@@ -334,6 +334,9 @@
       @confirm="confirmState.onConfirm"
       @cancel="confirmState.onCancel"
     />
+
+    <!-- PWA Install Prompt -->
+    <InstallPrompt />
   </div>
 </template>
 
@@ -344,6 +347,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import { useNotification } from '@/composables/useNotification'
 import { AlertToast, ConfirmModal } from '@/components'
+import InstallPrompt from '@/components/InstallPrompt.vue'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
