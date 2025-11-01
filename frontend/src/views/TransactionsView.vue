@@ -664,7 +664,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
-import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useCreditCardsStore } from '@/stores/creditCards'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
@@ -672,7 +671,6 @@ import { FileUpload } from '@/components'
 
 const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
-const fixedDepositsStore = useFixedDepositsStore()
 const creditCardsStore = useCreditCardsStore()
 const settingsStore = useSettingsStore()
 const { confirm, success, error } = useNotification()
@@ -1126,18 +1124,7 @@ const saveTransfer = async () => {
       // Deduct from source account
       await accountsStore.updateBalance(transferForm.value.fromAccountId, transferForm.value.amount, 'subtract')
 
-      // Create fixed deposit
-      await fixedDepositsStore.createFixedDeposit({
-        name: transferForm.value.fdName,
-        principal: transferForm.value.amount,
-        interestRate: transferForm.value.fdInterestRate,
-        tenureMonths: transferForm.value.fdTenureMonths,
-        startDate: dateISO,
-        maturityDate: maturityDate.toISOString(),
-        bank: 'N/A'
-      })
-
-      // Create transaction record
+      // Create transaction record for fixed deposit
       await transactionsStore.createTransaction({
         type: 'expense',
         amount: transferForm.value.amount,
@@ -1148,8 +1135,7 @@ const saveTransfer = async () => {
         tags: ['fixed_deposit']
       })
 
-      await fixedDepositsStore.fetchFixedDeposits()
-      success('Fixed deposit created successfully')
+      success('Fixed deposit transaction created successfully')
     }
 
     closeTransferModal()
@@ -1208,7 +1194,6 @@ onMounted(async () => {
   await Promise.all([
     transactionsStore.fetchTransactions(currentPage.value, itemsPerPage.value),
     accountsStore.fetchAccounts(),
-    fixedDepositsStore.fetchFixedDeposits(),
     creditCardsStore.fetchCreditCards()
   ])
 })

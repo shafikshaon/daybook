@@ -1,19 +1,19 @@
 Daybook Deployment Package
-Generated: Sat Nov  1 22:34:24 +06 2025
-Hostname: Shafiks-MacBook-Pro.local
-User: shafikshaon
+Generated: Sat Nov  1 22:44:35 +06 2025
 
 Files in this package:
--rw-r--r--@ 1 shafikshaon  staff   3.5K Nov  1 16:32 README.md
--rw-r--r--@ 1 shafikshaon  staff   514B Nov  1 22:34 backend.env.example
--rwxr-xr-x@ 1 shafikshaon  staff    26M Nov  1 18:55 daybook-backend
--rw-r--r--@ 1 shafikshaon  staff   212K Nov  1 22:34 frontend-dist.tar.gz
--rw-r--r--@ 1 shafikshaon  staff   128B Nov  1 22:34 frontend.env.example
+- daybook-backend          : Backend binary (Linux x64)
+- frontend-dist.tar.gz     : Frontend build (gzipped tarball)
+- backend.env.example      : Backend environment template
+- frontend.env.example     : Frontend environment template
 
-Backend Built: false
-Frontend Built: true
+Next Steps:
+1. Transfer files to EC2:
+   scp -i your-key.pem daybook-backend ubuntu@your-ec2-ip:/home/ubuntu/
+   scp -i your-key.pem frontend-dist.tar.gz ubuntu@your-ec2-ip:/home/ubuntu/
 
-Git Information:
-Branch: master
-Commit: 71bd0ea
-Message: Fix vite version conflict and rebuild frontend
+2. Follow the EC2_DEPLOYMENT_GUIDE.md for deployment instructions
+
+Build Information:
+- Backend: Go (CGO_ENABLED=0, GOOS=linux, GOARCH=amd64)
+- Frontend: Vue.js + Vite production build
