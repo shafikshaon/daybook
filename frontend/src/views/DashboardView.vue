@@ -29,14 +29,6 @@
           <div class="stat-label">Monthly Expenses</div>
         </div>
       </div>
-
-      <div class="col-12 col-sm-6 col-lg-3">
-        <div class="stat-card">
-          <div class="stat-icon blue">💎</div>
-          <div class="stat-value">{{ formatCurrency(investmentValue) }}</div>
-          <div class="stat-label">Investments</div>
-        </div>
-      </div>
     </div>
 
     <div class="row g-3">
@@ -149,47 +141,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Savings Goals -->
-      <div class="col-12">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Savings Goals</h5>
-          </div>
-          <div class="card-body">
-            <div v-if="savingsGoals.length === 0" class="text-center text-muted">
-              No savings goals yet
-            </div>
-            <div v-else class="row g-3">
-              <div v-for="goal in savingsGoals" :key="goal.id" class="col-12 col-md-6 col-lg-4">
-                <div class="p-3 border rounded">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                      <span style="font-size: 1.5rem;">{{ goal.icon }}</span>
-                      <span class="fw-semibold ms-2">{{ goal.name }}</span>
-                    </div>
-                  </div>
-                  <div class="mb-2">
-                    <div class="d-flex justify-content-between mb-1">
-                      <small class="text-muted">{{ formatCurrency(goal.currentAmount) }}</small>
-                      <small class="text-muted">{{ formatCurrency(goal.targetAmount) }}</small>
-                    </div>
-                    <div class="progress" style="height: 10px;">
-                      <div
-                        class="progress-bar bg-success"
-                        :style="{ width: Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) + '%' }"
-                      ></div>
-                    </div>
-                  </div>
-                  <small class="text-muted">
-                    {{ Math.round((goal.currentAmount / goal.targetAmount) * 100) }}% complete
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -199,27 +150,21 @@ import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBudgetsStore } from '@/stores/budgets'
-import { useInvestmentsStore } from '@/stores/investments'
-import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useBillsStore } from '@/stores/bills'
 import { useSettingsStore } from '@/stores/settings'
 
 const accountsStore = useAccountsStore()
 const transactionsStore = useTransactionsStore()
 const budgetsStore = useBudgetsStore()
-const investmentsStore = useInvestmentsStore()
-const savingsGoalsStore = useSavingsGoalsStore()
 const billsStore = useBillsStore()
 const settingsStore = useSettingsStore()
 
 const accounts = computed(() => accountsStore.allAccounts)
 const recentTransactions = computed(() => transactionsStore.allTransactions)
 const budgets = computed(() => budgetsStore.activeBudgets)
-const savingsGoals = computed(() => savingsGoalsStore.activeSavingsGoals)
 const upcomingBills = computed(() => billsStore.upcomingBills)
 
 const totalBalance = computed(() => accountsStore.totalBalance)
-const investmentValue = computed(() => investmentsStore.totalCurrentValue)
 
 const monthlyIncome = computed(() => {
   const now = new Date()
@@ -264,8 +209,6 @@ const loadData = async () => {
     accountsStore.fetchAccounts(),
     transactionsStore.fetchTransactions(),
     budgetsStore.fetchBudgets(),
-    investmentsStore.fetchInvestments(),
-    savingsGoalsStore.fetchSavingsGoals(),
     billsStore.fetchBills()
   ])
 }

@@ -664,7 +664,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
-import { useSavingsGoalsStore } from '@/stores/savingsGoals'
 import { useFixedDepositsStore } from '@/stores/fixedDeposits'
 import { useCreditCardsStore } from '@/stores/creditCards'
 import { useSettingsStore } from '@/stores/settings'
@@ -673,7 +672,6 @@ import { FileUpload } from '@/components'
 
 const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
-const savingsGoalsStore = useSavingsGoalsStore()
 const fixedDepositsStore = useFixedDepositsStore()
 const creditCardsStore = useCreditCardsStore()
 const settingsStore = useSettingsStore()
@@ -728,7 +726,6 @@ const transferForm = ref({
 
 const transactions = computed(() => transactionsStore.allTransactions)
 const accounts = computed(() => accountsStore.allAccounts)
-const savingsGoals = computed(() => savingsGoalsStore.activeSavingsGoals)
 const allCategories = computed(() => transactionsStore.categories)
 const pagination = computed(() => transactionsStore.pagination)
 
@@ -1115,7 +1112,6 @@ const saveTransfer = async () => {
         dateISO
       )
 
-      await savingsGoalsStore.fetchSavingsGoals()
       success('Funds transferred to savings goal successfully')
     } else if (transferForm.value.destinationType === 'fixed_deposit') {
       if (!transferForm.value.fdName || !transferForm.value.fdInterestRate || !transferForm.value.fdTenureMonths) {
@@ -1212,7 +1208,6 @@ onMounted(async () => {
   await Promise.all([
     transactionsStore.fetchTransactions(currentPage.value, itemsPerPage.value),
     accountsStore.fetchAccounts(),
-    savingsGoalsStore.fetchSavingsGoals(),
     fixedDepositsStore.fetchFixedDeposits(),
     creditCardsStore.fetchCreditCards()
   ])

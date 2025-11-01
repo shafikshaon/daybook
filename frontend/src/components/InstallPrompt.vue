@@ -12,12 +12,33 @@
 
       <div class="install-prompt-text">
         <h5 class="mb-1">Install Daybook</h5>
-        <p class="mb-3 text-muted">
+        <p class="mb-2 text-muted" v-if="!isIOS">
           Install Daybook on your {{ deviceType }} for quick access and offline support.
+        </p>
+        <p class="mb-2 text-muted" v-else>
+          Add Daybook to your home screen for quick access and offline support.
         </p>
       </div>
 
-      <div class="install-prompt-actions">
+      <!-- iOS specific instructions -->
+      <div v-if="isIOS && !isStandalone" class="install-prompt-ios mb-3">
+        <div class="alert alert-info mb-0">
+          <strong>📱 How to Install on iPhone/iPad:</strong>
+          <ol class="mb-0 mt-2">
+            <li>Tap the <strong>Share</strong> button
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
+                <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
+              </svg>
+              in Safari (at the bottom)
+            </li>
+            <li>Scroll down and select <strong>"Add to Home Screen"</strong></li>
+            <li>Tap <strong>"Add"</strong> to install the app</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Install button (hidden on iOS since it doesn't work) -->
+      <div v-if="!isIOS" class="install-prompt-actions">
         <button type="button" class="btn btn-primary btn-sm" @click="installApp">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="me-1" viewBox="0 0 16 16">
             <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
@@ -30,20 +51,11 @@
         </button>
       </div>
 
-      <!-- iOS specific instructions -->
-      <div v-if="isIOS && !isStandalone" class="install-prompt-ios mt-3">
-        <div class="alert alert-info mb-0">
-          <strong>iOS Users:</strong>
-          <ol class="mb-0 mt-2">
-            <li>Tap the Share button
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
-                <path d="M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5z"/>
-              </svg>
-            </li>
-            <li>Select "Add to Home Screen"</li>
-            <li>Tap "Add" to install</li>
-          </ol>
-        </div>
+      <!-- Dismiss button for iOS -->
+      <div v-else class="install-prompt-actions">
+        <button type="button" class="btn btn-secondary btn-sm w-100" @click="dismissPrompt">
+          Got it, thanks!
+        </button>
       </div>
     </div>
   </div>

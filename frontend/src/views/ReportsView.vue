@@ -243,13 +243,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 import { useTransactionsStore } from '@/stores/transactions'
-import { useInvestmentsStore } from '@/stores/investments'
 import { useCreditCardsStore } from '@/stores/creditCards'
 import { useSettingsStore } from '@/stores/settings'
 
 const accountsStore = useAccountsStore()
 const transactionsStore = useTransactionsStore()
-const investmentsStore = useInvestmentsStore()
 const creditCardsStore = useCreditCardsStore()
 const settingsStore = useSettingsStore()
 
@@ -263,11 +261,11 @@ const periodRegularExpense = ref(0)
 const periodSavings = ref(0)
 
 const netWorth = computed(() => {
-  return accountsStore.totalBalance + investmentsStore.totalCurrentValue - creditCardsStore.totalOutstanding
+  return accountsStore.totalBalance - creditCardsStore.totalOutstanding
 })
 
 const totalAssets = computed(() => {
-  return accountsStore.totalBalance + investmentsStore.totalCurrentValue
+  return accountsStore.totalBalance
 })
 
 const totalLiabilities = computed(() => {
@@ -347,7 +345,6 @@ onMounted(async () => {
   await Promise.all([
     accountsStore.fetchAccounts(),
     transactionsStore.fetchTransactions(),
-    investmentsStore.fetchInvestments(),
     creditCardsStore.fetchCreditCards()
   ])
   applyDateRange()
