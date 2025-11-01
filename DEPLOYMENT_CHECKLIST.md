@@ -79,18 +79,7 @@ Quick reference checklist for deploying Daybook to EC2.
 
 ## Application Deployment
 
-### 9. Transfer Build Artifacts
-From **local machine**:
-- [ ] Transfer backend:
-  ```bash
-  scp -i your-key.pem build/daybook-backend ubuntu@your-ec2-ip:/home/ubuntu/
-  ```
-- [ ] Transfer frontend:
-  ```bash
-  scp -i your-key.pem build/frontend-dist.tar.gz ubuntu@your-ec2-ip:/home/ubuntu/
-  ```
-
-### 10. Deploy Application (Option A: Manual)
+### 9. Deploy Application (Option A: Manual)
 On **EC2**:
 - [ ] Create directories:
   ```bash
@@ -108,7 +97,7 @@ On **EC2**:
   tar -xzf ~/frontend-dist.tar.gz
   ```
 
-### 11. Deploy Application (Option B: Automated)
+### 10. Deploy Application (Option B: Automated)
 On **EC2**:
 - [ ] Transfer setup script:
   ```bash
