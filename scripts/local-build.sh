@@ -87,6 +87,8 @@ if [ $? -eq 0 ]; then
     echo -e "${GREEN}✓ Frontend build successful${NC}"
     echo "Creating tarball..."
     cd dist
+    # Exclude macOS extended attributes to avoid warnings on Linux
+    COPYFILE_DISABLE=1 tar --no-xattrs -czf "$BUILD_DIR/frontend-dist.tar.gz" . 2>/dev/null || \
     tar -czf "$BUILD_DIR/frontend-dist.tar.gz" .
     echo -e "${GREEN}✓ Frontend tarball created${NC}"
     ls -lh "$BUILD_DIR/frontend-dist.tar.gz"

@@ -88,25 +88,14 @@ On **EC2**:
   ```
 - [ ] Deploy backend:
   ```bash
-  mv ~/daybook-backend /var/www/daybook/backend/
+  cp ~/daybook/build/daybook-backend /var/www/daybook/backend/
+  cp ~/daybook/build/frontend-dist.tar.gz /var/www/daybook/frontend/
   chmod +x /var/www/daybook/backend/daybook-backend
   ```
 - [ ] Deploy frontend:
   ```bash
   cd /var/www/daybook/frontend
-  tar -xzf ~/frontend-dist.tar.gz
-  ```
-
-### 10. Deploy Application (Option B: Automated)
-On **EC2**:
-- [ ] Transfer setup script:
-  ```bash
-  scp -i your-key.pem scripts/ec2-setup.sh ubuntu@your-ec2-ip:/home/ubuntu/
-  ```
-- [ ] Run setup script:
-  ```bash
-  chmod +x ~/ec2-setup.sh
-  ./ec2-setup.sh
+  tar -xzf frontend-dist.tar.gz
   ```
 
 ### 12. Configure Backend Environment

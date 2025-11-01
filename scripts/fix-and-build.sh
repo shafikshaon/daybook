@@ -56,6 +56,8 @@ EOF
 
 npm run build
 cd dist
+# Exclude macOS extended attributes to avoid warnings on Linux
+COPYFILE_DISABLE=1 tar --no-xattrs -czf "$PROJECT_DIR/build/frontend-dist.tar.gz" . 2>/dev/null || \
 tar -czf "$PROJECT_DIR/build/frontend-dist.tar.gz" .
 echo -e "${GREEN}✓ Frontend built${NC}"
 echo ""
