@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -148,10 +149,24 @@ func (g *Goal) CalculateProgress() float64 {
 // UpdateCurrentAmount recalculates current amount from all holdings
 func (g *Goal) UpdateCurrentAmount(db *gorm.DB) error {
 	var total float64
+
+	// DEBUG: Log query parameters
+	fmt.Printf("DEBUG UpdateCurrentAmount: GoalID=%s\n", g.ID)
+
+	// Count holdings first
+	var count int64
 	db.Model(&GoalHolding{}).
-		Where("goal_id = ? AND status IN ?", g.ID, []string{"active", "matured"}).
+		Where("goal_id = ? AND status IN ?", g.ID, []string{"active", "matured", "achieved"}).
+		Count(&count)
+	fmt.Printf("DEBUG UpdateCurrentAmount: Found %d holdings\n", count)
+
+	// Calculate sum
+	db.Model(&GoalHolding{}).
+		Where("goal_id = ? AND status IN ?", g.ID, []string{"active", "matured", "achieved"}).
 		Select("COALESCE(SUM(current_value), 0)").
 		Scan(&total)
+
+	fmt.Printf("DEBUG UpdateCurrentAmount: Total sum=%.2f\n", total)
 
 	g.CurrentAmount = total
 	return db.Save(g).Error

@@ -224,6 +224,17 @@
               <div class="mb-3">
                 <label class="form-label">Monthly Contribution Target</label>
                 <input type="number" step="0.01" class="form-control" v-model.number="goalForm.monthlyContribution" />
+                <small class="text-muted">Optional: Set your planned monthly contribution amount</small>
+              </div>
+
+              <div class="mb-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" v-model="goalForm.addInitialAmount" id="addInitialAmount">
+                  <label class="form-check-label" for="addInitialAmount">
+                    Start with initial amount (add FD/DPS/Savings immediately after creating)
+                  </label>
+                </div>
+                <small class="text-muted">Check this if you already have money set aside for this goal</small>
               </div>
 
               <div class="d-flex justify-content-end gap-2">
@@ -368,13 +379,30 @@
           <div class="modal-body">
             <form @submit.prevent="saveHolding">
               <div class="mb-3">
+                <div class="alert alert-warning mb-2" style="padding: 0.75rem;">
+                  <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" v-model="holdingForm.isExisting" id="isExisting">
+                    <label class="form-check-label" for="isExisting">
+                      <strong>✓ This is an existing/external investment</strong>
+                    </label>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Check this if you're adding an FD/DPS/investment that's <strong>already held outside your tracked accounts</strong>
+                    (e.g., money already locked in a bank FD that you haven't been tracking before).
+                    This will <strong>add to your net worth</strong> without deducting from any account.
+                  </small>
+                </div>
+              </div>
+
+              <div class="mb-3" v-if="!holdingForm.isExisting">
                 <label class="form-label">From Account *</label>
-                <select class="form-select" v-model="holdingForm.accountId" required>
+                <select class="form-select" v-model="holdingForm.accountId" :required="!holdingForm.isExisting">
                   <option value="">Select account...</option>
                   <option v-for="account in accounts" :key="account.id" :value="account.id">
                     {{ account.name }} ({{ formatCurrency(account.balance) }})
                   </option>
                 </select>
+                <small class="text-muted">Money will be deducted from this account</small>
               </div>
 
               <div class="row">
@@ -434,7 +462,16 @@
                 </div>
                 <div class="col-12 col-md-4 mb-3">
                   <label class="form-label">Tenure (months)</label>
-                  <input type="number" class="form-control" v-model.number="holdingForm.tenureMonths" />
+                  <input type="number" class="form-control" v-model.number="holdingForm.tenureMonths" @blur="calculateMaturityDate" />
+                </div>
+              </div>
+
+              <!-- DPS/Recurring Deposit Field -->
+              <div v-if="isDpsProduct" class="row">
+                <div class="col-12 mb-3">
+                  <label class="form-label">Monthly Deposit Amount *</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="holdingForm.monthlyDeposit" required />
+                  <small class="text-muted">The amount you will deposit every month</small>
                 </div>
               </div>
 
@@ -444,16 +481,38 @@
                   <input type="date" class="form-control" v-model="holdingForm.maturityDate" />
                 </div>
                 <div class="col-12 col-md-6 mb-3">
-                  <label class="form-label">Maturity Amount</label>
+                  <label class="form-label">Expected Maturity Amount</label>
                   <input type="number" step="0.01" class="form-control" v-model.number="holdingForm.maturityAmount" />
+                  <small class="text-muted">Principal + Interest</small>
                 </div>
               </div>
 
               <div class="alert alert-info">
                 <small>
-                  This will deduct {{ formatCurrency(holdingForm.amount || 0) }} from
-                  {{ getAccountName(holdingForm.accountId) || 'selected account' }} and add it as a holding to your goal.
-                  A transaction record will be created.
+                  <strong>What will happen:</strong><br>
+                  <span v-if="holdingForm.isExisting">
+                    • This existing holding of {{ formatCurrency(holdingForm.amount || 0) }} will be tracked in your goal<br>
+                    • <strong>No money will be deducted</strong> from your accounts (it's already invested elsewhere)<br>
+                    • Your <strong>Total Net Worth</strong> will increase by {{ formatCurrency(holdingForm.amount || 0) }}<br>
+                    • Your <strong>Goals & Investments</strong> balance will increase<br>
+                    • Account balances remain unchanged<br>
+                    • Won't appear in your regular transaction history (tracking only)<br>
+                  </span>
+                  <span v-else>
+                    <span v-if="isDpsProduct">
+                      • Initial deposit of {{ formatCurrency(holdingForm.amount || 0) }} will be deducted from {{ getAccountName(holdingForm.accountId) || 'selected account' }}<br>
+                      • This will be added as a DPS holding to your goal<br>
+                      • You'll need to manually add {{ formatCurrency(holdingForm.monthlyDeposit || 0) }} each month as a contribution<br>
+                    </span>
+                    <span v-else-if="isBankProduct">
+                      • One-time deposit of {{ formatCurrency(holdingForm.amount || 0) }} will be deducted from {{ getAccountName(holdingForm.accountId) || 'selected account' }}<br>
+                      • This will be locked until maturity date<br>
+                    </span>
+                    <span v-else>
+                      • Amount of {{ formatCurrency(holdingForm.amount || 0) }} will be deducted from {{ getAccountName(holdingForm.accountId) || 'selected account' }}<br>
+                    </span>
+                    • A transaction record will be created for tracking<br>
+                  </span>
                 </small>
               </div>
 
@@ -505,7 +564,8 @@ const goalForm = ref({
   priority: '',
   targetAmount: 0,
   targetDate: '',
-  monthlyContribution: 0
+  monthlyContribution: 0,
+  addInitialAmount: false
 })
 
 const holdingForm = ref({
@@ -538,6 +598,11 @@ const isMarketInstrument = computed(() => {
 const isBankProduct = computed(() => {
   const bankTypes = ['fixed_deposit', 'dps', 'recurring_deposit', 'savings_bond', 'ppf', 'nsc']
   return bankTypes.includes(holdingForm.value.type)
+})
+
+const isDpsProduct = computed(() => {
+  const dpsTypes = ['dps', 'recurring_deposit']
+  return dpsTypes.includes(holdingForm.value.type)
 })
 
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
@@ -636,9 +701,20 @@ const addHolding = (goalId) => {
     interestRate: null,
     tenureMonths: null,
     maturityDate: '',
-    maturityAmount: null
+    maturityAmount: null,
+    monthlyDeposit: null,
+    isExisting: false
   }
   showAddHoldingModal.value = true
+}
+
+const calculateMaturityDate = () => {
+  if (holdingForm.value.purchaseDate && holdingForm.value.tenureMonths) {
+    const purchaseDate = new Date(holdingForm.value.purchaseDate)
+    const maturityDate = new Date(purchaseDate)
+    maturityDate.setMonth(maturityDate.getMonth() + holdingForm.value.tenureMonths)
+    holdingForm.value.maturityDate = maturityDate.toISOString().split('T')[0]
+  }
 }
 
 const onHoldingTypeChange = () => {
@@ -650,9 +726,12 @@ const onHoldingTypeChange = () => {
 
 const saveGoal = async () => {
   try {
-    await goalsStore.createGoal(goalForm.value)
+    const shouldAddInitial = goalForm.value.addInitialAmount
+    const createdGoal = await goalsStore.createGoal(goalForm.value)
     success('Goal created successfully')
     showAddGoalModal.value = false
+
+    // Reset form
     goalForm.value = {
       name: '',
       description: '',
@@ -662,7 +741,15 @@ const saveGoal = async () => {
       priority: '',
       targetAmount: 0,
       targetDate: '',
-      monthlyContribution: 0
+      monthlyContribution: 0,
+      addInitialAmount: false
+    }
+
+    // If user wants to add initial amount, open the holding modal
+    if (shouldAddInitial && createdGoal) {
+      setTimeout(() => {
+        addHolding(createdGoal.id)
+      }, 300)
     }
   } catch (err) {
     error(err.response?.data?.message || err.message || 'Error creating goal')
@@ -671,9 +758,28 @@ const saveGoal = async () => {
 
 const saveHolding = async () => {
   try {
-    if (!holdingForm.value.accountId) {
-      error('Please select an account')
-      return
+    // Validate based on whether it's an existing investment
+    if (!holdingForm.value.isExisting) {
+      if (!holdingForm.value.accountId) {
+        error('Please select an account')
+        return
+      }
+
+      // Check account balance only for new investments
+      const account = accountsStore.getAccountById(holdingForm.value.accountId)
+      if (!account) {
+        error('Selected account not found')
+        return
+      }
+
+      let accountBalance = typeof account.balance === 'string'
+        ? parseFloat(account.balance.replace(/[^\d.-]/g, ''))
+        : Number(account.balance)
+
+      if (accountBalance < holdingForm.value.amount) {
+        error(`Insufficient balance. Available: ${formatCurrency(accountBalance)}`)
+        return
+      }
     }
 
     if (holdingForm.value.amount <= 0) {
@@ -681,26 +787,12 @@ const saveHolding = async () => {
       return
     }
 
-    // Check account balance
-    const account = accountsStore.getAccountById(holdingForm.value.accountId)
-    if (!account) {
-      error('Selected account not found')
-      return
-    }
-
-    let accountBalance = typeof account.balance === 'string'
-      ? parseFloat(account.balance.replace(/[^\d.-]/g, ''))
-      : Number(account.balance)
-
-    if (accountBalance < holdingForm.value.amount) {
-      error(`Insufficient balance. Available: ${formatCurrency(accountBalance)}`)
-      return
-    }
-
     // Prepare holding data
     const holdingData = {
       ...holdingForm.value,
-      currentValue: holdingForm.value.amount // Initial value equals amount
+      currentValue: holdingForm.value.amount, // Initial value equals amount
+      // For existing investments, don't send accountId (backend will handle it)
+      accountId: holdingForm.value.isExisting ? null : holdingForm.value.accountId
     }
 
     await goalsStore.addHolding(selectedGoalIdForHolding.value, holdingData)
@@ -708,10 +800,9 @@ const saveHolding = async () => {
     success('Holding added successfully')
     showAddHoldingModal.value = false
 
-    // Refresh data
+    // Refresh data (no need to refetch goals - already updated in store)
     await Promise.all([
       accountsStore.fetchAccounts(),
-      goalsStore.fetchGoals(),
       transactionsStore.fetchTransactions(1, 20)
     ])
 

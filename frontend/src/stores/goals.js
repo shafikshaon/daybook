@@ -159,7 +159,8 @@ export const useGoalsStore = defineStore('goals', {
         // Update in local state if exists, otherwise add
         const index = this.goals.findIndex(g => g.id === id)
         if (index !== -1) {
-          this.goals[index] = goal
+          // Use splice to ensure reactivity
+          this.goals.splice(index, 1, goal)
         } else {
           this.goals.push(goal)
         }
@@ -202,7 +203,8 @@ export const useGoalsStore = defineStore('goals', {
         const response = await apiService.put('goals', id, dataToSend)
         const index = this.goals.findIndex(goal => goal.id === id)
         if (index !== -1) {
-          this.goals[index] = response.data
+          // Use splice to ensure reactivity
+          this.goals.splice(index, 1, response.data)
         }
         return response.data
       } catch (error) {
@@ -223,16 +225,40 @@ export const useGoalsStore = defineStore('goals', {
 
     async addHolding(goalId, holdingData) {
       try {
+        // Ensure amount and currentValue are numbers
         const dataToSend = {
           ...holdingData,
+          amount: parseFloat(holdingData.amount) || 0,
+          currentValue: parseFloat(holdingData.currentValue) || parseFloat(holdingData.amount) || 0,
           purchaseDate: toISOString(holdingData.purchaseDate),
           maturityDate: holdingData.maturityDate ? toISOString(holdingData.maturityDate) : null
         }
 
+        console.log('Adding holding to goal:', goalId, 'with data:', dataToSend)
+
         const response = await apiService.post(`goals/${goalId}/holdings`, dataToSend)
 
-        // Refresh the goal to get updated holdings
-        await this.fetchGoal(goalId)
+        console.log('Holding added response:', response.data)
+
+        // Update the goal in local state with the returned updated goal
+        if (response.data && response.data.goal) {
+          const updatedGoal = response.data.goal
+          console.log('Updated goal received, currentAmount:', updatedGoal.currentAmount)
+
+          const index = this.goals.findIndex(g => g.id === goalId)
+          if (index !== -1) {
+            // Use splice to ensure reactivity
+            this.goals.splice(index, 1, updatedGoal)
+            console.log('Goal updated in store at index', index)
+          } else {
+            this.goals.push(updatedGoal)
+            console.log('Goal added to store')
+          }
+        } else {
+          console.log('No goal in response, fetching manually')
+          // Fallback: refresh the goal if response doesn't include it
+          await this.fetchGoal(goalId)
+        }
 
         return response.data
       } catch (error) {

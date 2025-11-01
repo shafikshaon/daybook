@@ -15,32 +15,44 @@
       <div class="col-12 col-md-6 col-lg-3">
         <div class="stat-card">
           <div class="stat-icon purple">💰</div>
-          <div class="stat-value">{{ formatCurrency(totalBalance) }}</div>
-          <div class="stat-label">Total Balance</div>
+          <div class="stat-value">{{ formatCurrency(totalNetWorth) }}</div>
+          <div class="stat-label">Total Net Worth</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            Accounts + Goals
+          </small>
         </div>
       </div>
 
       <div class="col-12 col-md-6 col-lg-3">
         <div class="stat-card">
           <div class="stat-icon blue">🏦</div>
-          <div class="stat-value">{{ accounts.length }}</div>
-          <div class="stat-label">Total Accounts</div>
+          <div class="stat-value">{{ formatCurrency(totalBalance) }}</div>
+          <div class="stat-label">Liquid Balance</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            {{ accounts.length }} accounts
+          </small>
         </div>
       </div>
 
       <div class="col-12 col-md-6 col-lg-3">
         <div class="stat-card">
-          <div class="stat-icon green">💵</div>
+          <div class="stat-icon green">🎯</div>
+          <div class="stat-value">{{ formatCurrency(totalGoalsValue) }}</div>
+          <div class="stat-label">Goals & Investments</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            FD, DPS, Stocks, etc.
+          </small>
+        </div>
+      </div>
+
+      <div class="col-12 col-md-6 col-lg-3">
+        <div class="stat-card">
+          <div class="stat-icon orange">💵</div>
           <div class="stat-value">{{ formatCurrency(cashBalance) }}</div>
-          <div class="stat-label">Cash Accounts</div>
-        </div>
-      </div>
-
-      <div class="col-12 col-md-6 col-lg-3">
-        <div class="stat-card">
-          <div class="stat-icon orange">🏦</div>
-          <div class="stat-value">{{ formatCurrency(bankBalance) }}</div>
-          <div class="stat-label">Bank Accounts</div>
+          <div class="stat-label">Cash & Bank</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            Immediately available
+          </small>
         </div>
       </div>
     </div>
@@ -252,12 +264,14 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
+import { useGoalsStore } from '@/stores/goals'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
 import ReconciliationModal from '@/components/ReconciliationModal.vue'
 import ReconciliationHistory from '@/components/ReconciliationHistory.vue'
 
 const accountsStore = useAccountsStore()
+const goalsStore = useGoalsStore()
 const settingsStore = useSettingsStore()
 const { confirm, success, error } = useNotification()
 
@@ -281,6 +295,7 @@ const accounts = computed(() => accountsStore.allAccounts)
 const totalBalance = computed(() => accountsStore.totalBalance)
 const accountTypes = computed(() => accountsStore.accountTypes)
 const currencies = computed(() => settingsStore.currencies)
+const totalGoalsValue = computed(() => goalsStore.totalCurrentAmount)
 
 const cashBalance = computed(() => {
   return accountsStore.cashAccounts.reduce((sum, acc) => sum + acc.balance, 0)
@@ -289,6 +304,8 @@ const cashBalance = computed(() => {
 const bankBalance = computed(() => {
   return accountsStore.bankAccounts.reduce((sum, acc) => sum + acc.balance, 0)
 })
+
+const totalNetWorth = computed(() => totalBalance.value + totalGoalsValue.value)
 
 const formatCurrency = (amount) => {
   return settingsStore.formatCurrency(amount)
@@ -376,7 +393,8 @@ const refreshAccounts = async () => {
 onMounted(async () => {
   await Promise.all([
     accountsStore.fetchAccounts(),
-    accountsStore.fetchAccountTypes()
+    accountsStore.fetchAccountTypes(),
+    goalsStore.fetchGoals()
   ])
   form.value.currency = settingsStore.settings.currency
 })

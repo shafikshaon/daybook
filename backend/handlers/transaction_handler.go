@@ -24,6 +24,11 @@ func ListTransactions(c *gin.Context) {
 
 	query := database.DB.Where("user_id = ?", userID)
 
+	// Exclude tracking transactions (used for external holdings) unless explicitly requested
+	if c.Query("includeTracking") != "true" {
+		query = query.Where("type != ?", "tracking")
+	}
+
 	// Apply filters
 	if transactionType := c.Query("type"); transactionType != "" {
 		query = query.Where("type = ?", transactionType)
@@ -659,6 +664,9 @@ func GetTransactionStats(c *gin.Context) {
 	endDate := c.Query("endDate")
 
 	query := database.DB.Model(&models.Transaction{}).Where("user_id = ?", userID)
+
+	// Exclude tracking transactions from statistics
+	query = query.Where("type != ?", "tracking")
 
 	if startDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {

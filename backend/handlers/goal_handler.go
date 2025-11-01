@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -196,7 +197,8 @@ func AddHolding(c *gin.Context) {
 
 	var holdingData struct {
 		models.GoalHolding
-		AccountID uuid.UUID `json:"accountId" binding:"required"`
+		AccountID  *uuid.UUID `json:"accountId"`  // Pointer to allow null for existing investments
+		IsExisting bool       `json:"isExisting"` // Flag for existing/external investments
 	}
 
 	if err := c.ShouldBindJSON(&holdingData); err != nil {
@@ -211,29 +213,39 @@ func AddHolding(c *gin.Context) {
 		return
 	}
 
-	// Verify account belongs to user
+	// For existing investments, we don't need to verify account or check balance
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", holdingData.AccountID, userID).First(&account).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
-		return
-	}
+	if !holdingData.IsExisting {
+		// Verify account belongs to user
+		if holdingData.AccountID == nil || *holdingData.AccountID == uuid.Nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Account ID is required for new investments")
+			return
+		}
 
-	// Check sufficient balance
-	if account.Balance < holdingData.Amount {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Insufficient account balance")
-		return
+		if err := database.DB.Where("id = ? AND user_id = ?", *holdingData.AccountID, userID).First(&account).Error; err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
+			return
+		}
+
+		// Check sufficient balance
+		if account.Balance < holdingData.Amount {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Insufficient account balance")
+			return
+		}
 	}
 
 	holdingData.GoalHolding.UserID = userID
 	holdingData.GoalHolding.GoalID = goalID
 	holdingData.GoalHolding.Status = models.HoldingStatusActive
 
-	// Set current value to initial amount if not set
+	// IMPORTANT: Always set currentValue to amount initially
+	// The frontend should send this, but ensure it's set
 	if holdingData.CurrentValue == 0 {
 		holdingData.CurrentValue = holdingData.Amount
 	}
 
-	// Update market value for market instruments
+	// For market instruments, calculate value based on quantity and price
+	// For others (FD/DPS), currentValue should equal amount
 	holdingData.GoalHolding.UpdateMarketValue()
 
 	// Start transaction
@@ -252,17 +264,38 @@ func AddHolding(c *gin.Context) {
 	}
 
 	// Create transaction record
-	categoryID := "goal_holding_added"
+	var transaction models.Transaction
 
-	transaction := models.Transaction{
-		UserID:      userID,
-		AccountID:   holdingData.AccountID,
-		Type:        "expense",
-		Amount:      holdingData.Amount,
-		CategoryID:  categoryID,
-		Date:        holdingData.PurchaseDate,
-		Description: "Added to " + goal.Name + ": " + holdingData.Name,
-		Tags:        []string{"goal", "holding"},
+	if holdingData.IsExisting {
+		// For existing investments, create a special "tracking" type transaction
+		// This won't show in regular expense/income lists but tracks the holding for reference
+		var trackingAccountID uuid.UUID
+		if holdingData.AccountID != nil {
+			trackingAccountID = *holdingData.AccountID
+		}
+
+		transaction = models.Transaction{
+			UserID:      userID,
+			AccountID:   trackingAccountID,
+			Type:        "tracking", // Special type that won't appear in regular transaction lists
+			Amount:      holdingData.Amount,
+			CategoryID:  "goal_external_holding",
+			Date:        holdingData.PurchaseDate,
+			Description: "External " + holdingData.Name + " tracked for " + goal.Name,
+			Tags:        []string{"goal", "holding", "external", "tracking", "hidden"},
+		}
+	} else {
+		// For new investments, create normal transaction
+		transaction = models.Transaction{
+			UserID:      userID,
+			AccountID:   *holdingData.AccountID,
+			Type:        "expense",
+			Amount:      holdingData.Amount,
+			CategoryID:  "goal_holding_added",
+			Date:        holdingData.PurchaseDate,
+			Description: "Added to " + goal.Name + ": " + holdingData.Name,
+			Tags:        []string{"goal", "holding"},
+		}
 	}
 
 	if err := tx.Create(&transaction).Error; err != nil {
@@ -273,15 +306,22 @@ func AddHolding(c *gin.Context) {
 
 	holdingData.TransactionID = transaction.ID
 
-	// Update account balance
-	account.Balance -= holdingData.Amount
-	if err := tx.Save(&account).Error; err != nil {
-		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
-		return
+	// Update account balance only for new investments (not existing ones)
+	if !holdingData.IsExisting {
+		account.Balance -= holdingData.Amount
+		if err := tx.Save(&account).Error; err != nil {
+			tx.Rollback()
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
+			return
+		}
 	}
 
 	// Create contribution record
+	contributionNotes := "Added " + holdingData.Name
+	if holdingData.IsExisting {
+		contributionNotes = "External holding: " + holdingData.Name
+	}
+
 	contribution := models.GoalContribution{
 		UserID:        userID,
 		GoalID:        goalID,
@@ -289,7 +329,7 @@ func AddHolding(c *gin.Context) {
 		Type:          models.ContributionTypeContribution,
 		Amount:        holdingData.Amount,
 		Date:          holdingData.PurchaseDate,
-		Notes:         "Added " + holdingData.Name,
+		Notes:         contributionNotes,
 		TransactionID: transaction.ID,
 	}
 
@@ -299,18 +339,9 @@ func AddHolding(c *gin.Context) {
 		return
 	}
 
-	// Update goal
-	goal.UpdateCurrentAmount(tx)
+	// Update goal metadata (but not currentAmount yet - we'll do that after commit)
 	goal.LastContribution = holdingData.Amount
 	goal.LastContributionDate = &holdingData.PurchaseDate
-
-	// Check if goal is achieved
-	if goal.CurrentAmount >= goal.TargetAmount && !goal.Achieved {
-		goal.Achieved = true
-		now := time.Now()
-		goal.AchievedDate = &now
-		goal.Status = models.GoalStatusAchieved
-	}
 
 	if err := tx.Save(&goal).Error; err != nil {
 		tx.Rollback()
@@ -318,7 +349,27 @@ func AddHolding(c *gin.Context) {
 		return
 	}
 
-	tx.Commit()
+	// Commit the transaction first
+	if err := tx.Commit().Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	// NOW update currentAmount after everything is committed
+	// This ensures the holding is properly saved in the database
+
+	err = goal.UpdateCurrentAmount(database.DB)
+	if err != nil {
+		fmt.Printf("DEBUG: Error updating current amount: %v\n", err)
+	}
+	// Reload goal with all relations to return complete data
+	var updatedGoal models.Goal
+	if err := database.DB.Where("id = ?", goalID).
+		Preload("Holdings").
+		Preload("Contributions").
+		First(&updatedGoal).Error; err == nil {
+		goal = updatedGoal
+	}
 
 	result := map[string]interface{}{
 		"holding":      holdingData.GoalHolding,

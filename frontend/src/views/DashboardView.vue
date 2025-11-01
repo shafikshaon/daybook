@@ -9,8 +9,22 @@
       <div class="col-12 col-sm-6 col-lg-3">
         <div class="stat-card">
           <div class="stat-icon purple">💰</div>
-          <div class="stat-value">{{ formatCurrency(totalBalance) }}</div>
-          <div class="stat-label">Total Balance</div>
+          <div class="stat-value">{{ formatCurrency(totalNetWorth) }}</div>
+          <div class="stat-label">Total Net Worth</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            Liquid: {{ formatCurrency(totalBalance) }} | Goals: {{ formatCurrency(totalGoalsValue) }}
+          </small>
+        </div>
+      </div>
+
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="stat-card">
+          <div class="stat-icon blue">🎯</div>
+          <div class="stat-value">{{ formatCurrency(totalGoalsValue) }}</div>
+          <div class="stat-label">Goals & Investments</div>
+          <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+            {{ activeGoalsCount }} active goals
+          </small>
         </div>
       </div>
 
@@ -151,12 +165,14 @@ import { useAccountsStore } from '@/stores/accounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBudgetsStore } from '@/stores/budgets'
 import { useBillsStore } from '@/stores/bills'
+import { useGoalsStore } from '@/stores/goals'
 import { useSettingsStore } from '@/stores/settings'
 
 const accountsStore = useAccountsStore()
 const transactionsStore = useTransactionsStore()
 const budgetsStore = useBudgetsStore()
 const billsStore = useBillsStore()
+const goalsStore = useGoalsStore()
 const settingsStore = useSettingsStore()
 
 const accounts = computed(() => accountsStore.allAccounts)
@@ -165,6 +181,9 @@ const budgets = computed(() => budgetsStore.activeBudgets)
 const upcomingBills = computed(() => billsStore.upcomingBills)
 
 const totalBalance = computed(() => accountsStore.totalBalance)
+const totalGoalsValue = computed(() => goalsStore.totalCurrentAmount)
+const activeGoalsCount = computed(() => goalsStore.activeGoals.length)
+const totalNetWorth = computed(() => totalBalance.value + totalGoalsValue.value)
 
 const monthlyIncome = computed(() => {
   const now = new Date()
@@ -209,7 +228,8 @@ const loadData = async () => {
     accountsStore.fetchAccounts(),
     transactionsStore.fetchTransactions(),
     budgetsStore.fetchBudgets(),
-    billsStore.fetchBills()
+    billsStore.fetchBills(),
+    goalsStore.fetchGoals()
   ])
 }
 
