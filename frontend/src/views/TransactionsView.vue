@@ -406,7 +406,7 @@
                 <select class="form-select" v-model="form.accountId" required>
                   <option value="">Select account...</option>
                   <option v-for="acc in accountsAndCreditCards" :key="acc.id" :value="acc.id">
-                    {{ acc.name }}
+                    {{ acc.name }} {{ acc.balance !== undefined ? `(${formatCurrency(acc.balance)})` : acc.creditLimit !== undefined ? `💳 Limit: ${formatCurrency(acc.creditLimit)}` : '' }}
                   </option>
                 </select>
               </div>

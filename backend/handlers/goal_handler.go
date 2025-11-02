@@ -407,15 +407,54 @@ func UpdateHolding(c *gin.Context) {
 		return
 	}
 
-	// Update fields
-	if updateData.CurrentPrice != nil {
-		existingHolding.CurrentPrice = updateData.CurrentPrice
+	// Update core fields
+	if updateData.Name != "" {
+		existingHolding.Name = updateData.Name
 	}
 	if updateData.CurrentValue > 0 {
 		existingHolding.CurrentValue = updateData.CurrentValue
 	}
 	if updateData.Status != "" {
 		existingHolding.Status = updateData.Status
+	}
+	if !updateData.PurchaseDate.IsZero() {
+		existingHolding.PurchaseDate = updateData.PurchaseDate
+	}
+
+	// Update market instrument fields
+	if updateData.Symbol != nil {
+		existingHolding.Symbol = updateData.Symbol
+	}
+	if updateData.Quantity != nil {
+		existingHolding.Quantity = updateData.Quantity
+	}
+	if updateData.CostBasis != nil {
+		existingHolding.CostBasis = updateData.CostBasis
+	}
+	if updateData.CurrentPrice != nil {
+		existingHolding.CurrentPrice = updateData.CurrentPrice
+	}
+
+	// Update bank product fields
+	if updateData.Institution != nil {
+		existingHolding.Institution = updateData.Institution
+	}
+	if updateData.InterestRate != nil {
+		existingHolding.InterestRate = updateData.InterestRate
+	}
+	if updateData.TenureMonths != nil {
+		existingHolding.TenureMonths = updateData.TenureMonths
+	}
+	if updateData.MaturityDate != nil {
+		existingHolding.MaturityDate = updateData.MaturityDate
+	}
+	if updateData.MaturityAmount != nil {
+		existingHolding.MaturityAmount = updateData.MaturityAmount
+	}
+
+	// Update DPS field
+	if updateData.MonthlyDeposit != nil {
+		existingHolding.MonthlyDeposit = updateData.MonthlyDeposit
 	}
 
 	// Recalculate market value

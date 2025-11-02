@@ -247,6 +247,94 @@
       </div>
     </div>
 
+    <!-- Edit Goal Modal -->
+    <div class="modal fade" :class="{ 'show d-block': showEditGoalModal }" style="background-color: rgba(0,0,0,0.5);" v-if="showEditGoalModal">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Goal</h5>
+            <button type="button" class="btn-close" @click="showEditGoalModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="updateGoal">
+              <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Goal Name *</label>
+                  <input type="text" class="form-control" v-model="editGoalForm.name" required />
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Icon</label>
+                  <input type="text" class="form-control" v-model="editGoalForm.icon" placeholder="e.g., 🏠" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea class="form-control" v-model="editGoalForm.description" rows="2"></textarea>
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Category *</label>
+                  <select class="form-select" v-model="editGoalForm.category" required>
+                    <option value="">Select...</option>
+                    <option value="emergency_fund">Emergency Fund</option>
+                    <option value="vacation">Vacation</option>
+                    <option value="retirement">Retirement</option>
+                    <option value="home">Home</option>
+                    <option value="education">Education</option>
+                    <option value="car">Car</option>
+                    <option value="wedding">Wedding</option>
+                    <option value="business">Business</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Priority *</label>
+                  <select class="form-select" v-model="editGoalForm.priority" required>
+                    <option value="">Select...</option>
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" v-model="editGoalForm.status">
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Target Amount *</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editGoalForm.targetAmount" required />
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Target Date</label>
+                  <input type="date" class="form-control" v-model="editGoalForm.targetDate" />
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Monthly Contribution Target</label>
+                <input type="number" step="0.01" class="form-control" v-model.number="editGoalForm.monthlyContribution" />
+                <small class="text-muted">Optional: Set your planned monthly contribution amount</small>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" @click="showEditGoalModal = false">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Goal</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Goal Detail Modal -->
     <div class="modal fade" :class="{ 'show d-block': showDetailModal }" style="background-color: rgba(0,0,0,0.5);" v-if="showDetailModal">
       <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -255,7 +343,15 @@
             <h5 class="modal-title">
               {{ selectedGoal?.icon }} {{ selectedGoal?.name }}
             </h5>
-            <button type="button" class="btn-close" @click="showDetailModal = false"></button>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn btn-sm btn-outline-primary" @click="editGoal(selectedGoal)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                  <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207 11.207 2.5zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293l6.5-6.5zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/>
+                </svg>
+                Edit
+              </button>
+              <button type="button" class="btn-close" @click="showDetailModal = false" aria-label="Close"></button>
+            </div>
           </div>
           <div class="modal-body" v-if="selectedGoal">
             <!-- Goal Progress -->
@@ -336,6 +432,9 @@
                       </span>
                     </td>
                     <td>
+                      <button class="btn btn-sm btn-outline-primary me-1" @click="editHolding(holding)">
+                        Edit
+                      </button>
                       <button class="btn btn-sm btn-outline-danger" @click="removeHolding(holding.id)">
                         Remove
                       </button>
@@ -525,6 +624,117 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Holding Modal -->
+    <div class="modal fade" :class="{ 'show d-block': showEditHoldingModal }" style="background-color: rgba(0,0,0,0.5);" v-if="showEditHoldingModal">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Holding</h5>
+            <button type="button" class="btn-close" @click="showEditHoldingModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="updateHoldingData">
+              <div class="row">
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Holding Type *</label>
+                  <input type="text" class="form-control" :value="goalsStore.getHoldingTypeLabel(editHoldingForm.type)" disabled />
+                  <small class="text-muted">Holding type cannot be changed</small>
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Holding Name *</label>
+                  <input type="text" class="form-control" v-model="editHoldingForm.name" required />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Initial Amount *</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.amount" disabled />
+                  <small class="text-muted">Initial amount cannot be changed</small>
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Current Value *</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.currentValue" required />
+                  <small class="text-muted">Update the current market value</small>
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Purchase Date & Time *</label>
+                  <input type="datetime-local" class="form-control" v-model="editHoldingForm.purchaseDate" required />
+                </div>
+              </div>
+
+              <!-- Market Instruments Fields -->
+              <div v-if="isMarketInstrumentEdit" class="row">
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Symbol</label>
+                  <input type="text" class="form-control" v-model="editHoldingForm.symbol" placeholder="e.g., AAPL" />
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Quantity</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.quantity" />
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Cost Per Unit</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.costBasis" />
+                </div>
+              </div>
+
+              <!-- Bank Products Fields -->
+              <div v-if="isBankProductEdit" class="row">
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Institution</label>
+                  <input type="text" class="form-control" v-model="editHoldingForm.institution" />
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Interest Rate (%)</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.interestRate" />
+                </div>
+                <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Tenure (months)</label>
+                  <input type="number" class="form-control" v-model.number="editHoldingForm.tenureMonths" />
+                </div>
+              </div>
+
+              <!-- DPS/Recurring Deposit Field -->
+              <div v-if="isDpsProductEdit" class="row">
+                <div class="col-12 mb-3">
+                  <label class="form-label">Monthly Deposit Amount *</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.monthlyDeposit" required />
+                  <small class="text-muted">The amount you deposit every month</small>
+                </div>
+              </div>
+
+              <div v-if="isBankProductEdit" class="row">
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Maturity Date</label>
+                  <input type="date" class="form-control" v-model="editHoldingForm.maturityDate" />
+                </div>
+                <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Expected Maturity Amount</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editHoldingForm.maturityAmount" />
+                  <small class="text-muted">Principal + Interest</small>
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select class="form-select" v-model="editHoldingForm.status">
+                  <option value="active">Active</option>
+                  <option value="matured">Matured</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" @click="showEditHoldingModal = false">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Holding</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -543,11 +753,15 @@ const settingsStore = useSettingsStore()
 const { confirm, success, error } = useNotification()
 
 const showAddGoalModal = ref(false)
+const showEditGoalModal = ref(false)
 const showDetailModal = ref(false)
 const showAddHoldingModal = ref(false)
+const showEditHoldingModal = ref(false)
 const selectedGoal = ref(null)
 const selectedGoalIdForHolding = ref(null)
 const holdingTypes = ref(null)
+const editingGoalId = ref(null)
+const editingHoldingId = ref(null)
 
 const filters = ref({
   status: '',
@@ -568,6 +782,19 @@ const goalForm = ref({
   addInitialAmount: false
 })
 
+const editGoalForm = ref({
+  name: '',
+  description: '',
+  icon: '🎯',
+  color: '#3b82f6',
+  category: '',
+  priority: '',
+  targetAmount: 0,
+  targetDate: '',
+  monthlyContribution: 0,
+  status: 'active'
+})
+
 const holdingForm = ref({
   accountId: '',
   type: '',
@@ -584,6 +811,26 @@ const holdingForm = ref({
   tenureMonths: null,
   maturityDate: '',
   maturityAmount: null
+})
+
+const editHoldingForm = ref({
+  type: '',
+  name: '',
+  amount: 0,
+  currentValue: 0,
+  purchaseDate: '',
+  status: 'active',
+  // Market instruments
+  symbol: '',
+  quantity: null,
+  costBasis: null,
+  // Bank products
+  institution: '',
+  interestRate: null,
+  tenureMonths: null,
+  maturityDate: '',
+  maturityAmount: null,
+  monthlyDeposit: null
 })
 
 const goals = computed(() => goalsStore.allGoals)
@@ -603,6 +850,22 @@ const isBankProduct = computed(() => {
 const isDpsProduct = computed(() => {
   const dpsTypes = ['dps', 'recurring_deposit']
   return dpsTypes.includes(holdingForm.value.type)
+})
+
+// Edit form computed properties
+const isMarketInstrumentEdit = computed(() => {
+  const marketTypes = ['stocks', 'mutual_fund', 'etf', 'index_fund', 'bonds', 'cryptocurrency', 'commodities', 'gold']
+  return marketTypes.includes(editHoldingForm.value.type)
+})
+
+const isBankProductEdit = computed(() => {
+  const bankTypes = ['fixed_deposit', 'dps', 'recurring_deposit', 'savings_bond', 'ppf', 'nsc']
+  return bankTypes.includes(editHoldingForm.value.type)
+})
+
+const isDpsProductEdit = computed(() => {
+  const dpsTypes = ['dps', 'recurring_deposit']
+  return dpsTypes.includes(editHoldingForm.value.type)
 })
 
 const formatCurrency = (amount) => settingsStore.formatCurrency(amount)
@@ -756,6 +1019,44 @@ const saveGoal = async () => {
   }
 }
 
+const editGoal = (goal) => {
+  editingGoalId.value = goal.id
+  editGoalForm.value = {
+    name: goal.name,
+    description: goal.description || '',
+    icon: goal.icon || '🎯',
+    color: goal.color || '#3b82f6',
+    category: goal.category,
+    priority: goal.priority,
+    targetAmount: goal.targetAmount,
+    targetDate: goal.targetDate ? goal.targetDate.split('T')[0] : '',
+    monthlyContribution: goal.monthlyContribution || 0,
+    status: goal.status || 'active'
+  }
+  showEditGoalModal.value = true
+}
+
+const updateGoal = async () => {
+  try {
+    // Prepare data - convert empty strings to null for dates
+    const dataToSend = {
+      ...editGoalForm.value,
+      targetDate: editGoalForm.value.targetDate || null
+    }
+
+    await goalsStore.updateGoal(editingGoalId.value, dataToSend)
+    success('Goal updated successfully')
+    showEditGoalModal.value = false
+
+    // Refresh detail modal if it's open
+    if (showDetailModal.value && selectedGoal.value?.id === editingGoalId.value) {
+      await viewGoalDetails(editingGoalId.value)
+    }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error updating goal')
+  }
+}
+
 const saveHolding = async () => {
   try {
     // Validate based on whether it's an existing investment
@@ -847,6 +1148,82 @@ const removeHolding = async (holdingId) => {
     } catch (err) {
       error(err.response?.data?.message || err.message || 'Error removing holding')
     }
+  }
+}
+
+const editHolding = (holding) => {
+  editingHoldingId.value = holding.id
+
+  // Format purchaseDate to datetime-local format (YYYY-MM-DDTHH:mm)
+  const purchaseDate = holding.purchaseDate
+    ? new Date(holding.purchaseDate).toISOString().slice(0, 16)
+    : ''
+
+  // Format maturityDate to date format (YYYY-MM-DD)
+  const maturityDate = holding.maturityDate
+    ? new Date(holding.maturityDate).toISOString().split('T')[0]
+    : ''
+
+  editHoldingForm.value = {
+    type: holding.type,
+    name: holding.name,
+    amount: holding.amount,
+    currentValue: holding.currentValue || holding.amount,
+    purchaseDate: purchaseDate,
+    status: holding.status || 'active',
+    // Market instruments
+    symbol: holding.symbol || '',
+    quantity: holding.quantity || null,
+    costBasis: holding.costBasis || null,
+    // Bank products
+    institution: holding.institution || '',
+    interestRate: holding.interestRate || null,
+    tenureMonths: holding.tenureMonths || null,
+    maturityDate: maturityDate,
+    maturityAmount: holding.maturityAmount || null,
+    monthlyDeposit: holding.monthlyDeposit || null
+  }
+
+  showEditHoldingModal.value = true
+}
+
+const updateHoldingData = async () => {
+  try {
+    if (editHoldingForm.value.currentValue <= 0) {
+      error('Current value must be greater than 0')
+      return
+    }
+
+    // Prepare data - format dates properly
+    const dataToSend = {
+      name: editHoldingForm.value.name,
+      currentValue: parseFloat(editHoldingForm.value.currentValue),
+      purchaseDate: editHoldingForm.value.purchaseDate,
+      status: editHoldingForm.value.status,
+      // Market instruments
+      symbol: editHoldingForm.value.symbol || null,
+      quantity: editHoldingForm.value.quantity ? parseFloat(editHoldingForm.value.quantity) : null,
+      costBasis: editHoldingForm.value.costBasis ? parseFloat(editHoldingForm.value.costBasis) : null,
+      // Bank products
+      institution: editHoldingForm.value.institution || null,
+      interestRate: editHoldingForm.value.interestRate ? parseFloat(editHoldingForm.value.interestRate) : null,
+      tenureMonths: editHoldingForm.value.tenureMonths ? parseInt(editHoldingForm.value.tenureMonths) : null,
+      maturityDate: editHoldingForm.value.maturityDate || null,
+      maturityAmount: editHoldingForm.value.maturityAmount ? parseFloat(editHoldingForm.value.maturityAmount) : null,
+      monthlyDeposit: editHoldingForm.value.monthlyDeposit ? parseFloat(editHoldingForm.value.monthlyDeposit) : null
+    }
+
+    await goalsStore.updateHolding(editingHoldingId.value, dataToSend)
+
+    success('Holding updated successfully')
+    showEditHoldingModal.value = false
+
+    // Refresh detail modal if open
+    if (showDetailModal.value && selectedGoal.value) {
+      await viewGoalDetails(selectedGoal.value.id)
+    }
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error updating holding')
   }
 }
 

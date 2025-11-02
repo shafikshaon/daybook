@@ -195,9 +195,13 @@ export const useGoalsStore = defineStore('goals', {
         const dataToSend = { ...goalData }
         if (dataToSend.targetDate) {
           dataToSend.targetDate = toISOString(dataToSend.targetDate)
+        } else {
+          dataToSend.targetDate = null
         }
         if (dataToSend.achievedDate) {
           dataToSend.achievedDate = toISOString(dataToSend.achievedDate)
+        } else {
+          dataToSend.achievedDate = null
         }
 
         const response = await apiService.put('goals', id, dataToSend)
@@ -277,7 +281,7 @@ export const useGoalsStore = defineStore('goals', {
           dataToSend.maturityDate = toISOString(dataToSend.maturityDate)
         }
 
-        const response = await apiService.put(`goals/holdings/${holdingId}`, dataToSend)
+        const response = await apiService.put('goals/holdings', holdingId, dataToSend)
 
         // Find the goal containing this holding and refresh it
         const goal = this.goals.find(g =>
