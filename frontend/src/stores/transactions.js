@@ -40,6 +40,7 @@ export const useTransactionsStore = defineStore('transactions', {
       { id: 'housing', name: 'Housing', type: 'expense', group: 'expense', icon: '🏠', color: '#ef4444' },
       { id: 'insurance', name: 'Insurance', type: 'expense', group: 'expense', icon: '🛡️', color: '#ef4444' },
       { id: 'subscriptions', name: 'Subscriptions', type: 'expense', group: 'expense', icon: '📱', color: '#ef4444' },
+      { id: 'donation', name: 'Donation', type: 'expense', group: 'expense', icon: '🤲', color: '#ef4444' },
       { id: 'credit_card_payment', name: 'Credit Card Payment', type: 'expense', group: 'expense', icon: '💳', color: '#ef4444' },
       { id: 'other_expense', name: 'Other Expense', type: 'expense', group: 'expense', icon: '💸', color: '#ef4444' },
 
