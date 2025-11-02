@@ -38,7 +38,7 @@ func ListGoals(c *gin.Context) {
 	}
 
 	var goals []models.Goal
-	if err := query.Preload("Holdings").Preload("Contributions").Order("priority DESC, created_at DESC").Find(&goals).Error; err != nil {
+	if err := query.Preload("Holdings").Preload("Contributions").Order("name DESC, created_at DESC").Find(&goals).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch goals")
 		return
 	}
