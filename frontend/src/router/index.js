@@ -88,13 +88,17 @@ const router = createRouter({
   routes
 })
 
+// Track if auth has been initialized
+let authInitialized = false
+
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Initialize auth on first load
-  if (!authStore.isAuthenticated && !authStore.user) {
+  // Initialize auth once on first navigation
+  if (!authInitialized) {
     await authStore.initializeAuth()
+    authInitialized = true
   }
 
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
