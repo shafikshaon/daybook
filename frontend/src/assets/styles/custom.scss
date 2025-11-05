@@ -709,6 +709,14 @@ nav.sidebar {
 .modal-footer {
   border-top: 1px solid $border-light;
   padding: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+
+  .btn {
+    flex: 1;
+    min-width: fit-content;
+  }
 }
 
 // Dark Mode - Harmonious dark theme
@@ -1680,17 +1688,251 @@ nav.sidebar {
     }
   }
 
-  // Tables - mobile responsive
+  // ============================================================================
+  // MOBILE MODAL STYLES - ENHANCED RESPONSIVE DESIGN
+  // ============================================================================
+
+  // Modal backdrop and container adjustments
+  .modal {
+    &.show {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      padding: 0 !important;
+    }
+  }
+
+  .modal-dialog {
+    margin: 8px !important;
+    max-width: calc(100% - 16px) !important;
+    width: calc(100% - 16px) !important;
+    max-height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
+
+    &.modal-sm {
+      max-width: calc(100% - 16px) !important;
+    }
+
+    &.modal-lg,
+    &.modal-xl {
+      max-width: calc(100% - 16px) !important;
+    }
+  }
+
+  .modal-content {
+    border-radius: 16px;
+    max-height: calc(100vh - 16px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 16px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    background-color: $bg-secondary;
+    z-index: 10;
+    border-bottom: 1px solid $border-light;
+
+    .modal-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: $text-primary;
+    }
+
+    .btn-close {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: background-color 0.2s ease;
+
+      &:hover, &:active {
+        background-color: rgba($danger, 0.1);
+      }
+    }
+  }
+
+  .modal-body {
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+
+    // Make tables in modals scrollable
+    .table-responsive {
+      margin: 0 -16px;
+      padding: 0 16px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+
+      &::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: $bg-tertiary;
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: $border-medium;
+        border-radius: 4px;
+
+        &:hover {
+          background: $border-dark;
+        }
+      }
+    }
+
+    // Ensure tables don't break modal layout
+    .table {
+      min-width: 600px; // Force horizontal scroll on small tables
+      margin-bottom: 0;
+    }
+
+    // Better form spacing in modals
+    .form-group,
+    .mb-3 {
+      margin-bottom: 16px;
+    }
+  }
+
+  .modal-footer {
+    padding: 12px 16px 16px 16px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 8px;
+    border-top: 1px solid $border-light;
+    background-color: $bg-secondary;
+
+    .btn {
+      width: 100%;
+      min-height: 48px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      // Primary button should be on top (due to column-reverse)
+      &.btn-primary {
+        order: -1;
+      }
+
+      // Secondary/cancel button below
+      &.btn-secondary {
+        order: 0;
+      }
+    }
+  }
+
+  // Tables - mobile responsive with horizontal scroll
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+
+    &::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: $bg-tertiary;
+      border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $border-medium;
+      border-radius: 4px;
+
+      &:hover {
+        background: $border-dark;
+      }
+    }
+  }
+
   .table {
     font-size: 0.8125rem;
+    min-width: 600px; // Force horizontal scroll
+    margin-bottom: 0;
 
     thead th {
       padding: 10px 8px;
       font-size: 0.75rem;
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      background-color: $bg-tertiary;
+      z-index: 5;
     }
 
     tbody td {
       padding: 12px 8px;
+      vertical-align: middle;
+      white-space: nowrap;
+
+      // Action buttons in table cells
+      .btn {
+        min-height: 36px;
+        padding: 6px 12px;
+        font-size: 0.875rem;
+        white-space: nowrap;
+      }
+
+      .action-icon-btn {
+        width: 36px;
+        height: 36px;
+        min-width: 36px;
+        min-height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        margin: 0 2px;
+
+        svg {
+          width: 16px;
+          height: 16px;
+        }
+      }
+
+      // Button groups in table cells
+      .btn-group {
+        display: inline-flex;
+        gap: 4px;
+        flex-wrap: nowrap;
+      }
+    }
+
+    // Ensure action column is always visible
+    td:last-child,
+    th:last-child {
+      position: sticky;
+      right: 0;
+      background-color: $bg-secondary;
+      box-shadow: -2px 0 4px rgba(0, 0, 0, 0.05);
+      z-index: 4;
+
+      &:hover {
+        background-color: $bg-tertiary;
+      }
+    }
+
+    thead th:last-child {
+      background-color: $bg-tertiary;
+      z-index: 6;
     }
   }
 
@@ -1701,6 +1943,139 @@ nav.sidebar {
 
   .mb-4 {
     margin-bottom: 1.25rem !important;
+  }
+
+  // ============================================================================
+  // GENERAL PAGE TABLES (Outside Modals) - MOBILE RESPONSIVE
+  // ============================================================================
+
+  // Card with table inside - ensure proper scrolling
+  .card {
+    overflow: hidden;
+
+    .card-body {
+      padding: 0;
+      overflow: visible;
+
+      &.p-0 .table-responsive {
+        margin: 0;
+        border-radius: 0;
+      }
+    }
+  }
+
+  // Ensure all tables on the page are scrollable
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 0;
+
+    // Add scroll hint shadow
+    background:
+      linear-gradient(to right, white 30%, rgba(255,255,255,0)),
+      linear-gradient(to right, rgba(255,255,255,0), white 70%) 0 100%,
+      radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)),
+      radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.2), rgba(0,0,0,0)) 0 100%;
+    background-repeat: no-repeat;
+    background-color: white;
+    background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+    background-position: 0 0, 100%, 0 0, 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  // ============================================================================
+  // MOBILE BUTTON IMPROVEMENTS - BETTER SPACING & GROUPS
+  // ============================================================================
+
+  // Button groups on mobile
+  .btn-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .btn {
+      width: 100%;
+      border-radius: 12px !important;
+      margin: 0;
+    }
+
+    // Horizontal button group on mobile (for small action buttons)
+    &.btn-group-sm {
+      flex-direction: row;
+      flex-wrap: wrap;
+
+      .btn {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+  }
+
+  // Action buttons row on mobile (like in table headers)
+  .d-flex {
+    &.justify-content-between,
+    &.justify-content-end {
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .btn {
+        flex: 1;
+        min-width: fit-content;
+      }
+    }
+  }
+
+  // Dropdown menus on mobile
+  .dropdown-menu {
+    min-width: 200px;
+    max-width: calc(100vw - 32px);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+    .dropdown-item {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background-color 0.2s ease;
+
+      &:active {
+        background-color: rgba($primary, 0.1);
+      }
+    }
+  }
+
+  // ============================================================================
+  // MOBILE BADGE AND PILL IMPROVEMENTS
+  // ============================================================================
+
+  .badge {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  // ============================================================================
+  // MOBILE ALERT/TOAST IMPROVEMENTS
+  // ============================================================================
+
+  .alert {
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    font-size: 14px;
+
+    .alert-heading {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
   }
 }
 
@@ -1959,6 +2334,182 @@ nav.sidebar {
       background-color: #111827;
       border-color: #374151;
       color: #e5e7eb;
+    }
+
+    // Dark mode modal improvements
+    .modal-content {
+      background-color: #1f2937;
+      border-color: #374151;
+    }
+
+    .modal-header {
+      background-color: #1f2937;
+      border-bottom-color: #374151;
+
+      .modal-title {
+        color: #f9fafb;
+      }
+
+      .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+
+        &:hover, &:active {
+          background-color: rgba($danger, 0.15);
+        }
+      }
+    }
+
+    .modal-body {
+      background-color: #1f2937;
+      color: #e5e7eb;
+
+      .table-responsive {
+        &::-webkit-scrollbar-track {
+          background: #111827;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: #374151;
+
+          &:hover {
+            background: #4b5563;
+          }
+        }
+      }
+    }
+
+    .modal-footer {
+      background-color: #1f2937;
+      border-top-color: #374151;
+    }
+
+    // Dark mode table improvements
+    .table-responsive {
+      &::-webkit-scrollbar-track {
+        background: #111827;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #374151;
+
+        &:hover {
+          background: #4b5563;
+        }
+      }
+    }
+
+    .table {
+      background-color: #1f2937;
+
+      thead th {
+        background-color: #111827;
+        color: #f9fafb;
+
+        &:last-child {
+          background-color: #111827;
+        }
+      }
+
+      tbody {
+        td {
+          color: #e5e7eb;
+
+          &:last-child {
+            background-color: #1f2937;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.3);
+
+            &:hover {
+              background-color: #374151;
+            }
+          }
+        }
+
+        tr:hover td:last-child {
+          background-color: #374151;
+        }
+      }
+    }
+
+    // Dark mode for general page tables
+    .table-responsive {
+      background:
+        linear-gradient(to right, #1f2937 30%, rgba(31,41,55,0)),
+        linear-gradient(to right, rgba(31,41,55,0), #1f2937 70%) 0 100%,
+        radial-gradient(farthest-side at 0% 50%, rgba(0,0,0,.4), rgba(0,0,0,0)),
+        radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,.4), rgba(0,0,0,0)) 0 100%;
+      background-repeat: no-repeat;
+      background-color: #1f2937;
+      background-size: 40px 100%, 40px 100%, 14px 100%, 14px 100%;
+      background-position: 0 0, 100%, 0 0, 100%;
+      background-attachment: local, local, scroll, scroll;
+    }
+
+    // Dark mode dropdown improvements
+    .dropdown-menu {
+      background-color: #1f2937;
+      border-color: #374151;
+
+      .dropdown-item {
+        color: #e5e7eb;
+
+        &:active {
+          background-color: rgba($primary, 0.15);
+          color: $primary;
+        }
+
+        &:hover {
+          background-color: #374151;
+          color: #f9fafb;
+        }
+      }
+    }
+
+    // Dark mode badge improvements
+    .badge {
+      &.bg-secondary {
+        background-color: #374151 !important;
+        color: #e5e7eb !important;
+      }
+
+      &.bg-light {
+        background-color: #374151 !important;
+        color: #e5e7eb !important;
+      }
+    }
+
+    // Dark mode alert improvements
+    .alert {
+      background-color: #374151;
+      border-color: #4b5563;
+      color: #e5e7eb;
+
+      .alert-heading {
+        color: #f9fafb;
+      }
+
+      &.alert-success {
+        background-color: rgba($success, 0.15);
+        border-color: rgba($success, 0.3);
+        color: color.scale($success, $lightness: 30%);
+      }
+
+      &.alert-danger {
+        background-color: rgba($danger, 0.15);
+        border-color: rgba($danger, 0.3);
+        color: color.scale($danger, $lightness: 30%);
+      }
+
+      &.alert-warning {
+        background-color: rgba($warning, 0.15);
+        border-color: rgba($warning, 0.3);
+        color: color.scale($warning, $lightness: 30%);
+      }
+
+      &.alert-info {
+        background-color: rgba($info, 0.15);
+        border-color: rgba($info, 0.3);
+        color: color.scale($info, $lightness: 30%);
+      }
     }
   }
 }
