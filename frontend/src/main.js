@@ -19,6 +19,8 @@ app.use(pinia)
 // Install router AFTER Pinia is installed
 app.use(router)
 
-// Mount immediately - router will handle navigation asynchronously
-// This ensures Pinia is active before any component setup runs
-app.mount('#app')
+// Wait for router to be ready before mounting the app
+// This ensures router guards complete and Pinia is fully active before component setup
+router.isReady().then(() => {
+  app.mount('#app')
+})
