@@ -177,7 +177,6 @@
                   <option value="purchase">Purchase</option>
                   <option value="fee">Fee</option>
                   <option value="interest">Interest Charge</option>
-                  <option value="refund">Refund</option>
                 </select>
               </div>
 
@@ -390,10 +389,10 @@
                     <strong
                       :class="{
                         'text-danger': transaction.type === 'purchase' || transaction.type === 'fee' || transaction.type === 'interest',
-                        'text-success': transaction.type === 'payment' || transaction.type === 'refund'
+                        'text-success': transaction.type === 'payment'
                       }"
                     >
-                      {{ transaction.type === 'payment' || transaction.type === 'refund' ? '-' : '+' }}{{ formatCurrency(transaction.amount) }}
+                      {{ transaction.type === 'payment' ? '-' : '+' }}{{ formatCurrency(transaction.amount) }}
                     </strong>
                     <button
                       class="btn btn-sm btn-danger mt-2"
@@ -480,7 +479,6 @@ const getTransactionTypeBadge = (type) => {
     purchase: 'bg-primary',
     fee: 'bg-warning',
     interest: 'bg-danger',
-    refund: 'bg-success',
     payment: 'bg-info'
   }
   return badges[type] || 'bg-secondary'
