@@ -222,6 +222,12 @@ func CreateTransaction(c *gin.Context) {
 		return
 	}
 
+	// Validate that date is provided
+	if transaction.Date.IsZero() {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Date is required")
+		return
+	}
+
 	transaction.UserID = userID
 
 	// Determine if this is a credit card transaction or account transaction
@@ -343,6 +349,12 @@ func UpdateTransaction(c *gin.Context) {
 	var updateData models.Transaction
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Validate that date is provided
+	if updateData.Date.IsZero() {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Date is required")
 		return
 	}
 

@@ -15,7 +15,7 @@ type Transaction struct {
 	Type             string         `gorm:"not null" json:"type" binding:"required"` // income, expense, transfer
 	Amount           float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	CategoryID       string         `gorm:"not null;index" json:"categoryId" binding:"required"`
-	Date             time.Time      `gorm:"not null;index" json:"date" binding:"required"`
+	Date             time.Time      `gorm:"not null;index" json:"date"`
 	Description      string         `json:"description"`
 	Tags             []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	SavingsGoalID    *uuid.UUID     `gorm:"type:uuid;index" json:"savingsGoalId"`
