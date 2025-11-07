@@ -3,6 +3,13 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="text-purple">Transactions</h1>
       <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" @click="processScheduledTransactions" :disabled="isProcessing">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/>
+            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/>
+          </svg>
+          {{ isProcessing ? 'Processing...' : 'Process Scheduled' }}
+        </button>
         <button class="btn btn-outline-primary" @click="showTransferModal = true">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
             <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
@@ -681,6 +688,7 @@ const showTransferModal = ref(false)
 const showAttachmentsModal = ref(false)
 const editingTransaction = ref(null)
 const viewingTransaction = ref(null)
+const isProcessing = ref(false)
 
 const filters = ref({
   type: '',
@@ -834,6 +842,28 @@ const loadTransactions = async () => {
     await transactionsStore.fetchTransactions(params.page, params.limit, params)
   } catch (err) {
     error('Error loading transactions')
+  }
+}
+
+const processScheduledTransactions = async () => {
+  if (isProcessing.value) return
+
+  try {
+    isProcessing.value = true
+    const result = await transactionsStore.processRecurringTransactions()
+
+    if (result.created > 0) {
+      success(`Successfully created ${result.created} scheduled transaction(s)`)
+    } else {
+      success('No new scheduled transactions to process')
+    }
+
+    // Reload transactions to show newly created ones
+    await loadTransactions()
+  } catch (err) {
+    error('Error processing scheduled transactions: ' + (err.response?.data?.error || err.message))
+  } finally {
+    isProcessing.value = false
   }
 }
 
