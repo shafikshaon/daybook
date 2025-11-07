@@ -43,8 +43,8 @@ type RecurringTransaction struct {
 	UserID              uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	TransactionTemplate Transaction    `gorm:"embedded;embeddedPrefix:template_" json:"transactionTemplate"`
 	Frequency           string         `gorm:"not null" json:"frequency"` // daily, weekly, biweekly, monthly, quarterly, yearly
-	StartDate           time.Time      `gorm:"not null" json:"startDate"`
-	EndDate             *time.Time     `json:"endDate"`
+	StartDate           Date           `gorm:"not null" json:"startDate"`
+	EndDate             *Date          `json:"endDate"`
 	LastProcessed       *time.Time     `json:"lastProcessed"`
 	Enabled             bool           `gorm:"default:true" json:"enabled"`
 	CreatedAt           time.Time      `json:"createdAt"`
