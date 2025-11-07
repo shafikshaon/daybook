@@ -76,6 +76,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/scheduled-transactions',
+    name: 'ScheduledTransactions',
+    component: () => import('@/views/ScheduledTransactionsView.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('@/views/SettingsView.vue'),
