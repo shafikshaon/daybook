@@ -121,21 +121,6 @@
                 </label>
               </div>
             </div>
-
-            <div class="mb-3">
-              <div class="form-check form-switch">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="billReminders"
-                  v-model="settings.notifications.billReminders"
-                  @change="saveSettings"
-                />
-                <label class="form-check-label" for="billReminders">
-                  Bill Reminders
-                </label>
-              </div>
-            </div>
           </div>
         </div>
       </div>
