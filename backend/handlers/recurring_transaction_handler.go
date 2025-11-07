@@ -69,6 +69,20 @@ func CreateRecurringTransaction(c *gin.Context) {
 
 	recurringTransaction.UserID = userID
 
+	// Validate required UUID fields
+	if recurringTransaction.TransactionTemplate.AccountID == uuid.Nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Account ID is required")
+		return
+	}
+
+	// Validate transfer-specific requirements
+	if recurringTransaction.TransactionTemplate.Type == "transfer" {
+		if recurringTransaction.TransactionTemplate.ToAccountID == nil || *recurringTransaction.TransactionTemplate.ToAccountID == uuid.Nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "To Account ID is required for transfers")
+			return
+		}
+	}
+
 	// Verify account belongs to user
 	var account models.Account
 	if err := database.DB.Where("id = ? AND user_id = ?", recurringTransaction.TransactionTemplate.AccountID, userID).First(&account).Error; err != nil {
@@ -123,6 +137,20 @@ func UpdateRecurringTransaction(c *gin.Context) {
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// Validate required UUID fields
+	if updateData.TransactionTemplate.AccountID == uuid.Nil {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Account ID is required")
+		return
+	}
+
+	// Validate transfer-specific requirements
+	if updateData.TransactionTemplate.Type == "transfer" {
+		if updateData.TransactionTemplate.ToAccountID == nil || *updateData.TransactionTemplate.ToAccountID == uuid.Nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "To Account ID is required for transfers")
+			return
+		}
 	}
 
 	// Verify account belongs to user if changed

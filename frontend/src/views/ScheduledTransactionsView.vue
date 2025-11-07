@@ -379,9 +379,9 @@ const saveSchedule = async () => {
         description: form.value.description,
         type: form.value.type,
         amount: form.value.amount,
-        categoryId: form.value.categoryId,
-        accountId: form.value.accountId,
-        toAccountId: form.value.type === 'transfer' ? form.value.toAccountId : '',
+        categoryId: form.value.categoryId || null,
+        accountId: form.value.accountId || null,
+        toAccountId: (form.value.type === 'transfer' && form.value.toAccountId) ? form.value.toAccountId : null,
         notes: form.value.notes
       },
       frequency: form.value.frequency,
