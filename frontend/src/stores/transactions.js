@@ -382,27 +382,44 @@ export const useTransactionsStore = defineStore('transactions', {
       }
     },
 
-    async processRecurringTransactions() {
-      const today = new Date()
-
-      for (const recurring of this.recurringTransactions) {
-        if (!recurring.enabled) continue
-
-        const lastProcessed = recurring.lastProcessed ? new Date(recurring.lastProcessed) : null
-        const nextDate = this.calculateNextDate(lastProcessed || new Date(recurring.startDate), recurring.frequency)
-
-        if (nextDate <= today) {
-          await this.createTransaction({
-            ...recurring.transactionTemplate,
-            date: nextDate.toISOString(),
-            recurringId: recurring.id
-          })
-
-          await apiService.put('recurring-transactions', recurring.id, {
-            ...recurring,
-            lastProcessed: nextDate.toISOString()
-          })
+    async updateRecurringTransaction(id, recurringData) {
+      try {
+        const response = await apiService.put('recurring-transactions', id, recurringData)
+        const index = this.recurringTransactions.findIndex(rt => rt.id === id)
+        if (index !== -1) {
+          this.recurringTransactions[index] = response.data
         }
+        return response.data
+      } catch (error) {
+        console.error('Error updating recurring transaction:', error)
+        throw error
+      }
+    },
+
+    async deleteRecurringTransaction(id) {
+      try {
+        await apiService.delete('recurring-transactions', id)
+        this.recurringTransactions = this.recurringTransactions.filter(rt => rt.id !== id)
+      } catch (error) {
+        console.error('Error deleting recurring transaction:', error)
+        throw error
+      }
+    },
+
+    async processRecurringTransactions() {
+      try {
+        // Call backend endpoint to process all recurring transactions
+        const response = await apiService.post('recurring-transactions/process', {})
+
+        // Refresh transactions and accounts after processing
+        await this.fetchTransactions()
+        const accountsStore = useAccountsStore()
+        await accountsStore.fetchAccounts()
+
+        return response.data
+      } catch (error) {
+        console.error('Error processing recurring transactions:', error)
+        throw error
       }
     },
 

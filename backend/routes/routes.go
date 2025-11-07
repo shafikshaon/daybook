@@ -74,6 +74,17 @@ func SetupRoutes(router *gin.Engine) {
 				transactionRoutes.DELETE("/:id", handlers.DeleteTransaction)
 			}
 
+
+			// Recurring transaction routes
+			recurringTransactionRoutes := protected.Group("/recurring-transactions")
+			{
+				recurringTransactionRoutes.GET("", handlers.ListRecurringTransactions)
+				recurringTransactionRoutes.GET("/:id", handlers.GetRecurringTransaction)
+				recurringTransactionRoutes.POST("", handlers.CreateRecurringTransaction)
+				recurringTransactionRoutes.PUT("/:id", handlers.UpdateRecurringTransaction)
+				recurringTransactionRoutes.DELETE("/:id", handlers.DeleteRecurringTransaction)
+				recurringTransactionRoutes.POST("/process", handlers.ProcessRecurringTransactions)
+			}
 			// Credit card routes
 			creditCardRoutes := protected.Group("/credit-cards")
 			{
