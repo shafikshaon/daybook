@@ -17,5 +17,12 @@ const app = createApp(App)
 app.use(pinia)
 app.use(router)
 
-// Mount app
-app.mount('#app')
+// Wait for router to be ready before mounting to avoid timing issues
+router.isReady().then(() => {
+  // Mount app after router is ready
+  app.mount('#app')
+}).catch(error => {
+  console.error('Error starting router:', error)
+  // Mount anyway to show error state
+  app.mount('#app')
+})
