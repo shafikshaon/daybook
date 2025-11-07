@@ -236,34 +236,34 @@ func ProcessRecurringTransactions(c *gin.Context) {
 
 	for _, recurring := range recurringTransactions {
 		// Skip if start date is in the future
-		if recurring.StartDate.After(now) {
+		if recurring.StartDate.Time.After(now) {
 			skippedCount++
 			continue
 		}
 
 		// Skip if end date has passed
-		if recurring.EndDate != nil && recurring.EndDate.Before(now) {
+		if recurring.EndDate != nil && recurring.EndDate.Time.Before(now) {
 			skippedCount++
 			continue
 		}
 
 		// Determine the start point for generating transactions
-		startFrom := recurring.StartDate
+		startFrom := recurring.StartDate.Time
 		if recurring.LastProcessed != nil {
 			startFrom = *recurring.LastProcessed
 		}
 
 		// Generate transactions from startFrom to now
-		transactionDates := calculateTransactionDates(startFrom, now, recurring.Frequency, recurring.StartDate)
+		transactionDates := calculateTransactionDates(startFrom, now, recurring.Frequency, recurring.StartDate.Time)
 
 		for _, txnDate := range transactionDates {
 			// Skip if transaction date is before start date
-			if txnDate.Before(recurring.StartDate) {
+			if txnDate.Before(recurring.StartDate.Time) {
 				continue
 			}
 
 			// Skip if transaction date is after end date
-			if recurring.EndDate != nil && txnDate.After(*recurring.EndDate) {
+			if recurring.EndDate != nil && txnDate.After(recurring.EndDate.Time) {
 				continue
 			}
 
