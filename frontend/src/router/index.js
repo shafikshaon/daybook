@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { pinia } from '@/stores'
 
 const routes = [
   // Public routes
@@ -111,7 +112,8 @@ let authInitialized = false
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
   try {
-    const authStore = useAuthStore()
+    // Pass pinia instance explicitly for use outside components
+    const authStore = useAuthStore(pinia)
 
     // Initialize auth once on first navigation
     if (!authInitialized) {
