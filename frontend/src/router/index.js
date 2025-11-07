@@ -86,6 +86,12 @@ const routes = [
     name: 'Settings',
     component: () => import('@/views/SettingsView.vue'),
     meta: { requiresAuth: true }
+  },
+  // 404 catch-all route
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    redirect: '/dashboard'
   }
 ]
 
@@ -94,29 +100,46 @@ const router = createRouter({
   routes
 })
 
+// Error handling for lazy-loaded components
+router.onError((error) => {
+  console.error('Router error:', error)
+  if (error.message.includes('Failed to fetch dynamically imported module') ||
+      error.message.includes('Importing a module script failed')) {
+    // Chunk loading error - reload the page to get fresh chunks
+    console.warn('Chunk loading failed, reloading page...')
+    window.location.reload()
+  }
+})
+
 // Track if auth has been initialized
 let authInitialized = false
 
 // Navigation guard
 router.beforeEach(async (to, from, next) => {
-  const authStore = useAuthStore()
+  try {
+    const authStore = useAuthStore()
 
-  // Initialize auth once on first navigation
-  if (!authInitialized) {
-    await authStore.initializeAuth()
-    authInitialized = true
-  }
+    // Initialize auth once on first navigation
+    if (!authInitialized) {
+      await authStore.initializeAuth()
+      authInitialized = true
+    }
 
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
-  const isAuthPage = to.path === '/login' || to.path === '/signup'
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
+    const isAuthPage = to.path === '/login' || to.path === '/signup'
 
-  if (requiresAuth && !authStore.isAuthenticated) {
-    // Redirect to login if trying to access protected route
-    next({ name: 'Login', query: { redirect: to.fullPath } })
-  } else if (isAuthPage && authStore.isAuthenticated) {
-    // Redirect to dashboard if already logged in and trying to access auth pages
-    next({ name: 'Dashboard' })
-  } else {
+    if (requiresAuth && !authStore.isAuthenticated) {
+      // Redirect to login if trying to access protected route
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+    } else if (isAuthPage && authStore.isAuthenticated) {
+      // Redirect to dashboard if already logged in and trying to access auth pages
+      next({ name: 'Dashboard' })
+    } else {
+      next()
+    }
+  } catch (error) {
+    console.error('Navigation guard error:', error)
+    // Allow navigation to continue even if auth check fails
     next()
   }
 })

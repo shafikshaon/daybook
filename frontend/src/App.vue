@@ -445,14 +445,13 @@ const handleClickOutside = (event) => {
   }
 }
 
-onMounted(async () => {
+onMounted(() => {
   // Register alert instance for global notifications
   if (alertToastRef.value) {
     registerAlertInstance(alertToastRef.value)
   }
 
-  // Initialize authentication
-  await authStore.initializeAuth()
+  // Auth is initialized by router guard, no need to initialize here
 
   // Load settings
   settingsStore.loadSettings()
