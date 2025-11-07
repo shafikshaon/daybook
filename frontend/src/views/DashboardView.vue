@@ -171,7 +171,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useAccountsStore } from '@/stores/accounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useBudgetsStore } from '@/stores/budgets'
-import { useBillsStore } from '@/stores/bills'
 import { useGoalsStore } from '@/stores/goals'
 import { useSettingsStore } from '@/stores/settings'
 
@@ -185,7 +184,6 @@ const settingsStore = useSettingsStore()
 const accounts = computed(() => accountsStore.allAccounts)
 const recentTransactions = computed(() => transactionsStore.allTransactions)
 const budgets = computed(() => budgetsStore.activeBudgets)
-const upcomingBills = computed(() => billsStore.upcomingBills)
 
 const totalBalance = computed(() => accountsStore.totalBalance)
 const totalGoalsValue = computed(() => goalsStore.totalCurrentAmount)
@@ -235,7 +233,6 @@ const loadData = async () => {
     accountsStore.fetchAccounts(),
     transactionsStore.fetchTransactions(),
     budgetsStore.fetchBudgets(),
-    billsStore.fetchBills(),
     goalsStore.fetchGoals()
   ])
 }
