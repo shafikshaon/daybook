@@ -320,8 +320,23 @@ const processScheduled = async () => {
 
 const toggleEnabled = async (schedule) => {
   try {
+    // Build transaction template without empty UUID fields
+    const transactionTemplate = {
+      description: schedule.transactionTemplate.description,
+      type: schedule.transactionTemplate.type,
+      amount: schedule.transactionTemplate.amount,
+      categoryId: schedule.transactionTemplate.categoryId,
+      accountId: schedule.transactionTemplate.accountId,
+      notes: schedule.transactionTemplate.notes || ''
+    }
+
+    // Only include toAccountId if it exists and has a value
+    if (schedule.transactionTemplate.toAccountId) {
+      transactionTemplate.toAccountId = schedule.transactionTemplate.toAccountId
+    }
+
     const updatedData = {
-      transactionTemplate: schedule.transactionTemplate,
+      transactionTemplate,
       frequency: schedule.frequency,
       startDate: schedule.startDate,
       endDate: schedule.endDate,
@@ -374,16 +389,23 @@ const deleteSchedule = async (id) => {
 
 const saveSchedule = async () => {
   try {
+    // Build transaction template without empty UUID fields
+    const transactionTemplate = {
+      description: form.value.description,
+      type: form.value.type,
+      amount: form.value.amount,
+      categoryId: form.value.categoryId,
+      accountId: form.value.accountId,
+      notes: form.value.notes
+    }
+
+    // Only include toAccountId if it's a transfer and has a value
+    if (form.value.type === 'transfer' && form.value.toAccountId) {
+      transactionTemplate.toAccountId = form.value.toAccountId
+    }
+
     const scheduleData = {
-      transactionTemplate: {
-        description: form.value.description,
-        type: form.value.type,
-        amount: form.value.amount,
-        categoryId: form.value.categoryId,
-        accountId: form.value.accountId,
-        toAccountId: form.value.type === 'transfer' ? form.value.toAccountId : '',
-        notes: form.value.notes
-      },
+      transactionTemplate,
       frequency: form.value.frequency,
       startDate: form.value.startDate,
       endDate: form.value.endDate || null,
