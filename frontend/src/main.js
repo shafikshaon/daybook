@@ -7,22 +7,18 @@ import App from './App.vue'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import './assets/styles/custom.scss'
 
-// Create Pinia instance FIRST (before router)
+// Create Pinia instance FIRST
 const pinia = createPinia()
 
 // Create app instance
 const app = createApp(App)
 
-// Use Pinia BEFORE router to ensure stores are available in navigation guards
+// CRITICAL: Install Pinia FIRST, synchronously, before anything else
 app.use(pinia)
+
+// Install router AFTER Pinia is installed
 app.use(router)
 
-// Wait for router to be ready before mounting to avoid timing issues
-router.isReady().then(() => {
-  // Mount app after router is ready
-  app.mount('#app')
-}).catch(error => {
-  console.error('Error starting router:', error)
-  // Mount anyway to show error state
-  app.mount('#app')
-})
+// Mount immediately - router will handle navigation asynchronously
+// This ensures Pinia is active before any component setup runs
+app.mount('#app')
