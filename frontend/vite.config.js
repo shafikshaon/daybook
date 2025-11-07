@@ -20,21 +20,13 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    host: '0.0.0.0',
+    host: true,
     strictPort: true,
     hmr: {
-      protocol: 'ws',
-      host: 'localhost',
-      port: 3000,
-      // Increase timeout and add retry options
-      timeout: 30000,
-      overlay: true,
-      // Handle connection errors gracefully
-      clientPort: 3000
+      overlay: true
     },
     watch: {
-      usePolling: true,
-      interval: 1000
+      usePolling: false
     }
   }
 })
