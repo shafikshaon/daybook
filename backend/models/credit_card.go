@@ -95,7 +95,7 @@ type CreditCardTransaction struct {
 	Description   string         `json:"description"`
 	Merchant      string         `json:"merchant"`
 	Date          time.Time      `gorm:"not null" json:"date"`
-	Type          string         `gorm:"not null" json:"type"` // purchase, payment, refund, fee, interest
+	Type          string         `gorm:"not null" json:"type"` // purchase, payment, fee, interest
 	Tags          []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	Attachments   []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
 	CreatedAt     time.Time      `json:"createdAt"`

@@ -202,11 +202,6 @@ func RecordCreditCardTransaction(c *gin.Context) {
 		Attachments:  ccTransaction.Attachments,
 	}
 
-	// For refunds, it's income
-	if ccTransaction.Type == "refund" {
-		mainTransaction.Type = "income"
-	}
-
 	if err := tx.Create(&mainTransaction).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction record")
@@ -226,11 +221,6 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	// Update card balance based on transaction type
 	if ccTransaction.Type == "purchase" || ccTransaction.Type == "fee" || ccTransaction.Type == "interest" {
 		card.CurrentBalance += ccTransaction.Amount
-	} else if ccTransaction.Type == "refund" {
-		card.CurrentBalance -= ccTransaction.Amount
-		if card.CurrentBalance < 0 {
-			card.CurrentBalance = 0
-		}
 	}
 
 	if err := tx.Save(&card).Error; err != nil {
@@ -327,8 +317,6 @@ func DeleteCreditCardTransaction(c *gin.Context) {
 		if card.CurrentBalance < 0 {
 			card.CurrentBalance = 0
 		}
-	} else if transaction.Type == "refund" {
-		card.CurrentBalance += transaction.Amount
 	}
 
 	if err := tx.Save(&card).Error; err != nil {
