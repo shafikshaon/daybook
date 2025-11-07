@@ -139,29 +139,6 @@
           </div>
         </div>
       </div>
-
-      <!-- Upcoming Bills -->
-      <div class="col-12 col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="mb-0">Upcoming Bills</h5>
-          </div>
-          <div class="card-body">
-            <div v-if="upcomingBills.length === 0" class="text-center text-muted">
-              No upcoming bills
-            </div>
-            <div v-else>
-              <div v-for="bill in upcomingBills.slice(0, 5)" :key="bill.id" class="d-flex justify-content-between align-items-center mb-2">
-                <div>
-                  <div class="fw-semibold">{{ bill.name }}</div>
-                  <small class="text-muted">Due in {{ bill.daysUntilDue }} days</small>
-                </div>
-                <div class="fw-bold">{{ formatCurrency(bill.amount) }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -177,7 +154,6 @@ import { useSettingsStore } from '@/stores/settings'
 const accountsStore = useAccountsStore()
 const transactionsStore = useTransactionsStore()
 const budgetsStore = useBudgetsStore()
-const billsStore = useBillsStore()
 const goalsStore = useGoalsStore()
 const settingsStore = useSettingsStore()
 
