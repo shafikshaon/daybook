@@ -57,10 +57,9 @@ func Signup(c *gin.Context) {
 		FirstDayOfWeek: 0,
 		Language:       "en",
 		Notifications: &models.Notifications{
-			Push:          true,
-			Email:         true,
-			BudgetAlerts:  true,
-			BillReminders: true,
+			Push:         true,
+			Email:        true,
+			BudgetAlerts: true,
 		},
 	}
 	database.DB.Create(&settings)

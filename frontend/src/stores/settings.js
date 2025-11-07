@@ -9,8 +9,7 @@ export const useSettingsStore = defineStore('settings', {
       notifications: {
         push: true,
         email: true,
-        budgetAlerts: true,
-        billReminders: true
+        budgetAlerts: true
       },
       dateFormat: 'MM/DD/YYYY',
       firstDayOfWeek: 0, // 0 = Sunday

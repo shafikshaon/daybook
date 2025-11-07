@@ -111,14 +111,6 @@
             </router-link>
           </li>
           <li class="drawer-nav-item">
-            <router-link to="/bills" class="drawer-nav-link" @click="closeMobileMenu">
-              <svg class="drawer-nav-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
-              </svg>
-              <span>Bills & Reminders</span>
-            </router-link>
-          </li>
-          <li class="drawer-nav-item">
             <router-link to="/scheduled-transactions" class="drawer-nav-link" @click="closeMobileMenu">
               <svg class="drawer-nav-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
@@ -229,14 +221,6 @@
               <path d="M0 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm3 0a2 2 0 0 1-2 2v4a2 2 0 0 1 2 2h10a2 2 0 0 1 2-2V7a2 2 0 0 1-2-2z"/>
             </svg>
             <span v-if="showSidebar">Budgets</span>
-          </router-link>
-        </li>
-        <li class="nav-item">
-          <router-link to="/bills" class="nav-link" active-class="active" :title="!showSidebar ? 'Bills & Reminders' : ''">
-            <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M14 4.5V14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h5.5zm-3 0A1.5 1.5 0 0 1 9.5 3V1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V4.5z"/>
-            </svg>
-            <span v-if="showSidebar">Bills & Reminders</span>
           </router-link>
         </li>
         <li class="nav-item">

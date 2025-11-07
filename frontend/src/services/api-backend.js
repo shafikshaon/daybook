@@ -178,12 +178,6 @@ const apiService = {
     return response
   },
 
-  // Bill payment
-  async payBill(billId, paymentData) {
-    const response = await api.post(`/bills/${billId}/pay`, paymentData)
-    return response
-  },
-
   // Budget progress
   async getBudgetProgress(budgetId) {
     const response = await api.get(`/budgets/${budgetId}/progress`)

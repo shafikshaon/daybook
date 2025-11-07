@@ -49,8 +49,6 @@ func InitDatabase(cfg *config.Config) error {
 		&models.CreditCardPayment{},
 		&models.Statement{},
 		&models.Reward{},
-		&models.Bill{},
-		&models.BillPayment{},
 		&models.Budget{},
 		&models.Reconciliation{},
 		&models.ReconciliationTransaction{},

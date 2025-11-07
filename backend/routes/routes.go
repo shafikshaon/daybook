@@ -121,20 +121,6 @@ func SetupRoutes(router *gin.Engine) {
 			// Replaced by unified Goals system at /goals
 			// Investment, Portfolio, and Dividend functionality now available as Goal Holdings
 
-			// Bill routes
-			billRoutes := protected.Group("/bills")
-			{
-				billRoutes.GET("", handlers.ListBills)
-				billRoutes.GET("/:id", handlers.GetBill)
-				billRoutes.POST("", handlers.CreateBill)
-				billRoutes.PUT("/:id", handlers.UpdateBill)
-				billRoutes.DELETE("/:id", handlers.DeleteBill)
-				billRoutes.POST("/:id/pay", handlers.PayBill)
-			}
-
-			// Bill payment routes
-			protected.GET("/bill-payments", handlers.GetBillPayments)
-
 			// Budget routes
 			budgetRoutes := protected.Group("/budgets")
 			{

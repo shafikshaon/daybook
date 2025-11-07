@@ -22,10 +22,9 @@ type Settings struct {
 }
 
 type Notifications struct {
-	Push          bool `json:"push"`
-	Email         bool `json:"email"`
-	BudgetAlerts  bool `json:"budgetAlerts"`
-	BillReminders bool `json:"billReminders"`
+	Push         bool `json:"push"`
+	Email        bool `json:"email"`
+	BudgetAlerts bool `json:"budgetAlerts"`
 }
 
 func (s *Settings) BeforeCreate(tx *gorm.DB) error {
