@@ -96,6 +96,10 @@ func CreateSavingsGoal(c *gin.Context) {
 		return
 	}
 
+	// Log savings goal creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
+		"SavingsGoal", goal.ID, "Created savings goal: "+goal.Name, nil)
+
 	utilities.CreatedResponse(c, goal, "Savings goal created successfully")
 }
 
@@ -139,6 +143,10 @@ func UpdateSavingsGoal(c *gin.Context) {
 		return
 	}
 
+	// Log savings goal update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
+		"SavingsGoal", existingGoal.ID, "Updated savings goal: "+existingGoal.Name, nil)
+
 	utilities.SuccessResponse(c, existingGoal, "Savings goal updated successfully")
 }
 
@@ -167,6 +175,10 @@ func DeleteSavingsGoal(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete savings goal")
 		return
 	}
+
+	// Log savings goal deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
+		"SavingsGoal", goal.ID, "Deleted savings goal: "+goal.Name, nil)
 
 	utilities.SuccessResponse(c, nil, "Savings goal deleted successfully")
 }
@@ -286,6 +298,10 @@ func AddContribution(c *gin.Context) {
 	}
 
 	tx.Commit()
+
+	// Log contribution addition activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
+		"SavingsContribution", contribution.ID, "Added contribution to savings goal: "+goal.Name, nil)
 
 	result := map[string]interface{}{
 		"goal":         goal,
@@ -415,6 +431,10 @@ func WithdrawFromGoal(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log withdrawal activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
+		"SavingsContribution", withdrawal.ID, "Withdrew from savings goal: "+goal.Name, nil)
+
 	result := map[string]interface{}{
 		"goal":        goal,
 		"withdrawal":  withdrawal,
@@ -480,6 +500,10 @@ func CreateAutomatedRule(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create automated rule")
 		return
 	}
+
+	// Log automated rule creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
+		"AutomatedRule", rule.ID, "Created automated rule for savings goal: "+goal.Name, nil)
 
 	utilities.CreatedResponse(c, rule, "Automated rule created successfully")
 }

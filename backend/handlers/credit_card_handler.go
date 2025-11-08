@@ -74,6 +74,10 @@ func CreateCreditCard(c *gin.Context) {
 		return
 	}
 
+	// Log credit card creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
+		"CreditCard", card.ID, "Created credit card: "+card.Name, nil)
+
 	utilities.CreatedResponse(c, card, "Credit card created successfully")
 }
 
@@ -122,6 +126,10 @@ func UpdateCreditCard(c *gin.Context) {
 		return
 	}
 
+	// Log credit card update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleCreditCard,
+		"CreditCard", existingCard.ID, "Updated credit card: "+existingCard.Name, nil)
+
 	utilities.SuccessResponse(c, existingCard, "Credit card updated successfully")
 }
 
@@ -150,6 +158,10 @@ func DeleteCreditCard(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete credit card")
 		return
 	}
+
+	// Log credit card deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleCreditCard,
+		"CreditCard", card.ID, "Deleted credit card: "+card.Name, nil)
 
 	utilities.SuccessResponse(c, nil, "Credit card deleted successfully")
 }
@@ -240,6 +252,10 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	}
 
 	tx.Commit()
+
+	// Log credit card transaction activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
+		"CreditCardTransaction", ccTransaction.ID, "Created credit card transaction: "+ccTransaction.Description, nil)
 
 	utilities.CreatedResponse(c, ccTransaction, "Transaction recorded successfully")
 }
@@ -345,6 +361,10 @@ func DeleteCreditCardTransaction(c *gin.Context) {
 	}
 
 	tx.Commit()
+
+	// Log credit card transaction deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleCreditCard,
+		"CreditCardTransaction", transaction.ID, "Deleted credit card transaction: "+transaction.Description, nil)
 
 	utilities.SuccessResponse(c, nil, "Transaction deleted successfully")
 }
@@ -495,6 +515,10 @@ func RecordPayment(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log credit card payment activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
+		"CreditCardPayment", payment.ID, "Recorded credit card payment: "+card.Name, nil)
+
 	response := map[string]interface{}{
 		"card":    card,
 		"payment": payment,
@@ -593,6 +617,10 @@ func CreateStatement(c *gin.Context) {
 		return
 	}
 
+	// Log statement creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
+		"Statement", statement.ID, "Created credit card statement", nil)
+
 	utilities.CreatedResponse(c, statement, "Statement created successfully")
 }
 
@@ -652,6 +680,10 @@ func RecordReward(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to record reward")
 		return
 	}
+
+	// Log reward creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
+		"Reward", reward.ID, "Recorded credit card reward", nil)
 
 	utilities.CreatedResponse(c, reward, "Reward recorded successfully")
 }

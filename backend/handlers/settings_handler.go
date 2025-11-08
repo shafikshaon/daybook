@@ -97,5 +97,9 @@ func UpdateSettings(c *gin.Context) {
 		}
 	}
 
+	// Log settings update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleSettings,
+		"Settings", settings.ID, "Updated user settings", nil)
+
 	utilities.SuccessResponse(c, settings, "Settings updated successfully")
 }

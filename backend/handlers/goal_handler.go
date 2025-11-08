@@ -103,6 +103,10 @@ func CreateGoal(c *gin.Context) {
 		return
 	}
 
+	// Log goal creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
+		"Goal", goal.ID, "Created goal: "+goal.Name, nil)
+
 	utilities.CreatedResponse(c, goal, "Goal created successfully")
 }
 
@@ -149,6 +153,10 @@ func UpdateGoal(c *gin.Context) {
 		return
 	}
 
+	// Log goal update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
+		"Goal", existingGoal.ID, "Updated goal: "+existingGoal.Name, nil)
+
 	utilities.SuccessResponse(c, existingGoal, "Goal updated successfully")
 }
 
@@ -177,6 +185,10 @@ func DeleteGoal(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete goal")
 		return
 	}
+
+	// Log goal deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
+		"Goal", goal.ID, "Deleted goal: "+goal.Name, nil)
 
 	utilities.SuccessResponse(c, nil, "Goal deleted successfully")
 }
@@ -371,6 +383,10 @@ func AddHolding(c *gin.Context) {
 		goal = updatedGoal
 	}
 
+	// Log holding addition activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
+		"GoalHolding", holdingData.GoalHolding.ID, "Added holding "+holdingData.Name+" to goal "+goal.Name, nil)
+
 	result := map[string]interface{}{
 		"holding":      holdingData.GoalHolding,
 		"contribution": contribution,
@@ -470,6 +486,10 @@ func UpdateHolding(c *gin.Context) {
 	if err := database.DB.First(&goal, existingHolding.GoalID).Error; err == nil {
 		goal.UpdateCurrentAmount(database.DB)
 	}
+
+	// Log holding update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
+		"GoalHolding", existingHolding.ID, "Updated holding: "+existingHolding.Name, nil)
 
 	utilities.SuccessResponse(c, existingHolding, "Holding updated successfully")
 }
@@ -591,6 +611,10 @@ func RemoveHolding(c *gin.Context) {
 	goal.UpdateCurrentAmount(tx)
 
 	tx.Commit()
+
+	// Log holding removal activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
+		"GoalHolding", holding.ID, "Removed holding: "+holding.Name, nil)
 
 	result := map[string]interface{}{
 		"holding":      holding,

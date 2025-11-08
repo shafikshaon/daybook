@@ -503,6 +503,10 @@ func UpdateTransaction(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log transaction update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleTransaction,
+		"Transaction", existingTransaction.ID, "Updated transaction: "+existingTransaction.Description, nil)
+
 	utilities.SuccessResponse(c, existingTransaction, "Transaction updated successfully")
 }
 
@@ -593,6 +597,10 @@ func DeleteTransaction(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log transaction deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleTransaction,
+		"Transaction", transaction.ID, "Deleted transaction: "+transaction.Description, nil)
+
 	utilities.SuccessResponse(c, nil, "Transaction deleted successfully")
 }
 
@@ -652,6 +660,10 @@ func BulkImportTransactions(c *gin.Context) {
 			failedCount++
 			continue
 		}
+
+		// Log transaction creation activity
+		utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
+			"Transaction", transactions[i].ID, "Created transaction via bulk import: "+transactions[i].Description, nil)
 
 		successCount++
 	}

@@ -110,6 +110,10 @@ func CreateRecurringTransaction(c *gin.Context) {
 		return
 	}
 
+	// Log recurring transaction creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
+		"RecurringTransaction", recurringTransaction.ID, "Created recurring transaction: "+recurringTransaction.TransactionTemplate.Description, nil)
+
 	utilities.CreatedResponse(c, recurringTransaction, "Recurring transaction created successfully")
 }
 
@@ -174,6 +178,10 @@ func UpdateRecurringTransaction(c *gin.Context) {
 		return
 	}
 
+	// Log recurring transaction update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleTransaction,
+		"RecurringTransaction", existingRecurring.ID, "Updated recurring transaction: "+existingRecurring.TransactionTemplate.Description, nil)
+
 	utilities.SuccessResponse(c, existingRecurring, "Recurring transaction updated successfully")
 }
 
@@ -202,6 +210,10 @@ func DeleteRecurringTransaction(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete recurring transaction")
 		return
 	}
+
+	// Log recurring transaction deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleTransaction,
+		"RecurringTransaction", recurringTransaction.ID, "Deleted recurring transaction: "+recurringTransaction.TransactionTemplate.Description, nil)
 
 	utilities.SuccessResponse(c, nil, "Recurring transaction deleted successfully")
 }
