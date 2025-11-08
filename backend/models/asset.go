@@ -17,11 +17,11 @@ type Asset struct {
 	Brand             string            `json:"brand"`
 	Model             string            `json:"model"`
 	SerialNumber      string            `json:"serialNumber"`
-	PurchaseDate      Date              `gorm:"not null;index" json:"purchaseDate"`
+	PurchaseDate      Date              `gorm:"column:purchase_date;not null;index" json:"purchaseDate"`
 	PurchasePrice     float64           `gorm:"not null" json:"purchasePrice" binding:"required,gt=0"`
 	PurchaseLocation  string            `json:"purchaseLocation"` // Store/website name
-	WarrantyStartDate *Date             `json:"warrantyStartDate"`
-	WarrantyEndDate   *Date             `json:"warrantyEndDate"`
+	WarrantyStartDate *Date             `gorm:"column:warranty_start_date" json:"warrantyStartDate"`
+	WarrantyEndDate   *Date             `gorm:"column:warranty_end_date" json:"warrantyEndDate"`
 	WarrantyProvider  string            `json:"warrantyProvider"` // Manufacturer, Retailer, Extended warranty provider
 	WarrantyType      string            `json:"warrantyType"`     // manufacturer, extended, lifetime
 	Status            string            `gorm:"not null;index" json:"status"` // active, archived, sold, disposed
@@ -51,7 +51,7 @@ type ServiceRecord struct {
 	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	AssetID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"assetId"`
-	ServiceDate     Date           `gorm:"not null;index" json:"serviceDate"`
+	ServiceDate     Date           `gorm:"column:service_date;not null;index" json:"serviceDate"`
 	ServiceType     string         `gorm:"not null" json:"serviceType"` // repair, maintenance, inspection, replacement
 	ServiceProvider string         `json:"serviceProvider"` // Company/person who provided service
 	Cost            float64        `gorm:"not null" json:"cost" binding:"required,gte=0"`
