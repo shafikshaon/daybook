@@ -191,6 +191,27 @@ func SetupRoutes(router *gin.Engine) {
 				lendRoutes.GET("/:id/payments", handlers.ListLendPayments)
 			}
 
+			// Goods tracking routes
+			goodRoutes := protected.Group("/goods")
+			{
+				goodRoutes.GET("", handlers.ListGoods)
+				goodRoutes.GET("/stats", handlers.GetGoodsStats)
+				goodRoutes.GET("/:id", handlers.GetGood)
+				goodRoutes.POST("", handlers.CreateGood)
+				goodRoutes.PUT("/:id", handlers.UpdateGood)
+				goodRoutes.DELETE("/:id", handlers.DeleteGood)
+
+				// Service records
+				goodRoutes.POST("/:id/services", handlers.CreateServiceRecord)
+				goodRoutes.GET("/:id/services", handlers.ListServiceRecords)
+				goodRoutes.DELETE("/:id/services/:serviceId", handlers.DeleteServiceRecord)
+
+				// Attachments
+				goodRoutes.POST("/:id/attachments", handlers.AddAttachment)
+				goodRoutes.GET("/:id/attachments", handlers.ListAttachments)
+				goodRoutes.DELETE("/:id/attachments/:attachmentId", handlers.DeleteAttachment)
+			}
+
 			// File upload routes
 			uploadRoutes := protected.Group("/uploads")
 			{
