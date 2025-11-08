@@ -388,9 +388,36 @@
           <div class="modal-body">
             <p class="text-muted small mb-3">Upload receipts, warranty documents, photos, and other files related to this asset.</p>
 
-            <!-- File Upload Info -->
-            <div class="alert alert-info small">
-              To upload files: Use the file upload endpoint at <code>/api/v1/uploads</code> first, then link them here.
+            <!-- File Upload Component -->
+            <div class="mb-4">
+              <h6 class="mb-3">Upload New Files</h6>
+
+              <!-- Attachment Type Selection (before upload) -->
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Attachment Type</label>
+                  <select v-model="attachmentType" class="form-select">
+                    <option value="photo">Photo</option>
+                    <option value="receipt">Receipt</option>
+                    <option value="warranty_document">Warranty Document</option>
+                    <option value="manual">Manual</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">Description (Optional)</label>
+                  <input v-model="attachmentDescription" class="form-control" placeholder="Add a description..." />
+                </div>
+              </div>
+
+              <FileUpload
+                label=""
+                :multiple="true"
+                :maxFiles="10"
+                :autoUpload="true"
+                @upload-success="handleFilesUploaded"
+                ref="fileUploadRef"
+              />
             </div>
 
             <!-- Attachments List -->
@@ -399,21 +426,59 @@
               No attachments yet
             </div>
             <div v-else class="row g-2">
-              <div v-for="attachment in currentAttachments" :key="attachment.id" class="col-12 col-md-6">
+              <div v-for="attachment in currentAttachments" :key="attachment.id" class="col-12">
                 <div class="card">
-                  <div class="card-body p-2">
-                    <div class="d-flex justify-content-between align-items-center">
+                  <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
                       <div class="flex-grow-1">
-                        <div class="small fw-bold text-truncate">{{ attachment.originalName }}</div>
-                        <div class="text-muted small">{{ attachment.attachmentType || 'file' }}</div>
+                        <div class="fw-bold">{{ attachment.originalName }}</div>
+                        <div class="text-muted small">
+                          <span class="badge bg-secondary me-2">{{ formatAttachmentType(attachment.attachmentType) }}</span>
+                          <span v-if="attachment.fileSize">{{ formatFileSize(attachment.fileSize) }}</span>
+                        </div>
+                        <div v-if="attachment.description" class="text-muted small mt-1">{{ attachment.description }}</div>
                       </div>
-                      <button class="btn btn-sm btn-outline-danger" @click="deleteAttachment(attachment.id)">
-                        Delete
-                      </button>
+                      <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-primary" @click="viewAttachment(attachment)" title="View">
+                          👁️
+                        </button>
+                        <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-success" title="Download">
+                          ⬇️
+                        </a>
+                        <button class="btn btn-sm btn-outline-danger" @click="deleteAttachment(attachment.id)" title="Delete">
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View Attachment Modal -->
+    <div
+      class="modal fade"
+      :class="{ 'show d-block': showViewAttachmentModal }"
+      style="background-color: rgba(0,0,0,0.5);"
+      v-if="showViewAttachmentModal"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ viewingAttachment?.originalName }}</h5>
+            <button type="button" class="btn-close" @click="closeViewAttachmentModal"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img v-if="isImageAttachment(viewingAttachment)" :src="getAttachmentUrl(viewingAttachment)" :alt="viewingAttachment.originalName" class="img-fluid" style="max-height: 70vh;" />
+            <div v-else class="py-5">
+              <p class="text-muted">Preview not available for this file type.</p>
+              <a :href="getAttachmentUrl(viewingAttachment)" :download="viewingAttachment.originalName" class="btn btn-primary">
+                Download File
+              </a>
             </div>
           </div>
         </div>
@@ -427,6 +492,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAssetsStore } from '@/stores/assets'
 import { useSettingsStore } from '@/stores/settings'
+import FileUpload from '@/components/FileUpload.vue'
 
 const assetsStore = useAssetsStore()
 const settingsStore = useSettingsStore()
@@ -437,8 +503,15 @@ const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showServiceModal = ref(false)
 const showAttachmentsModal = ref(false)
+const showViewAttachmentModal = ref(false)
 const selectedAsset = ref(null)
 const editingAssetId = ref(null)
+const viewingAttachment = ref(null)
+const fileUploadRef = ref(null)
+const pendingFiles = ref([])
+const attachmentType = ref('photo')
+const attachmentDescription = ref('')
+const uploading = ref(false)
 
 const form = ref({
   name: '',
@@ -477,12 +550,12 @@ const filteredAssets = computed(() => {
 
 const currentServiceRecords = computed(() => {
   if (!selectedAsset.value) return []
-  return assetsStore.getServiceRecordsForGood(selectedAsset.value.id)
+  return assetsStore.getServiceRecordsForAsset(selectedAsset.value.id)
 })
 
 const currentAttachments = computed(() => {
   if (!selectedAsset.value) return []
-  return assetsStore.getAttachmentsForGood(selectedAsset.value.id)
+  return assetsStore.getAttachmentsForAsset(selectedAsset.value.id)
 })
 
 onMounted(async () => {
@@ -703,6 +776,85 @@ const deleteAttachment = async (attachmentId) => {
   } finally {
     loading.value = false
   }
+}
+
+const handleFilesUploaded = async (files) => {
+  if (!selectedAsset.value || !files || files.length === 0) return
+
+  uploading.value = true
+  try {
+    // Files are already uploaded to the server, now create attachment records for each file
+    for (const file of files) {
+      const attachmentData = {
+        fileName: file.fileName,
+        originalName: file.originalName,
+        filePath: file.filePath,
+        fileUrl: file.fileUrl,
+        fileSize: file.fileSize,
+        mimeType: file.mimeType,
+        attachmentType: attachmentType.value,
+        description: attachmentDescription.value
+      }
+
+      await assetsStore.addAttachment(selectedAsset.value.id, attachmentData)
+    }
+
+    // Refresh attachments list
+    await assetsStore.fetchAttachments(selectedAsset.value.id)
+
+    // Clear the file upload component
+    fileUploadRef.value.clearFiles()
+
+    alert('Attachments saved successfully!')
+  } catch (error) {
+    console.error('Error saving attachments:', error)
+    alert('Error saving attachments. Please try again.')
+  } finally {
+    uploading.value = false
+  }
+}
+
+const viewAttachment = (attachment) => {
+  viewingAttachment.value = attachment
+  showViewAttachmentModal.value = true
+}
+
+const closeViewAttachmentModal = () => {
+  showViewAttachmentModal.value = false
+  viewingAttachment.value = null
+}
+
+const getAttachmentUrl = (attachment) => {
+  if (!attachment) return ''
+  return attachment.fileUrl || attachment.fileURL || ''
+}
+
+const isImageAttachment = (attachment) => {
+  if (!attachment) return false
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp']
+  const fileName = attachment.originalName || attachment.fileName || ''
+  const ext = '.' + fileName.split('.').pop().toLowerCase()
+  return imageExtensions.includes(ext)
+}
+
+const formatAttachmentType = (type) => {
+  if (!type) return 'File'
+  const types = {
+    photo: 'Photo',
+    receipt: 'Receipt',
+    warranty_document: 'Warranty',
+    manual: 'Manual',
+    other: 'Other'
+  }
+  return types[type] || type
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes || bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
 }
 </script>
 
