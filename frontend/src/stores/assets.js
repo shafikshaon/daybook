@@ -31,7 +31,7 @@ export const useAssetsStore = defineStore('assets', {
       return state.assets.filter(g => g.status === 'disposed')
     },
 
-    getGoodById: (state) => (id) => {
+    getAssetById: (state) => (id) => {
       return state.assets.find(g => g.id === id)
     },
 
@@ -196,7 +196,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.post(`goods/${assetId}/services`, serviceData)
+        const response = await apiService.post(`assets/${assetId}/services`, serviceData)
 
         // Add to local cache
         if (!this.serviceRecords[assetId]) {
@@ -221,7 +221,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get(`goods/${assetId}/services`)
+        const response = await apiService.get(`assets/${assetId}/services`)
         this.serviceRecords[assetId] = response.data || []
         return response.data
       } catch (error) {
@@ -237,7 +237,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        await apiService.delete(`goods/${assetId}/services/${serviceId}`)
+        await apiService.delete(`assets/${assetId}/services/${serviceId}`)
 
         // Remove from local cache
         if (this.serviceRecords[assetId]) {
@@ -261,7 +261,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.post(`goods/${assetId}/attachments`, attachmentData)
+        const response = await apiService.post(`assets/${assetId}/attachments`, attachmentData)
 
         // Add to local cache
         if (!this.attachments[assetId]) {
@@ -283,7 +283,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get(`goods/${assetId}/attachments`)
+        const response = await apiService.get(`assets/${assetId}/attachments`)
         this.attachments[assetId] = response.data || []
         return response.data
       } catch (error) {
@@ -299,7 +299,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        await apiService.delete(`goods/${assetId}/attachments/${attachmentId}`)
+        await apiService.delete(`assets/${assetId}/attachments/${attachmentId}`)
 
         // Remove from local cache
         if (this.attachments[assetId]) {
@@ -320,7 +320,7 @@ export const useAssetsStore = defineStore('assets', {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get('goods/stats')
+        const response = await apiService.get('assets/stats')
         this.stats = response.data
         return response.data
       } catch (error) {

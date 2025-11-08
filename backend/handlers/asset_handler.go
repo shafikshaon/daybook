@@ -191,14 +191,14 @@ func DeleteAsset(c *gin.Context) {
 	}()
 
 	// Soft delete attachments
-	if err := tx.Where("good_id = ?", assetID).Delete(&models.AssetAttachment{}).Error; err != nil {
+	if err := tx.Where("asset_id = ?", assetID).Delete(&models.AssetAttachment{}).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete attachments")
 		return
 	}
 
 	// Soft delete service records
-	if err := tx.Where("good_id = ?", assetID).Delete(&models.ServiceRecord{}).Error; err != nil {
+	if err := tx.Where("asset_id = ?", assetID).Delete(&models.ServiceRecord{}).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete service records")
 		return
@@ -285,7 +285,7 @@ func ListServiceRecords(c *gin.Context) {
 	}
 
 	var serviceRecords []models.ServiceRecord
-	if err := database.DB.Where("good_id = ? AND user_id = ?", assetID, userID).
+	if err := database.DB.Where("asset_id = ? AND user_id = ?", assetID, userID).
 		Order("service_date DESC, created_at DESC").
 		Find(&serviceRecords).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch service records")
@@ -383,7 +383,7 @@ func ListAttachments(c *gin.Context) {
 	}
 
 	var attachments []models.AssetAttachment
-	if err := database.DB.Where("good_id = ? AND user_id = ?", assetID, userID).
+	if err := database.DB.Where("asset_id = ? AND user_id = ?", assetID, userID).
 		Order("created_at DESC").
 		Find(&attachments).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch attachments")
