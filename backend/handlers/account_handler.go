@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -14,18 +15,26 @@ import (
 
 // ListAccounts returns all accounts for the authenticated user
 func ListAccounts(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListAccounts handler - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access to list accounts: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching accounts for user: %s", userID)
+
 	var accounts []models.Account
-	if err := database.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&accounts).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Find(&accounts).Error; err != nil {
+		logger.Errorf(ctx, "Failed to fetch accounts from database: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch accounts")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d accounts for user: %s", len(accounts), userID)
 	utilities.SuccessResponse(c, accounts, "Accounts retrieved successfully")
 }
 
@@ -54,36 +63,48 @@ func GetAccount(c *gin.Context) {
 
 // CreateAccount creates a new account
 func CreateAccount(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateAccount handler - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access to create account: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	var account models.Account
 	if err := c.ShouldBindJSON(&account); err != nil {
+		logger.Warnf(ctx, "Invalid create account request: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	account.UserID = userID
+	logger.Infof(ctx, "Creating new account '%s' for user: %s", account.Name, userID)
 
 	// Start transaction to ensure atomicity
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting database transaction for account creation")
+	tx := database.DB.WithContext(ctx).Begin()
 	if tx.Error != nil {
+		logger.Errorf(ctx, "Failed to start transaction: %v", tx.Error)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to start transaction")
 		return
 	}
 
 	// Create the account
+	logger.Debugf(ctx, "Creating account record in database")
 	if err := tx.Create(&account).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Failed to create account: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create account")
 		return
 	}
+	logger.Infof(ctx, "Account created successfully with ID: %s", account.ID)
 
 	// If there's an initial balance, create an opening balance transaction
 	if account.InitialBalance > 0 {
+		logger.Debugf(ctx, "Creating opening balance transaction: %.2f", account.InitialBalance)
 		transaction := models.Transaction{
 			UserID:      userID,
 			AccountID:   account.ID,
@@ -96,6 +117,7 @@ func CreateAccount(c *gin.Context) {
 
 		if err := tx.Create(&transaction).Error; err != nil {
 			tx.Rollback()
+			logger.Errorf(ctx, "Failed to create opening balance transaction: %v", err)
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create opening balance transaction")
 			return
 		}
