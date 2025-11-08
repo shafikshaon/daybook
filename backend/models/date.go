@@ -23,6 +23,11 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 		str = str[1 : len(str)-1]
 	}
 
+	// Handle empty strings after quote removal
+	if str == "" {
+		return nil
+	}
+
 	// Try parsing as date-only format first (2006-01-02)
 	t, err := time.Parse("2006-01-02", str)
 	if err == nil {

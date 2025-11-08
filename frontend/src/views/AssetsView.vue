@@ -271,6 +271,59 @@
                 <textarea v-model="form.notes" class="form-control" rows="2"></textarea>
               </div>
 
+              <!-- Attachments Section for Edit Mode -->
+              <div v-if="showEditModal && editingAssetId" class="mb-4">
+                <h6 class="mb-3">Attachments</h6>
+
+                <!-- Upload New Files -->
+                <div class="mb-3">
+                  <label class="form-label">Upload Files</label>
+                  <div class="row mb-2">
+                    <div class="col-md-6">
+                      <select v-model="attachmentType" class="form-select form-select-sm">
+                        <option value="photo">Photo</option>
+                        <option value="receipt">Receipt</option>
+                        <option value="warranty_document">Warranty Document</option>
+                        <option value="manual">Manual</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <input v-model="attachmentDescription" class="form-control form-control-sm" placeholder="Description (optional)" />
+                    </div>
+                  </div>
+                  <FileUpload
+                    label=""
+                    :multiple="true"
+                    :maxFiles="10"
+                    :autoUpload="true"
+                    @upload-success="handleEditFormFilesUploaded"
+                    ref="editFileUploadRef"
+                  />
+                </div>
+
+                <!-- Current Attachments -->
+                <div v-if="editFormAttachments.length > 0">
+                  <label class="form-label">Current Files</label>
+                  <div class="list-group">
+                    <div v-for="attachment in editFormAttachments" :key="attachment.id" class="list-group-item">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div class="flex-grow-1">
+                          <div class="fw-bold small">{{ attachment.originalName }}</div>
+                          <span class="badge bg-secondary me-1">{{ formatAttachmentType(attachment.attachmentType) }}</span>
+                          <span v-if="attachment.description" class="text-muted small">{{ attachment.description }}</span>
+                        </div>
+                        <div class="d-flex gap-1">
+                          <button type="button" class="btn btn-sm btn-outline-primary" @click="viewAttachment(attachment)">👁️</button>
+                          <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-success">⬇️</a>
+                          <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteEditFormAttachment(attachment.id)">🗑️</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" @click="closeModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" :disabled="loading">
@@ -508,10 +561,12 @@ const selectedAsset = ref(null)
 const editingAssetId = ref(null)
 const viewingAttachment = ref(null)
 const fileUploadRef = ref(null)
+const editFileUploadRef = ref(null)
 const pendingFiles = ref([])
 const attachmentType = ref('photo')
 const attachmentDescription = ref('')
 const uploading = ref(false)
+const editFormAttachments = ref([])
 
 const form = ref({
   name: '',
@@ -613,7 +668,7 @@ const getWarrantyProgress = (asset) => {
   return Math.min(100, (passed / asset.warrantyDaysTotal) * 100)
 }
 
-const editGood = (asset) => {
+const editGood = async (asset) => {
   editingAssetId.value = asset.id
   form.value = {
     name: asset.name,
@@ -632,6 +687,16 @@ const editGood = (asset) => {
     status: asset.status,
     notes: asset.notes || ''
   }
+
+  // Fetch attachments for the asset
+  try {
+    await assetsStore.fetchAttachments(asset.id)
+    editFormAttachments.value = assetsStore.getAttachmentsForAsset(asset.id)
+  } catch (error) {
+    console.error('Error loading attachments:', error)
+    editFormAttachments.value = []
+  }
+
   showEditModal.value = true
 }
 
@@ -670,6 +735,9 @@ const closeModal = () => {
   showAddModal.value = false
   showEditModal.value = false
   editingAssetId.value = null
+  editFormAttachments.value = []
+  attachmentType.value = 'photo'
+  attachmentDescription.value = ''
   form.value = {
     name: '',
     description: '',
@@ -811,6 +879,64 @@ const handleFilesUploaded = async (files) => {
     alert('Error saving attachments. Please try again.')
   } finally {
     uploading.value = false
+  }
+}
+
+const handleEditFormFilesUploaded = async (files) => {
+  if (!editingAssetId.value || !files || files.length === 0) return
+
+  uploading.value = true
+  try {
+    // Files are already uploaded to the server, now create attachment records for each file
+    for (const file of files) {
+      const attachmentData = {
+        fileName: file.fileName,
+        originalName: file.originalName,
+        filePath: file.filePath,
+        fileUrl: file.fileUrl,
+        fileSize: file.fileSize,
+        mimeType: file.mimeType,
+        attachmentType: attachmentType.value,
+        description: attachmentDescription.value
+      }
+
+      await assetsStore.addAttachment(editingAssetId.value, attachmentData)
+    }
+
+    // Refresh attachments list in the form
+    await assetsStore.fetchAttachments(editingAssetId.value)
+    editFormAttachments.value = assetsStore.getAttachmentsForAsset(editingAssetId.value)
+
+    // Clear the file upload component
+    if (editFileUploadRef.value) {
+      editFileUploadRef.value.clearFiles()
+    }
+
+    // Reset attachment metadata
+    attachmentType.value = 'photo'
+    attachmentDescription.value = ''
+  } catch (error) {
+    console.error('Error saving attachments:', error)
+    alert('Error saving attachments. Please try again.')
+  } finally {
+    uploading.value = false
+  }
+}
+
+const deleteEditFormAttachment = async (attachmentId) => {
+  if (!editingAssetId.value) return
+  if (!confirm('Are you sure you want to delete this attachment?')) return
+
+  loading.value = true
+  try {
+    await assetsStore.deleteAttachment(editingAssetId.value, attachmentId)
+    // Refresh the attachments list
+    editFormAttachments.value = assetsStore.getAttachmentsForAsset(editingAssetId.value)
+  } catch (error) {
+    console.error('Error deleting attachment:', error)
+    alert('Error deleting attachment. Please try again.')
+  } finally {
+    loading.value = false
   }
 }
 
