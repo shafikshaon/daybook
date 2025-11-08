@@ -92,3 +92,8 @@ func (d *Date) Scan(value interface{}) error {
 		return fmt.Errorf("cannot scan type %T into Date", value)
 	}
 }
+
+// GormDataType tells GORM to use DATE type in the database
+func (Date) GormDataType() string {
+	return "timestamp"
+}
