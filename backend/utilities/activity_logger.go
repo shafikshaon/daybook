@@ -30,10 +30,14 @@ func LogActivity(c *gin.Context, params ActivityLogParams) {
 
 	// Convert metadata to JSON string
 	var metadataJSON string
-	if params.Metadata != nil {
+	if params.Metadata != nil && len(params.Metadata) > 0 {
 		if jsonBytes, err := json.Marshal(params.Metadata); err == nil {
 			metadataJSON = string(jsonBytes)
+		} else {
+			metadataJSON = "null"
 		}
+	} else {
+		metadataJSON = "null"
 	}
 
 	activityLog := models.ActivityLog{
