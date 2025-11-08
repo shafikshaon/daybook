@@ -94,6 +94,12 @@ const routes = [
     component: () => import('@/views/LendsView.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/assets',
+    name: 'Assets',
+    component: () => import('@/views/AssetsView.vue'),
+    meta: { requiresAuth: true }
+  },
   // 404 catch-all route
   {
     path: '/:pathMatch(.*)*',
