@@ -323,6 +323,10 @@ func CreateTransaction(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log transaction creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
+		"Transaction", transaction.ID, "Created transaction: "+transaction.Description, nil)
+
 	utilities.CreatedResponse(c, transaction, "Transaction created successfully")
 }
 

@@ -63,6 +63,7 @@ func InitDatabase(cfg *config.Config) error {
 		&models.Asset{},
 		&models.ServiceRecord{},
 		&models.AssetAttachment{},
+		&models.ActivityLog{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
