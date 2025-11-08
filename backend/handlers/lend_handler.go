@@ -192,6 +192,10 @@ func CreateLend(c *gin.Context) {
 		}
 	}
 
+	// Log lend creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleLend,
+		"Lend", lend.ID, "Created lend record for "+lend.DebtorName, nil)
+
 	utilities.SuccessResponse(c, lend, "Lend created successfully")
 }
 
@@ -233,6 +237,10 @@ func UpdateLend(c *gin.Context) {
 		return
 	}
 
+	// Log lend update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleLend,
+		"Lend", existingLend.ID, "Updated lend record for "+existingLend.DebtorName, nil)
+
 	utilities.SuccessResponse(c, existingLend, "Lend updated successfully")
 }
 
@@ -260,6 +268,10 @@ func DeleteLend(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete lend")
 		return
 	}
+
+	// Log lend deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleLend,
+		"Lend", lend.ID, "Deleted lend record for "+lend.DebtorName, nil)
 
 	utilities.SuccessResponse(c, nil, "Lend deleted successfully")
 }
@@ -380,6 +392,10 @@ func RecordLendPayment(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
 		return
 	}
+
+	// Log lend payment activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleLend,
+		"LendPayment", payment.ID, "Recorded payment from "+lend.DebtorName, nil)
 
 	utilities.SuccessResponse(c, map[string]interface{}{
 		"payment": payment,

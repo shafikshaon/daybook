@@ -99,6 +99,10 @@ func CreateBudget(c *gin.Context) {
 		return
 	}
 
+	// Log budget creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleBudget,
+		"Budget", budget.ID, "Created budget for category "+budget.CategoryID, nil)
+
 	utilities.CreatedResponse(c, budget, "Budget created successfully")
 }
 
@@ -144,6 +148,10 @@ func UpdateBudget(c *gin.Context) {
 		return
 	}
 
+	// Log budget update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleBudget,
+		"Budget", existingBudget.ID, "Updated budget for category "+existingBudget.CategoryID, nil)
+
 	utilities.SuccessResponse(c, existingBudget, "Budget updated successfully")
 }
 
@@ -172,6 +180,10 @@ func DeleteBudget(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete budget")
 		return
 	}
+
+	// Log budget deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleBudget,
+		"Budget", budget.ID, "Deleted budget for category "+budget.CategoryID, nil)
 
 	utilities.SuccessResponse(c, nil, "Budget deleted successfully")
 }

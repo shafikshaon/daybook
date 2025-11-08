@@ -185,6 +185,10 @@ func CreateDebt(c *gin.Context) {
 		}
 	}
 
+	// Log debt creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleDebt,
+		"Debt", debt.ID, "Created debt: "+debt.CreditorName, nil)
+
 	utilities.SuccessResponse(c, debt, "Debt created successfully")
 }
 
@@ -226,6 +230,10 @@ func UpdateDebt(c *gin.Context) {
 		return
 	}
 
+	// Log debt update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleDebt,
+		"Debt", existingDebt.ID, "Updated debt: "+existingDebt.CreditorName, nil)
+
 	utilities.SuccessResponse(c, existingDebt, "Debt updated successfully")
 }
 
@@ -253,6 +261,10 @@ func DeleteDebt(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete debt")
 		return
 	}
+
+	// Log debt deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleDebt,
+		"Debt", debt.ID, "Deleted debt: "+debt.CreditorName, nil)
 
 	utilities.SuccessResponse(c, nil, "Debt deleted successfully")
 }
@@ -380,6 +392,10 @@ func RecordDebtPayment(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
 		return
 	}
+
+	// Log debt payment activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleDebt,
+		"DebtPayment", payment.ID, "Recorded debt payment: "+debt.CreditorName, nil)
 
 	utilities.SuccessResponse(c, map[string]interface{}{
 		"payment": payment,

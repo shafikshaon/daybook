@@ -197,6 +197,10 @@ func CreateFixedDeposit(c *gin.Context) {
 
 	tx.Commit()
 
+	// Log fixed deposit creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, "fixed_deposit",
+		"FixedDeposit", depositData.FixedDeposit.ID, "Created fixed deposit at "+depositData.Institution, nil)
+
 	result := map[string]interface{}{
 		"fixedDeposit": depositData.FixedDeposit,
 		"transaction":  transaction,
@@ -262,6 +266,10 @@ func UpdateFixedDeposit(c *gin.Context) {
 		return
 	}
 
+	// Log fixed deposit update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, "fixed_deposit",
+		"FixedDeposit", existingDeposit.ID, "Updated fixed deposit at "+existingDeposit.Institution, nil)
+
 	utilities.SuccessResponse(c, existingDeposit, "Fixed deposit updated successfully")
 }
 
@@ -290,6 +298,10 @@ func DeleteFixedDeposit(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete fixed deposit")
 		return
 	}
+
+	// Log fixed deposit deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, "fixed_deposit",
+		"FixedDeposit", deposit.ID, "Deleted fixed deposit at "+deposit.Institution, nil)
 
 	utilities.SuccessResponse(c, nil, "Fixed deposit deleted successfully")
 }
@@ -403,6 +415,10 @@ func WithdrawFixedDeposit(c *gin.Context) {
 		expectedInterest := deposit.MaturityAmount - deposit.Principal
 		penalty = expectedInterest - interestEarned
 	}
+
+	// Log fixed deposit withdrawal activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, "fixed_deposit",
+		"FixedDeposit", deposit.ID, "Withdrew fixed deposit from "+deposit.Institution, nil)
 
 	result := map[string]interface{}{
 		"deposit":           deposit,

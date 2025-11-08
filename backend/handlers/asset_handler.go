@@ -120,6 +120,10 @@ func CreateAsset(c *gin.Context) {
 		return
 	}
 
+	// Log asset creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
+		"Asset", asset.ID, "Created asset: "+asset.Name, nil)
+
 	utilities.CreatedResponse(c, asset, "Asset created successfully")
 }
 
@@ -158,6 +162,10 @@ func UpdateAsset(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update asset")
 		return
 	}
+
+	// Log asset update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAsset,
+		"Asset", existingGood.ID, "Updated asset: "+existingGood.Name, nil)
 
 	utilities.SuccessResponse(c, existingGood, "Asset updated successfully")
 }
@@ -216,6 +224,10 @@ func DeleteAsset(c *gin.Context) {
 		return
 	}
 
+	// Log asset deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
+		"Asset", asset.ID, "Deleted asset: "+asset.Name, nil)
+
 	utilities.SuccessResponse(c, nil, "Asset deleted successfully")
 }
 
@@ -259,6 +271,10 @@ func CreateServiceRecord(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create service record")
 		return
 	}
+
+	// Log service record creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
+		"ServiceRecord", serviceRecord.ID, "Created service record for asset: "+asset.Name, nil)
 
 	utilities.CreatedResponse(c, serviceRecord, "Service record created successfully")
 }
@@ -320,6 +336,10 @@ func DeleteServiceRecord(c *gin.Context) {
 		return
 	}
 
+	// Log service record deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
+		"ServiceRecord", serviceRecord.ID, "Deleted service record", nil)
+
 	utilities.SuccessResponse(c, nil, "Service record deleted successfully")
 }
 
@@ -357,6 +377,10 @@ func AddAttachment(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to add attachment")
 		return
 	}
+
+	// Log attachment addition activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
+		"AssetAttachment", attachment.ID, "Added attachment to asset: "+asset.Name, nil)
 
 	utilities.CreatedResponse(c, attachment, "Attachment added successfully")
 }
@@ -417,6 +441,10 @@ func DeleteAttachment(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete attachment")
 		return
 	}
+
+	// Log attachment deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
+		"AssetAttachment", attachment.ID, "Deleted attachment", nil)
 
 	utilities.SuccessResponse(c, nil, "Attachment deleted successfully")
 }

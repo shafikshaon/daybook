@@ -183,6 +183,10 @@ func CreateReconciliation(c *gin.Context) {
 		Preload("Transactions.Transaction").
 		First(&reconciliation)
 
+	// Log reconciliation creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleReconcile,
+		"Reconciliation", reconciliation.ID, "Created reconciliation for account", nil)
+
 	utilities.CreatedResponse(c, reconciliation, "Reconciliation created successfully")
 }
 
@@ -234,6 +238,10 @@ func UpdateReconciliation(c *gin.Context) {
 			database.DB.Save(&account)
 		}
 	}
+
+	// Log reconciliation update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleReconcile,
+		"Reconciliation", existingReconciliation.ID, "Updated reconciliation", nil)
 
 	utilities.SuccessResponse(c, existingReconciliation, "Reconciliation updated successfully")
 }
@@ -287,6 +295,10 @@ func DeleteReconciliation(c *gin.Context) {
 	}
 
 	tx.Commit()
+
+	// Log reconciliation deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleReconcile,
+		"Reconciliation", reconciliation.ID, "Deleted reconciliation", nil)
 
 	utilities.SuccessResponse(c, nil, "Reconciliation deleted successfully")
 }

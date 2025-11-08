@@ -96,6 +96,10 @@ func CreateInvestment(c *gin.Context) {
 		return
 	}
 
+	// Log investment creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, "investment",
+		"Investment", investment.ID, "Created investment: "+investment.Name, nil)
+
 	utilities.CreatedResponse(c, investment, "Investment created successfully")
 }
 
@@ -142,6 +146,10 @@ func UpdateInvestment(c *gin.Context) {
 		return
 	}
 
+	// Log investment update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, "investment",
+		"Investment", existingInvestment.ID, "Updated investment: "+existingInvestment.Name, nil)
+
 	utilities.SuccessResponse(c, existingInvestment, "Investment updated successfully")
 }
 
@@ -170,6 +178,10 @@ func DeleteInvestment(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete investment")
 		return
 	}
+
+	// Log investment deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, "investment",
+		"Investment", investment.ID, "Deleted investment: "+investment.Name, nil)
 
 	utilities.SuccessResponse(c, nil, "Investment deleted successfully")
 }
@@ -219,6 +231,10 @@ func BuyShares(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to buy shares")
 		return
 	}
+
+	// Log share purchase activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, "investment",
+		"InvestmentTransaction", investment.ID, "Bought shares of "+investment.Name, nil)
 
 	utilities.SuccessResponse(c, investment, "Shares purchased successfully")
 }
@@ -275,6 +291,10 @@ func SellShares(c *gin.Context) {
 		return
 	}
 
+	// Log share sale activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, "investment",
+		"InvestmentTransaction", investment.ID, "Sold shares of "+investment.Name, nil)
+
 	result := map[string]interface{}{
 		"investment":       investment,
 		"realizedGainLoss": realizedGainLoss,
@@ -320,6 +340,10 @@ func CreatePortfolio(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create portfolio")
 		return
 	}
+
+	// Log portfolio creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, "investment",
+		"Portfolio", portfolio.ID, "Created portfolio: "+portfolio.Name, nil)
 
 	utilities.CreatedResponse(c, portfolio, "Portfolio created successfully")
 }
@@ -375,6 +399,10 @@ func RecordDividend(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to record dividend")
 		return
 	}
+
+	// Log dividend record activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, "investment",
+		"Dividend", dividend.ID, "Recorded dividend from "+investment.Name, nil)
 
 	utilities.CreatedResponse(c, dividend, "Dividend recorded successfully")
 }

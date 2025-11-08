@@ -107,6 +107,10 @@ func CreateAccount(c *gin.Context) {
 		return
 	}
 
+	// Log account creation activity
+	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAccount,
+		"Account", account.ID, "Created account: "+account.Name, nil)
+
 	utilities.CreatedResponse(c, account, "Account created successfully")
 }
 
@@ -150,6 +154,10 @@ func UpdateAccount(c *gin.Context) {
 		return
 	}
 
+	// Log account update activity
+	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAccount,
+		"Account", existingAccount.ID, "Updated account: "+existingAccount.Name, nil)
+
 	utilities.SuccessResponse(c, existingAccount, "Account updated successfully")
 }
 
@@ -178,6 +186,10 @@ func DeleteAccount(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete account")
 		return
 	}
+
+	// Log account deletion activity
+	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAccount,
+		"Account", account.ID, "Deleted account: "+account.Name, nil)
 
 	utilities.SuccessResponse(c, nil, "Account deleted successfully")
 }
