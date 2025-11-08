@@ -325,6 +325,8 @@ const editDebt = (debt) => {
   editingDebt.value = debt
   form.value = {
     creditorName: debt.creditorName,
+    originalAmount: debt.originalAmount,
+    borrowedDate: debt.borrowedDate ? debt.borrowedDate.split('T')[0] : '',
     dueDate: debt.dueDate ? debt.dueDate.split('T')[0] : '',
     interestRate: debt.interestRate,
     description: debt.description

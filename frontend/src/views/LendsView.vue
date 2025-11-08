@@ -325,6 +325,8 @@ const editLend = (lend) => {
   editingLend.value = lend
   form.value = {
     debtorName: lend.debtorName,
+    originalAmount: lend.originalAmount,
+    lentDate: lend.lentDate ? lend.lentDate.split('T')[0] : '',
     dueDate: lend.dueDate ? lend.dueDate.split('T')[0] : '',
     interestRate: lend.interestRate,
     description: lend.description
