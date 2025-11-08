@@ -486,8 +486,8 @@ func calculateAssetStats(asset models.Asset) AssetWithStats {
 
 	// Calculate warranty statistics
 	if asset.WarrantyStartDate != nil && asset.WarrantyEndDate != nil {
-		startDate := *asset.WarrantyStartDate
-		endDate := *asset.WarrantyEndDate
+		startDate := asset.WarrantyStartDate.Time
+		endDate := asset.WarrantyEndDate.Time
 
 		totalDays := int(endDate.Sub(startDate).Hours() / 24)
 		daysPassed := int(now.Sub(startDate).Hours() / 24)

@@ -20,8 +20,8 @@ type Asset struct {
 	PurchaseDate      Date              `gorm:"not null;index" json:"purchaseDate"`
 	PurchasePrice     float64           `gorm:"not null" json:"purchasePrice" binding:"required,gt=0"`
 	PurchaseLocation  string            `json:"purchaseLocation"` // Store/website name
-	WarrantyStartDate *time.Time        `json:"warrantyStartDate"`
-	WarrantyEndDate   *time.Time        `json:"warrantyEndDate"`
+	WarrantyStartDate *Date             `json:"warrantyStartDate"`
+	WarrantyEndDate   *Date             `json:"warrantyEndDate"`
 	WarrantyProvider  string            `json:"warrantyProvider"` // Manufacturer, Retailer, Extended warranty provider
 	WarrantyType      string            `json:"warrantyType"`     // manufacturer, extended, lifetime
 	Status            string            `gorm:"not null;index" json:"status"` // active, archived, sold, disposed
