@@ -194,6 +194,7 @@
 import { ref, onMounted } from 'vue'
 import apiService from '@/services/api-backend'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 
 const props = defineProps({
   accountId: {
@@ -205,6 +206,7 @@ const props = defineProps({
 const emit = defineEmits(['refresh'])
 
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const loading = ref(false)
 const reconciliations = ref([])
@@ -273,17 +275,24 @@ const viewDetails = async (reconciliation) => {
 }
 
 const deleteReconciliation = async (reconciliation) => {
-  if (!confirm(`Are you sure you want to delete this reconciliation from ${formatDate(reconciliation.reconciliationDate)}?`)) {
-    return
-  }
+  const confirmed = await confirm({
+    title: 'Delete Reconciliation',
+    message: `Are you sure you want to delete this reconciliation from ${formatDate(reconciliation.reconciliationDate)}?`,
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (!confirmed) return
 
   try {
     await apiService.reconciliation.delete(reconciliation.id)
     await loadReconciliations()
     emit('refresh')
-  } catch (error) {
-    console.error('Failed to delete reconciliation:', error)
-    alert('Failed to delete reconciliation')
+    success('Reconciliation deleted successfully')
+  } catch (err) {
+    console.error('Failed to delete reconciliation:', err)
+    error(err.response?.data?.message || err.message || 'Failed to delete reconciliation')
   }
 }
 
