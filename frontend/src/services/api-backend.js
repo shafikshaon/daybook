@@ -290,6 +290,12 @@ const apiService = {
     async cleanup(days = 90) {
       const response = await api.delete(`/activity-logs/cleanup?days=${days}`)
       return response
+    },
+
+    // Backfill activity logs for historical data
+    async backfill(options = {}) {
+      const response = await api.post('/activity-logs/backfill', options)
+      return response
     }
   },
 
