@@ -899,11 +899,6 @@ const formatPriority = (priority) => {
   return map[priority] || priority
 }
 
-const formatStatus = (status) => {
-  const map = { active: 'Active', achieved: 'Achieved', paused: 'Paused', archived: 'Archived' }
-  return map[status] || status
-}
-
 const categoryBadgeClass = (category) => 'bg-info'
 const priorityBadgeClass = (priority) => {
   const map = { high: 'bg-danger', medium: 'bg-warning', low: 'bg-secondary' }
