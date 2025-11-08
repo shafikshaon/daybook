@@ -100,6 +100,27 @@
             </router-link>
           </li>
 
+          <li class="drawer-section-title">Debts & Lends</li>
+          <li class="drawer-nav-item">
+            <router-link to="/debts" class="drawer-nav-link" @click="closeMobileMenu">
+              <svg class="drawer-nav-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm13 2v5H1V2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1"/>
+                <path d="M2 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M2 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M2 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5M2 11.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
+              </svg>
+              <span>Debts</span>
+            </router-link>
+          </li>
+          <li class="drawer-nav-item">
+            <router-link to="/lends" class="drawer-nav-link" @click="closeMobileMenu">
+              <svg class="drawer-nav-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5 5.5A.5.5 0 0 1 5.5 5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m-1-3A.5.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m4-1a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5M7 12.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5M5.5 7a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1z"/>
+                <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a.5.5 0 0 1-1 0V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h5.5a.5.5 0 0 1 0 1H2a2 2 0 0 1-2-2z"/>
+                <path d="M15.354 11.354a.5.5 0 0 0 0-.708l-1-1a.5.5 0 0 0-.708.708l.147.146H10.5a.5.5 0 0 0 0 1h3.293l-.147.146a.5.5 0 0 0 .708.708z"/>
+              </svg>
+              <span>Lends</span>
+            </router-link>
+          </li>
+
           <li class="drawer-section-title">Planning & Budgets</li>
           <li class="drawer-nav-item">
             <router-link to="/budgets" class="drawer-nav-link" @click="closeMobileMenu">
@@ -207,6 +228,30 @@
               <path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm13 2v5H1V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1m-1 9H2a1 1 0 0 1-1-1v-1h14v1a1 1 0 0 1-1 1"/>
             </svg>
             <span v-if="showSidebar">Credit Cards</span>
+          </router-link>
+        </li>
+
+        <!-- Debts & Lends -->
+        <li v-if="showSidebar" class="nav-section-title">Debts & Lends</li>
+        <li v-if="!showSidebar" class="nav-divider"></li>
+
+        <li class="nav-item">
+          <router-link to="/debts" class="nav-link" active-class="active" :title="!showSidebar ? 'Debts' : ''">
+            <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2zm13 2v5H1V2a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1"/>
+              <path d="M2 3.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M2 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5M2 9.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5M2 11.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>
+            </svg>
+            <span v-if="showSidebar">Debts</span>
+          </router-link>
+        </li>
+        <li class="nav-item">
+          <router-link to="/lends" class="nav-link" active-class="active" :title="!showSidebar ? 'Lends' : ''">
+            <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+              <path d="M5 5.5A.5.5 0 0 1 5.5 5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m-1-3A.5.5 0 0 1 4.5 2h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m4-1a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5M7 12.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5M5.5 7a.5.5 0 0 0 0 1h2a.5.5 0 0 0 0-1z"/>
+              <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v5a.5.5 0 0 1-1 0V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h5.5a.5.5 0 0 1 0 1H2a2 2 0 0 1-2-2z"/>
+              <path d="M15.354 11.354a.5.5 0 0 0 0-.708l-1-1a.5.5 0 0 0-.708.708l.147.146H10.5a.5.5 0 0 0 0 1h3.293l-.147.146a.5.5 0 0 0 .708.708z"/>
+            </svg>
+            <span v-if="showSidebar">Lends</span>
           </router-link>
         </li>
 

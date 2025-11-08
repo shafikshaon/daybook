@@ -56,6 +56,10 @@ func InitDatabase(cfg *config.Config) error {
 		&models.GoalHolding{},
 		&models.GoalContribution{},
 		&models.Settings{},
+		&models.DebtRecord{},
+		&models.DebtPayment{},
+		&models.LendRecord{},
+		&models.LendPayment{},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to migrate database: %w", err)
