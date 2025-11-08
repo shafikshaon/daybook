@@ -447,7 +447,9 @@ func GetAssetsStats(c *gin.Context) {
 	}{}
 
 	now := time.Now()
-	thirtyDaysFromNow := now.AddDate(0, 0, 30)
+	// Truncate to day precision for date-only comparison
+	nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	thirtyDaysFromNow := nowDate.AddDate(0, 0, 30)
 
 	stats.TotalGoods = len(assets)
 
@@ -464,9 +466,13 @@ func GetAssetsStats(c *gin.Context) {
 
 		// Check warranty status
 		if asset.WarrantyEndDate != nil {
-			if asset.WarrantyEndDate.After(now) {
+			endDate := asset.WarrantyEndDate.Time
+			endDateTrunc := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 0, 0, 0, 0, endDate.Location())
+
+			// Warranty is active if today is on or before the end date
+			if !nowDate.After(endDateTrunc) {
 				stats.GoodsUnderWarranty++
-				if asset.WarrantyEndDate.Before(thirtyDaysFromNow) {
+				if endDateTrunc.Before(thirtyDaysFromNow) || endDateTrunc.Equal(thirtyDaysFromNow) {
 					stats.GoodsWarrantyExpiring++
 				}
 			}
@@ -489,9 +495,14 @@ func calculateAssetStats(asset models.Asset) AssetWithStats {
 		startDate := asset.WarrantyStartDate.Time
 		endDate := asset.WarrantyEndDate.Time
 
-		totalDays := int(endDate.Sub(startDate).Hours() / 24)
-		daysPassed := int(now.Sub(startDate).Hours() / 24)
-		daysRemaining := int(endDate.Sub(now).Hours() / 24)
+		// Truncate to day precision for date-only comparison
+		nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		startDateTrunc := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
+		endDateTrunc := time.Date(endDate.Year(), endDate.Month(), endDate.Day(), 0, 0, 0, 0, endDate.Location())
+
+		totalDays := int(endDateTrunc.Sub(startDateTrunc).Hours() / 24)
+		daysPassed := int(nowDate.Sub(startDateTrunc).Hours() / 24)
+		daysRemaining := int(endDateTrunc.Sub(nowDate).Hours() / 24)
 
 		if daysPassed < 0 {
 			daysPassed = 0
@@ -504,7 +515,8 @@ func calculateAssetStats(asset models.Asset) AssetWithStats {
 		stats.WarrantyDaysPassed = &daysPassed
 		stats.WarrantyDaysRemaining = &daysRemaining
 
-		if now.After(endDate) {
+		// Warranty is active if today is on or before the end date
+		if nowDate.After(endDateTrunc) {
 			stats.WarrantyStatus = "expired"
 		} else {
 			stats.WarrantyStatus = "active"
