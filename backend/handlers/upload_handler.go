@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/utilities"
 
@@ -48,8 +49,12 @@ type FileUploadResponse struct {
 
 // UploadFiles handles multiple file uploads
 func UploadFiles(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UploadFiles - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -154,13 +159,18 @@ func UploadFiles(c *gin.Context) {
 		return
 	}
 
+	logger.Infof(ctx, "Files uploaded successfully for user: %s (uploaded: %d)", userID, len(uploadedFiles))
 	utilities.SuccessResponse(c, response, "Files uploaded successfully")
 }
 
 // UploadSingleFile handles single file upload
 func UploadSingleFile(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UploadSingleFile - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -214,13 +224,18 @@ func UploadSingleFile(c *gin.Context) {
 		MimeType:     fileHeader.Header.Get("Content-Type"),
 	}
 
+	logger.Infof(ctx, "File uploaded successfully for user: %s", userID)
 	utilities.CreatedResponse(c, response, "File uploaded successfully")
 }
 
 // ServeUploadedFile serves the uploaded files
 func ServeUploadedFile(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ServeUploadedFile - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -242,13 +257,18 @@ func ServeUploadedFile(c *gin.Context) {
 		return
 	}
 
+	logger.Infof(ctx, "Serving file for user: %s", userID)
 	c.File(filePath)
 }
 
 // DeleteFile deletes an uploaded file
 func DeleteFile(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteFile - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -264,11 +284,13 @@ func DeleteFile(c *gin.Context) {
 	}
 
 	// Delete the file
+	logger.Debugf(ctx, "Deleting file: %s", filename)
 	if err := os.Remove(filePath); err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete file")
 		return
 	}
 
+	logger.Infof(ctx, "File deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, gin.H{
 		"filename": filename,
 	}, "File deleted successfully")
@@ -313,8 +335,12 @@ func ValidateAndSanitizeFilename(filename string) (string, error) {
 
 // GetFileInfo returns information about an uploaded file
 func GetFileInfo(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetFileInfo - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -358,5 +384,6 @@ func GetFileInfo(c *gin.Context) {
 		MimeType:     mimeType,
 	}
 
+	logger.Infof(ctx, "File info retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, response, "File info retrieved successfully")
 }

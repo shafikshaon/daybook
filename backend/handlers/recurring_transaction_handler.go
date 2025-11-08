@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -15,25 +16,36 @@ import (
 
 // ListRecurringTransactions returns all recurring transactions for the authenticated user
 func ListRecurringTransactions(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListRecurringTransactions - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching recurring transactions for user")
 	var recurringTransactions []models.RecurringTransaction
-	if err := database.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&recurringTransactions).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Find(&recurringTransactions).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch recurring transactions")
 		return
 	}
 
+	logger.Infof(ctx, "Recurring transactions retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, recurringTransactions, "Recurring transactions retrieved successfully")
 }
 
 // GetRecurringTransaction returns a specific recurring transaction by ID
 func GetRecurringTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetRecurringTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -44,19 +56,26 @@ func GetRecurringTransaction(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching recurring transaction with ID: %s", recurringID)
 	var recurringTransaction models.RecurringTransaction
-	if err := database.DB.Where("id = ? AND user_id = ?", recurringID, userID).First(&recurringTransaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", recurringID, userID).First(&recurringTransaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Recurring transaction not found")
 		return
 	}
 
+	logger.Infof(ctx, "Recurring transaction retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, recurringTransaction, "Recurring transaction retrieved successfully")
 }
 
 // CreateRecurringTransaction creates a new recurring transaction
 func CreateRecurringTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateRecurringTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -84,8 +103,10 @@ func CreateRecurringTransaction(c *gin.Context) {
 	}
 
 	// Verify account belongs to user
+	logger.Debugf(ctx, "Verifying account ownership")
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", recurringTransaction.TransactionTemplate.AccountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", recurringTransaction.TransactionTemplate.AccountID, userID).First(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
@@ -105,7 +126,9 @@ func CreateRecurringTransaction(c *gin.Context) {
 	}
 
 	// Create the recurring transaction
-	if err := database.DB.Create(&recurringTransaction).Error; err != nil {
+	logger.Debugf(ctx, "Creating recurring transaction")
+	if err := database.DB.WithContext(ctx).Create(&recurringTransaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create recurring transaction")
 		return
 	}
@@ -114,13 +137,18 @@ func CreateRecurringTransaction(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
 		"RecurringTransaction", recurringTransaction.ID, "Created recurring transaction: "+recurringTransaction.TransactionTemplate.Description, nil)
 
+	logger.Infof(ctx, "Recurring transaction created successfully for user: %s", userID)
 	utilities.CreatedResponse(c, recurringTransaction, "Recurring transaction created successfully")
 }
 
 // UpdateRecurringTransaction updates an existing recurring transaction
 func UpdateRecurringTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateRecurringTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -131,8 +159,10 @@ func UpdateRecurringTransaction(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing recurring transaction with ID: %s", recurringID)
 	var existingRecurring models.RecurringTransaction
-	if err := database.DB.Where("id = ? AND user_id = ?", recurringID, userID).First(&existingRecurring).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", recurringID, userID).First(&existingRecurring).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Recurring transaction not found")
 		return
 	}
@@ -159,8 +189,10 @@ func UpdateRecurringTransaction(c *gin.Context) {
 
 	// Verify account belongs to user if changed
 	if updateData.TransactionTemplate.AccountID != existingRecurring.TransactionTemplate.AccountID {
+		logger.Debugf(ctx, "Verifying account ownership")
 		var account models.Account
-		if err := database.DB.Where("id = ? AND user_id = ?", updateData.TransactionTemplate.AccountID, userID).First(&account).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", updateData.TransactionTemplate.AccountID, userID).First(&account).Error; err != nil {
+			logger.Errorf(ctx, "Database operation failed: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 			return
 		}
@@ -173,7 +205,9 @@ func UpdateRecurringTransaction(c *gin.Context) {
 	existingRecurring.EndDate = updateData.EndDate
 	existingRecurring.Enabled = updateData.Enabled
 
-	if err := database.DB.Save(&existingRecurring).Error; err != nil {
+	logger.Debugf(ctx, "Updating recurring transaction")
+	if err := database.DB.WithContext(ctx).Save(&existingRecurring).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update recurring transaction")
 		return
 	}
@@ -182,13 +216,18 @@ func UpdateRecurringTransaction(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleTransaction,
 		"RecurringTransaction", existingRecurring.ID, "Updated recurring transaction: "+existingRecurring.TransactionTemplate.Description, nil)
 
+	logger.Infof(ctx, "Recurring transaction updated successfully for user: %s", userID)
 	utilities.SuccessResponse(c, existingRecurring, "Recurring transaction updated successfully")
 }
 
 // DeleteRecurringTransaction deletes a recurring transaction
 func DeleteRecurringTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteRecurringTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -199,14 +238,18 @@ func DeleteRecurringTransaction(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching recurring transaction with ID: %s for deletion", recurringID)
 	var recurringTransaction models.RecurringTransaction
-	if err := database.DB.Where("id = ? AND user_id = ?", recurringID, userID).First(&recurringTransaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", recurringID, userID).First(&recurringTransaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Recurring transaction not found")
 		return
 	}
 
 	// Soft delete
-	if err := database.DB.Delete(&recurringTransaction).Error; err != nil {
+	logger.Debugf(ctx, "Deleting recurring transaction")
+	if err := database.DB.WithContext(ctx).Delete(&recurringTransaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete recurring transaction")
 		return
 	}
@@ -215,20 +258,27 @@ func DeleteRecurringTransaction(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleTransaction,
 		"RecurringTransaction", recurringTransaction.ID, "Deleted recurring transaction: "+recurringTransaction.TransactionTemplate.Description, nil)
 
+	logger.Infof(ctx, "Recurring transaction deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Recurring transaction deleted successfully")
 }
 
 // ProcessRecurringTransactions generates missing transactions for all enabled recurring transactions
 func ProcessRecurringTransactions(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ProcessRecurringTransactions - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	// Get all enabled recurring transactions for the user
+	logger.Debugf(ctx, "Fetching enabled recurring transactions for user")
 	var recurringTransactions []models.RecurringTransaction
-	if err := database.DB.Where("user_id = ? AND enabled = ?", userID, true).Find(&recurringTransactions).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("user_id = ? AND enabled = ?", userID, true).Find(&recurringTransactions).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch recurring transactions")
 		return
 	}
@@ -239,7 +289,8 @@ func ProcessRecurringTransactions(c *gin.Context) {
 	errorCount := 0
 
 	// Start a database transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting transaction for processing recurring transactions")
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -369,7 +420,9 @@ func ProcessRecurringTransactions(c *gin.Context) {
 	}
 
 	// Commit the transaction
+	logger.Debugf(ctx, "Committing transaction")
 	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to process recurring transactions")
 		return
 	}
@@ -381,6 +434,7 @@ func ProcessRecurringTransactions(c *gin.Context) {
 		"message": "Recurring transactions processed successfully",
 	}
 
+	logger.Infof(ctx, "Recurring transactions processed successfully for user: %s (created: %d, skipped: %d, errors: %d)", userID, createdCount, skippedCount, errorCount)
 	utilities.SuccessResponse(c, result, "Processing completed")
 }
 

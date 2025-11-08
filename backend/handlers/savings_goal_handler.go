@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -15,13 +16,18 @@ import (
 
 // ListSavingsGoals returns all savings goals for the authenticated user
 func ListSavingsGoals(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListSavingsGoals - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Fetching savings goals for user")
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Optional filter by achieved status
 	if achieved := c.Query("achieved"); achieved != "" {
@@ -45,17 +51,23 @@ func ListSavingsGoals(c *gin.Context) {
 
 	var goals []models.SavingsGoal
 	if err := query.Order("priority DESC, created_at DESC").Find(&goals).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch savings goals")
 		return
 	}
 
+	logger.Infof(ctx, "Savings goals retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, goals, "Savings goals retrieved successfully")
 }
 
 // GetSavingsGoal returns a specific savings goal by ID
 func GetSavingsGoal(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetSavingsGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -66,19 +78,26 @@ func GetSavingsGoal(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching savings goal with ID: %s", goalID)
 	var goal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Savings goal not found")
 		return
 	}
 
+	logger.Infof(ctx, "Savings goal retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, goal, "Savings goal retrieved successfully")
 }
 
 // CreateSavingsGoal creates a new savings goal
 func CreateSavingsGoal(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateSavingsGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -91,7 +110,9 @@ func CreateSavingsGoal(c *gin.Context) {
 
 	goal.UserID = userID
 
-	if err := database.DB.Create(&goal).Error; err != nil {
+	logger.Debugf(ctx, "Creating savings goal: %s", goal.Name)
+	if err := database.DB.WithContext(ctx).Create(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create savings goal")
 		return
 	}
@@ -100,13 +121,18 @@ func CreateSavingsGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
 		"SavingsGoal", goal.ID, "Created savings goal: "+goal.Name, nil)
 
+	logger.Infof(ctx, "Savings goal created successfully for user: %s", userID)
 	utilities.CreatedResponse(c, goal, "Savings goal created successfully")
 }
 
 // UpdateSavingsGoal updates an existing savings goal
 func UpdateSavingsGoal(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateSavingsGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -117,8 +143,10 @@ func UpdateSavingsGoal(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing savings goal with ID: %s", goalID)
 	var existingGoal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&existingGoal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&existingGoal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Savings goal not found")
 		return
 	}
@@ -138,7 +166,9 @@ func UpdateSavingsGoal(c *gin.Context) {
 	existingGoal.Category = updateData.Category
 	existingGoal.Priority = updateData.Priority
 
-	if err := database.DB.Save(&existingGoal).Error; err != nil {
+	logger.Debugf(ctx, "Updating savings goal: %s", existingGoal.Name)
+	if err := database.DB.WithContext(ctx).Save(&existingGoal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update savings goal")
 		return
 	}
@@ -147,13 +177,18 @@ func UpdateSavingsGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
 		"SavingsGoal", existingGoal.ID, "Updated savings goal: "+existingGoal.Name, nil)
 
+	logger.Infof(ctx, "Savings goal updated successfully for user: %s", userID)
 	utilities.SuccessResponse(c, existingGoal, "Savings goal updated successfully")
 }
 
 // DeleteSavingsGoal deletes a savings goal
 func DeleteSavingsGoal(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteSavingsGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -164,14 +199,18 @@ func DeleteSavingsGoal(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching savings goal with ID: %s for deletion", goalID)
 	var goal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Savings goal not found")
 		return
 	}
 
 	// Soft delete
-	if err := database.DB.Delete(&goal).Error; err != nil {
+	logger.Debugf(ctx, "Deleting savings goal: %s", goal.Name)
+	if err := database.DB.WithContext(ctx).Delete(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete savings goal")
 		return
 	}
@@ -180,13 +219,18 @@ func DeleteSavingsGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
 		"SavingsGoal", goal.ID, "Deleted savings goal: "+goal.Name, nil)
 
+	logger.Infof(ctx, "Savings goal deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Savings goal deleted successfully")
 }
 
 // AddContribution adds a contribution to a savings goal
 func AddContribution(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "AddContribution - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -209,21 +253,26 @@ func AddContribution(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching savings goal with ID: %s", goalID)
 	var goal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Savings goal not found")
 		return
 	}
 
 	// Verify account belongs to user
+	logger.Debugf(ctx, "Verifying account ownership for account ID: %s", contributionData.AccountID)
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", contributionData.AccountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", contributionData.AccountID, userID).First(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
 	// Start transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting transaction for contribution")
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -246,7 +295,9 @@ func AddContribution(c *gin.Context) {
 		Notes:  contributionData.Notes,
 	}
 
+	logger.Debugf(ctx, "Creating contribution record")
 	if err := tx.Create(&contribution).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create contribution")
 		return
@@ -265,7 +316,9 @@ func AddContribution(c *gin.Context) {
 		Tags:          []string{"savings_goal"},
 	}
 
+	logger.Debugf(ctx, "Creating transaction record")
 	if err := tx.Create(&transaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
 		return
@@ -273,7 +326,9 @@ func AddContribution(c *gin.Context) {
 
 	// Update account balance (debit)
 	account.Balance -= contributionData.Amount
+	logger.Debugf(ctx, "Updating account balance")
 	if err := tx.Save(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 		return
@@ -291,7 +346,9 @@ func AddContribution(c *gin.Context) {
 		goal.AchievedDate = &now
 	}
 
+	logger.Debugf(ctx, "Updating savings goal")
 	if err := tx.Save(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update goal")
 		return
@@ -309,13 +366,18 @@ func AddContribution(c *gin.Context) {
 		"transaction":  transaction,
 	}
 
+	logger.Infof(ctx, "Contribution added successfully for user: %s", userID)
 	utilities.SuccessResponse(c, result, "Contribution added successfully")
 }
 
 // WithdrawFromGoal withdraws from a savings goal
 func WithdrawFromGoal(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "WithdrawFromGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -338,8 +400,10 @@ func WithdrawFromGoal(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching savings goal with ID: %s", goalID)
 	var goal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Savings goal not found")
 		return
 	}
@@ -351,14 +415,17 @@ func WithdrawFromGoal(c *gin.Context) {
 	}
 
 	// Verify account belongs to user
+	logger.Debugf(ctx, "Verifying account ownership for account ID: %s", withdrawalData.AccountID)
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", withdrawalData.AccountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", withdrawalData.AccountID, userID).First(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
 	// Start transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting transaction for withdrawal")
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -381,7 +448,9 @@ func WithdrawFromGoal(c *gin.Context) {
 		Notes:  withdrawalData.Notes,
 	}
 
+	logger.Debugf(ctx, "Creating withdrawal record")
 	if err := tx.Create(&withdrawal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create withdrawal record")
 		return
@@ -400,7 +469,9 @@ func WithdrawFromGoal(c *gin.Context) {
 		Tags:          []string{"savings_goal"},
 	}
 
+	logger.Debugf(ctx, "Creating transaction record")
 	if err := tx.Create(&transaction).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
 		return
@@ -408,7 +479,9 @@ func WithdrawFromGoal(c *gin.Context) {
 
 	// Update account balance (credit)
 	account.Balance += withdrawalData.Amount
+	logger.Debugf(ctx, "Updating account balance")
 	if err := tx.Save(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 		return
@@ -423,7 +496,9 @@ func WithdrawFromGoal(c *gin.Context) {
 		goal.AchievedDate = nil
 	}
 
+	logger.Debugf(ctx, "Updating savings goal")
 	if err := tx.Save(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update goal")
 		return
@@ -441,18 +516,24 @@ func WithdrawFromGoal(c *gin.Context) {
 		"transaction": transaction,
 	}
 
+	logger.Infof(ctx, "Withdrawal completed successfully for user: %s", userID)
 	utilities.SuccessResponse(c, result, "Withdrawal completed successfully")
 }
 
 // ListAutomatedRules returns automated rules for the authenticated user
 func ListAutomatedRules(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListAutomatedRules - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Fetching automated rules for user")
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Optional filter by goal
 	if goalID := c.Query("goalId"); goalID != "" {
@@ -466,17 +547,23 @@ func ListAutomatedRules(c *gin.Context) {
 
 	var rules []models.AutomatedRule
 	if err := query.Order("created_at DESC").Find(&rules).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch automated rules")
 		return
 	}
 
+	logger.Infof(ctx, "Automated rules retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, rules, "Automated rules retrieved successfully")
 }
 
 // CreateAutomatedRule creates a new automated rule
 func CreateAutomatedRule(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateAutomatedRule - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -490,13 +577,17 @@ func CreateAutomatedRule(c *gin.Context) {
 	rule.UserID = userID
 
 	// Verify goal belongs to user
+	logger.Debugf(ctx, "Verifying savings goal ownership")
 	var goal models.SavingsGoal
-	if err := database.DB.Where("id = ? AND user_id = ?", rule.GoalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", rule.GoalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
 
-	if err := database.DB.Create(&rule).Error; err != nil {
+	logger.Debugf(ctx, "Creating automated rule for goal: %s", goal.Name)
+	if err := database.DB.WithContext(ctx).Create(&rule).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create automated rule")
 		return
 	}
@@ -505,5 +596,6 @@ func CreateAutomatedRule(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
 		"AutomatedRule", rule.ID, "Created automated rule for savings goal: "+goal.Name, nil)
 
+	logger.Infof(ctx, "Automated rule created successfully for user: %s", userID)
 	utilities.CreatedResponse(c, rule, "Automated rule created successfully")
 }

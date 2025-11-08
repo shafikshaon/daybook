@@ -4,10 +4,10 @@ This package provides a comprehensive logging solution for the Daybook backend a
 
 ## Features
 
+- **JSON Structured Logging**: All logs are output in JSON format for easy parsing and analysis
 - **Context-Aware Logging**: Automatically includes trace ID, span ID, and user ID from context
 - **Caller Information**: Automatically captures file name, line number, and function name
 - **Log Levels**: Support for Debug, Info, Warn, and Error levels
-- **Colored Output**: Terminal-friendly colored output for better readability
 - **Database Query Logging**: Custom GORM logger that logs all database queries with execution time
 - **Request Tracing**: Middleware for automatic request tracing with unique trace and span IDs
 
@@ -59,16 +59,32 @@ func GetUser(c *gin.Context) {
 
 ## Log Format
 
-Logs are formatted with the following information:
+Logs are output in structured JSON format with the following fields:
 
-```
-[timestamp] [LEVEL] [trace:trace-id] [span:span-id] [user:user-id] [file:line] [function] - message
+```json
+{
+  "timestamp": "2025-11-08T12:34:56.789123456Z",
+  "level": "INFO",
+  "trace_id": "abc-123-def-456",
+  "span_id": "span-12345678",
+  "user_id": "user-uuid-here",
+  "file": "auth_handler.go",
+  "line": 169,
+  "function": "handlers.Login",
+  "message": "User login completed successfully for user: johndoe (ID: user-uuid)"
+}
 ```
 
-Example:
-```
-[2025-11-08 12:34:56.789] [INFO] [trace:abc-123-def] [span:span-12ab] [user:user-uuid] [auth_handler.go:42] [handlers.Login] - User login completed successfully
-```
+Fields:
+- **timestamp**: ISO 8601 format with nanosecond precision (RFC3339Nano)
+- **level**: Log level (DEBUG, INFO, WARN, ERROR)
+- **trace_id**: Unique request trace identifier (omitted if not set)
+- **span_id**: Unique span identifier for the request (omitted if not set)
+- **user_id**: Authenticated user ID (omitted if not set)
+- **file**: Source file name where log was called
+- **line**: Line number in source file
+- **function**: Function name that generated the log
+- **message**: The log message
 
 ## Log Levels
 

@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -16,13 +16,20 @@ import (
 
 // ListGoals returns all goals for the authenticated user
 func ListGoals(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "ListGoals - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "ListGoals - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	ctx = middleware.GetContextWithUserID(c)
+	logger.Debugf(ctx, "ListGoals - Fetching goals for user: %s", userID)
+
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Optional filters
 	if status := c.Query("status"); status != "" {
@@ -39,66 +46,89 @@ func ListGoals(c *gin.Context) {
 
 	var goals []models.Goal
 	if err := query.Preload("Holdings").Preload("Contributions").Order("name DESC, created_at DESC").Find(&goals).Error; err != nil {
+		logger.Errorf(ctx, "ListGoals - Failed to fetch goals: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch goals")
 		return
 	}
 
+	logger.Debugf(ctx, "ListGoals - Retrieved %d goals", len(goals))
+
 	// Calculate progress for each goal
 	for i := range goals {
-		goals[i].UpdateCurrentAmount(database.DB)
+		goals[i].UpdateCurrentAmount(database.DB.WithContext(ctx))
 	}
 
+	logger.Infof(ctx, "ListGoals - Successfully retrieved goals")
 	utilities.SuccessResponse(c, goals, "Goals retrieved successfully")
 }
 
 // GetGoal returns a specific goal by ID with all details
 func GetGoal(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "GetGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "GetGoal - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	goalID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "GetGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
 
+	logger.Debugf(ctx, "GetGoal - Fetching goal: %s", goalID)
+
 	var goal models.Goal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).
 		Preload("Holdings").
 		Preload("Contributions").
 		First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "GetGoal - Failed to fetch goal: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Goal not found")
 		return
 	}
 
 	// Update current amount
-	goal.UpdateCurrentAmount(database.DB)
+	goal.UpdateCurrentAmount(database.DB.WithContext(ctx))
 
+	logger.Infof(ctx, "GetGoal - Successfully retrieved goal: %s", goalID)
 	utilities.SuccessResponse(c, goal, "Goal retrieved successfully")
 }
 
 // CreateGoal creates a new goal
 func CreateGoal(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "CreateGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "CreateGoal - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	var goal models.Goal
 	if err := c.ShouldBindJSON(&goal); err != nil {
+		logger.Warnf(ctx, "CreateGoal - Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	logger.Debugf(ctx, "CreateGoal - Creating goal: %s", goal.Name)
 
 	goal.UserID = userID
 	goal.Status = models.GoalStatusActive
 	goal.CurrentAmount = 0
 
-	if err := database.DB.Create(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Create(&goal).Error; err != nil {
+		logger.Errorf(ctx, "CreateGoal - Failed to create goal: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create goal")
 		return
 	}
@@ -107,31 +137,42 @@ func CreateGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
 		"Goal", goal.ID, "Created goal: "+goal.Name, nil)
 
+	logger.Infof(ctx, "CreateGoal - Successfully created goal: %s", goal.ID)
 	utilities.CreatedResponse(c, goal, "Goal created successfully")
 }
 
 // UpdateGoal updates an existing goal
 func UpdateGoal(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "UpdateGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "UpdateGoal - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	goalID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "UpdateGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
 
+	logger.Debugf(ctx, "UpdateGoal - Updating goal: %s", goalID)
+
 	var existingGoal models.Goal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&existingGoal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&existingGoal).Error; err != nil {
+		logger.Errorf(ctx, "UpdateGoal - Goal not found: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Goal not found")
 		return
 	}
 
 	var updateData models.Goal
 	if err := c.ShouldBindJSON(&updateData); err != nil {
+		logger.Warnf(ctx, "UpdateGoal - Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -148,7 +189,8 @@ func UpdateGoal(c *gin.Context) {
 	existingGoal.MonthlyContribution = updateData.MonthlyContribution
 	existingGoal.Status = updateData.Status
 
-	if err := database.DB.Save(&existingGoal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Save(&existingGoal).Error; err != nil {
+		logger.Errorf(ctx, "UpdateGoal - Failed to update goal: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update goal")
 		return
 	}
@@ -157,31 +199,42 @@ func UpdateGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
 		"Goal", existingGoal.ID, "Updated goal: "+existingGoal.Name, nil)
 
+	logger.Infof(ctx, "UpdateGoal - Successfully updated goal: %s", goalID)
 	utilities.SuccessResponse(c, existingGoal, "Goal updated successfully")
 }
 
 // DeleteGoal deletes a goal
 func DeleteGoal(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "DeleteGoal - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "DeleteGoal - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	goalID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "DeleteGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
 
+	logger.Debugf(ctx, "DeleteGoal - Deleting goal: %s", goalID)
+
 	var goal models.Goal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "DeleteGoal - Goal not found: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Goal not found")
 		return
 	}
 
 	// Soft delete
-	if err := database.DB.Delete(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Delete(&goal).Error; err != nil {
+		logger.Errorf(ctx, "DeleteGoal - Failed to delete goal: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete goal")
 		return
 	}
@@ -190,22 +243,31 @@ func DeleteGoal(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
 		"Goal", goal.ID, "Deleted goal: "+goal.Name, nil)
 
+	logger.Infof(ctx, "DeleteGoal - Successfully deleted goal: %s", goalID)
 	utilities.SuccessResponse(c, nil, "Goal deleted successfully")
 }
 
 // AddHolding adds a new holding to a goal
 func AddHolding(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "AddHolding - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "AddHolding - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	goalID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "AddHolding - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
+
+	logger.Debugf(ctx, "AddHolding - Adding holding to goal: %s", goalID)
 
 	var holdingData struct {
 		models.GoalHolding
@@ -214,13 +276,15 @@ func AddHolding(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&holdingData); err != nil {
+		logger.Warnf(ctx, "AddHolding - Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Verify goal belongs to user
 	var goal models.Goal
-	if err := database.DB.Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", goalID, userID).First(&goal).Error; err != nil {
+		logger.Errorf(ctx, "AddHolding - Goal not found: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Goal not found")
 		return
 	}
@@ -230,17 +294,20 @@ func AddHolding(c *gin.Context) {
 	if !holdingData.IsExisting {
 		// Verify account belongs to user
 		if holdingData.AccountID == nil || *holdingData.AccountID == uuid.Nil {
+			logger.Warnf(ctx, "AddHolding - Account ID is required for new investments")
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Account ID is required for new investments")
 			return
 		}
 
-		if err := database.DB.Where("id = ? AND user_id = ?", *holdingData.AccountID, userID).First(&account).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", *holdingData.AccountID, userID).First(&account).Error; err != nil {
+			logger.Errorf(ctx, "AddHolding - Invalid account ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 			return
 		}
 
 		// Check sufficient balance
 		if account.Balance < holdingData.Amount {
+			logger.Warnf(ctx, "AddHolding - Insufficient account balance")
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Insufficient account balance")
 			return
 		}
@@ -260,8 +327,10 @@ func AddHolding(c *gin.Context) {
 	// For others (FD/DPS), currentValue should equal amount
 	holdingData.GoalHolding.UpdateMarketValue()
 
+	logger.Debugf(ctx, "AddHolding - Starting transaction to create holding")
+
 	// Start transaction
-	tx := database.DB.Begin()
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -271,9 +340,12 @@ func AddHolding(c *gin.Context) {
 	// Create holding
 	if err := tx.Create(&holdingData.GoalHolding).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "AddHolding - Failed to create holding: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create holding")
 		return
 	}
+
+	logger.Debugf(ctx, "AddHolding - Created holding: %s", holdingData.GoalHolding.ID)
 
 	// Create transaction record
 	var transaction models.Transaction
@@ -363,20 +435,23 @@ func AddHolding(c *gin.Context) {
 
 	// Commit the transaction first
 	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "AddHolding - Failed to commit transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
 		return
 	}
 
+	logger.Debugf(ctx, "AddHolding - Transaction committed successfully")
+
 	// NOW update currentAmount after everything is committed
 	// This ensures the holding is properly saved in the database
 
-	err = goal.UpdateCurrentAmount(database.DB)
+	err = goal.UpdateCurrentAmount(database.DB.WithContext(ctx))
 	if err != nil {
-		fmt.Printf("DEBUG: Error updating current amount: %v\n", err)
+		logger.Warnf(ctx, "AddHolding - Error updating current amount: %v", err)
 	}
 	// Reload goal with all relations to return complete data
 	var updatedGoal models.Goal
-	if err := database.DB.Where("id = ?", goalID).
+	if err := database.DB.WithContext(ctx).Where("id = ?", goalID).
 		Preload("Holdings").
 		Preload("Contributions").
 		First(&updatedGoal).Error; err == nil {
@@ -386,6 +461,8 @@ func AddHolding(c *gin.Context) {
 	// Log holding addition activity
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleGoal,
 		"GoalHolding", holdingData.GoalHolding.ID, "Added holding "+holdingData.Name+" to goal "+goal.Name, nil)
+
+	logger.Infof(ctx, "AddHolding - Successfully added holding to goal: %s", goalID)
 
 	result := map[string]interface{}{
 		"holding":      holdingData.GoalHolding,
@@ -399,26 +476,36 @@ func AddHolding(c *gin.Context) {
 
 // UpdateHolding updates a holding (e.g., update stock price)
 func UpdateHolding(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "UpdateHolding - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "UpdateHolding - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	holdingID, err := uuid.Parse(c.Param("holdingId"))
 	if err != nil {
+		logger.Warnf(ctx, "UpdateHolding - Invalid holding ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid holding ID")
 		return
 	}
 
+	logger.Debugf(ctx, "UpdateHolding - Updating holding: %s", holdingID)
+
 	var existingHolding models.GoalHolding
-	if err := database.DB.Where("id = ? AND user_id = ?", holdingID, userID).First(&existingHolding).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", holdingID, userID).First(&existingHolding).Error; err != nil {
+		logger.Errorf(ctx, "UpdateHolding - Holding not found: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Holding not found")
 		return
 	}
 
 	var updateData models.GoalHolding
 	if err := c.ShouldBindJSON(&updateData); err != nil {
+		logger.Warnf(ctx, "UpdateHolding - Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -476,37 +563,47 @@ func UpdateHolding(c *gin.Context) {
 	// Recalculate market value
 	existingHolding.UpdateMarketValue()
 
-	if err := database.DB.Save(&existingHolding).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Save(&existingHolding).Error; err != nil {
+		logger.Errorf(ctx, "UpdateHolding - Failed to save holding: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update holding")
 		return
 	}
 
 	// Update goal's current amount
 	var goal models.Goal
-	if err := database.DB.First(&goal, existingHolding.GoalID).Error; err == nil {
-		goal.UpdateCurrentAmount(database.DB)
+	if err := database.DB.WithContext(ctx).First(&goal, existingHolding.GoalID).Error; err == nil {
+		goal.UpdateCurrentAmount(database.DB.WithContext(ctx))
 	}
 
 	// Log holding update activity
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleGoal,
 		"GoalHolding", existingHolding.ID, "Updated holding: "+existingHolding.Name, nil)
 
+	logger.Infof(ctx, "UpdateHolding - Successfully updated holding: %s", holdingID)
 	utilities.SuccessResponse(c, existingHolding, "Holding updated successfully")
 }
 
 // RemoveHolding removes/liquidates a holding
 func RemoveHolding(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "RemoveHolding - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "RemoveHolding - Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	ctx = middleware.GetContextWithUserID(c)
 	holdingID, err := uuid.Parse(c.Param("holdingId"))
 	if err != nil {
+		logger.Warnf(ctx, "RemoveHolding - Invalid holding ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid holding ID")
 		return
 	}
+
+	logger.Debugf(ctx, "RemoveHolding - Removing holding: %s", holdingID)
 
 	var removeData struct {
 		AccountID    uuid.UUID `json:"accountId" binding:"required"`
@@ -516,19 +613,22 @@ func RemoveHolding(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&removeData); err != nil {
+		logger.Warnf(ctx, "RemoveHolding - Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	var holding models.GoalHolding
-	if err := database.DB.Where("id = ? AND user_id = ?", holdingID, userID).First(&holding).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", holdingID, userID).First(&holding).Error; err != nil {
+		logger.Errorf(ctx, "RemoveHolding - Holding not found: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Holding not found")
 		return
 	}
 
 	// Verify account
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", removeData.AccountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", removeData.AccountID, userID).First(&account).Error; err != nil {
+		logger.Errorf(ctx, "RemoveHolding - Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
@@ -537,8 +637,10 @@ func RemoveHolding(c *gin.Context) {
 		removeData.Date = time.Now()
 	}
 
+	logger.Debugf(ctx, "RemoveHolding - Starting transaction to remove holding")
+
 	// Start transaction
-	tx := database.DB.Begin()
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -610,11 +712,19 @@ func RemoveHolding(c *gin.Context) {
 
 	goal.UpdateCurrentAmount(tx)
 
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "RemoveHolding - Failed to commit transaction: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
+
+	logger.Debugf(ctx, "RemoveHolding - Transaction committed successfully")
 
 	// Log holding removal activity
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleGoal,
 		"GoalHolding", holding.ID, "Removed holding: "+holding.Name, nil)
+
+	logger.Infof(ctx, "RemoveHolding - Successfully removed holding: %s", holdingID)
 
 	result := map[string]interface{}{
 		"holding":      holding,
@@ -627,6 +737,9 @@ func RemoveHolding(c *gin.Context) {
 
 // GetHoldingTypes returns all available holding types
 func GetHoldingTypes(c *gin.Context) {
+	ctx := middleware.GetContext(c)
+	logger.Infof(ctx, "GetHoldingTypes - Entry")
+
 	holdingTypes := map[string]interface{}{
 		"Savings": []map[string]string{
 			{"value": "savings", "label": "Savings", "icon": "💰"},
@@ -665,5 +778,6 @@ func GetHoldingTypes(c *gin.Context) {
 		},
 	}
 
+	logger.Infof(ctx, "GetHoldingTypes - Successfully retrieved holding types")
 	utilities.SuccessResponse(c, holdingTypes, "Holding types retrieved successfully")
 }

@@ -40,24 +40,32 @@ func ListAccounts(c *gin.Context) {
 
 // GetAccount returns a specific account by ID
 func GetAccount(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetAccount - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	accountID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching account %s for user: %s", accountID, userID)
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
 		return
 	}
 
+	logger.Infof(ctx, "Account retrieved successfully: %s for user: %s", accountID, userID)
 	utilities.SuccessResponse(c, account, "Account retrieved successfully")
 }
 
@@ -138,31 +146,41 @@ func CreateAccount(c *gin.Context) {
 
 // UpdateAccount updates an existing account
 func UpdateAccount(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateAccount - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	accountID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing account %s for user: %s", accountID, userID)
 	var existingAccount models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", accountID, userID).First(&existingAccount).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&existingAccount).Error; err != nil {
+		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Parsing update data for account: %s", accountID)
 	var updateData models.Account
 	if err := c.ShouldBindJSON(&updateData); err != nil {
+		logger.Warnf(ctx, "Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Update only allowed fields
+	logger.Debugf(ctx, "Updating account fields for: %s", accountID)
 	existingAccount.Name = updateData.Name
 	existingAccount.Type = updateData.Type
 	existingAccount.Currency = updateData.Currency
@@ -171,7 +189,8 @@ func UpdateAccount(c *gin.Context) {
 	existingAccount.AccountNumber = updateData.AccountNumber
 	existingAccount.Active = updateData.Active
 
-	if err := database.DB.Save(&existingAccount).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Save(&existingAccount).Error; err != nil {
+		logger.Errorf(ctx, "Failed to update account: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account")
 		return
 	}
@@ -180,31 +199,41 @@ func UpdateAccount(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAccount,
 		"Account", existingAccount.ID, "Updated account: "+existingAccount.Name, nil)
 
+	logger.Infof(ctx, "Account updated successfully: %s for user: %s", accountID, userID)
 	utilities.SuccessResponse(c, existingAccount, "Account updated successfully")
 }
 
 // DeleteAccount deletes an account
 func DeleteAccount(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteAccount - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	accountID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching account %s for deletion", accountID)
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
 		return
 	}
 
 	// Soft delete
-	if err := database.DB.Delete(&account).Error; err != nil {
+	logger.Debugf(ctx, "Deleting account: %s", accountID)
+	if err := database.DB.WithContext(ctx).Delete(&account).Error; err != nil {
+		logger.Errorf(ctx, "Failed to delete account: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete account")
 		return
 	}
@@ -213,6 +242,7 @@ func DeleteAccount(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAccount,
 		"Account", account.ID, "Deleted account: "+account.Name, nil)
 
+	logger.Infof(ctx, "Account deleted successfully: %s for user: %s", accountID, userID)
 	utilities.SuccessResponse(c, nil, "Account deleted successfully")
 }
 

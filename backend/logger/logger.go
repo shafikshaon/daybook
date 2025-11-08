@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -64,6 +65,7 @@ type Logger struct {
 	level      LogLevel
 	output     io.Writer
 	useColors  bool
+	jsonFormat bool
 	timeFormat string
 }
 
@@ -73,16 +75,29 @@ var (
 )
 
 func init() {
-	DefaultLogger = New(InfoLevel, os.Stdout, true)
+	// Use JSON format by default, disable colors when using JSON
+	DefaultLogger = NewJSON(InfoLevel, os.Stdout)
 }
 
-// New creates a new Logger instance
+// New creates a new Logger instance with text format
 func New(level LogLevel, output io.Writer, useColors bool) *Logger {
 	return &Logger{
 		level:      level,
 		output:     output,
 		useColors:  useColors,
+		jsonFormat: false,
 		timeFormat: "2006-01-02 15:04:05.000",
+	}
+}
+
+// NewJSON creates a new Logger instance with JSON format
+func NewJSON(level LogLevel, output io.Writer) *Logger {
+	return &Logger{
+		level:      level,
+		output:     output,
+		useColors:  false, // No colors in JSON mode
+		jsonFormat: true,
+		timeFormat: time.RFC3339Nano,
 	}
 }
 
@@ -122,19 +137,26 @@ func getCaller(skip int) (file string, line int, function string) {
 	return
 }
 
+// LogEntry represents a structured log entry for JSON output
+type LogEntry struct {
+	Timestamp string `json:"timestamp"`
+	Level     string `json:"level"`
+	TraceID   string `json:"trace_id,omitempty"`
+	SpanID    string `json:"span_id,omitempty"`
+	UserID    string `json:"user_id,omitempty"`
+	File      string `json:"file"`
+	Line      int    `json:"line"`
+	Function  string `json:"function"`
+	Message   string `json:"message"`
+}
+
 // formatLog formats the log message with all context information
 func (l *Logger) formatLog(ctx context.Context, level LogLevel, format string, args ...interface{}) string {
-	var builder strings.Builder
-
 	// Get caller information (skip 3 levels: formatLog -> log method -> user code)
 	file, line, function := getCaller(3)
 
 	// Get timestamp
 	timestamp := time.Now().Format(l.timeFormat)
-
-	// Get level color
-	levelColor := l.getLevelColor(level)
-	levelStr := level.String()
 
 	// Extract context information
 	traceID := extractContextValue(ctx, TraceIDKey, "-")
@@ -144,7 +166,42 @@ func (l *Logger) formatLog(ctx context.Context, level LogLevel, format string, a
 	// Format message
 	message := fmt.Sprintf(format, args...)
 
-	// Build log string
+	// JSON format
+	if l.jsonFormat {
+		entry := LogEntry{
+			Timestamp: timestamp,
+			Level:     level.String(),
+			File:      file,
+			Line:      line,
+			Function:  function,
+			Message:   message,
+		}
+
+		// Only include non-empty trace information
+		if traceID != "-" && traceID != "" {
+			entry.TraceID = traceID
+		}
+		if spanID != "-" && spanID != "" {
+			entry.SpanID = spanID
+		}
+		if userID != "-" && userID != "" {
+			entry.UserID = userID
+		}
+
+		jsonBytes, err := json.Marshal(entry)
+		if err != nil {
+			// Fallback to simple format if JSON marshaling fails
+			return fmt.Sprintf(`{"timestamp":"%s","level":"%s","message":"JSON marshal error: %v"}`,
+				timestamp, level.String(), err)
+		}
+		return string(jsonBytes)
+	}
+
+	// Text format
+	var builder strings.Builder
+	levelStr := level.String()
+	levelColor := l.getLevelColor(level)
+
 	if l.useColors {
 		builder.WriteString(fmt.Sprintf("%s[%s]%s ", colorGray, timestamp, colorReset))
 		builder.WriteString(fmt.Sprintf("%s[%-5s]%s ", levelColor, levelStr, colorReset))
