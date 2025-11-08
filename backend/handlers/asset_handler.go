@@ -141,33 +141,42 @@ func UpdateAsset(c *gin.Context) {
 		return
 	}
 
-	var existingGood models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&existingGood).Error; err != nil {
+	var existingAsset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&existingAsset).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
-	var updateData map[string]interface{}
+	var updateData models.Asset
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Prevent updating certain fields
-	delete(updateData, "id")
-	delete(updateData, "userId")
-	delete(updateData, "createdAt")
+	// Preserve protected fields from the existing asset
+	updateData.ID = existingAsset.ID
+	updateData.UserID = existingAsset.UserID
+	updateData.CreatedAt = existingAsset.CreatedAt
 
-	if err := database.DB.Model(&existingGood).Updates(updateData).Error; err != nil {
+	if err := database.DB.Model(&existingAsset).Updates(&updateData).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update asset")
+		return
+	}
+
+	// Reload the asset to get the updated data with all calculated fields
+	if err := database.DB.Where("id = ?", assetID).
+		Preload("Attachments").
+		Preload("ServiceRecords").
+		First(&existingAsset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to reload asset")
 		return
 	}
 
 	// Log asset update activity
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAsset,
-		"Asset", existingGood.ID, "Updated asset: "+existingGood.Name, nil)
+		"Asset", existingAsset.ID, "Updated asset: "+existingAsset.Name, nil)
 
-	utilities.SuccessResponse(c, existingGood, "Asset updated successfully")
+	utilities.SuccessResponse(c, existingAsset, "Asset updated successfully")
 }
 
 // DeleteAsset soft deletes an asset record
