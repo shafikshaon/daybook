@@ -167,6 +167,30 @@ func SetupRoutes(router *gin.Engine) {
 				reconciliationRoutes.DELETE("/:id", handlers.DeleteReconciliation)
 			}
 
+			// Debt routes
+			debtRoutes := protected.Group("/debts")
+			{
+				debtRoutes.GET("", handlers.ListDebts)
+				debtRoutes.GET("/:id", handlers.GetDebt)
+				debtRoutes.POST("", handlers.CreateDebt)
+				debtRoutes.PUT("/:id", handlers.UpdateDebt)
+				debtRoutes.DELETE("/:id", handlers.DeleteDebt)
+				debtRoutes.POST("/:id/payments", handlers.RecordDebtPayment)
+				debtRoutes.GET("/:id/payments", handlers.ListDebtPayments)
+			}
+
+			// Lend routes
+			lendRoutes := protected.Group("/lends")
+			{
+				lendRoutes.GET("", handlers.ListLends)
+				lendRoutes.GET("/:id", handlers.GetLend)
+				lendRoutes.POST("", handlers.CreateLend)
+				lendRoutes.PUT("/:id", handlers.UpdateLend)
+				lendRoutes.DELETE("/:id", handlers.DeleteLend)
+				lendRoutes.POST("/:id/payments", handlers.RecordLendPayment)
+				lendRoutes.GET("/:id/payments", handlers.ListLendPayments)
+			}
+
 			// File upload routes
 			uploadRoutes := protected.Group("/uploads")
 			{
