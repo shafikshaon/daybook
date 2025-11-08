@@ -146,7 +146,7 @@ func CreateDebt(c *gin.Context) {
 				Type:        "income",
 				Amount:      debt.OriginalAmount,
 				CategoryID:  "debt",
-				Date:        debt.BorrowedDate,
+				Date:        debt.BorrowedDate.Time,
 				Description: "Borrowed from " + debt.CreditorName,
 			}
 
@@ -356,7 +356,7 @@ func RecordDebtPayment(c *gin.Context) {
 		Type:        "expense",
 		Amount:      payment.Amount,
 		CategoryID:  "debt_payment",
-		Date:        payment.PaymentDate,
+		Date:        payment.PaymentDate.Time,
 		Description: description,
 	}
 
