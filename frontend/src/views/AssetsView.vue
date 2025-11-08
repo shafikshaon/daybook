@@ -122,7 +122,7 @@
               <div v-if="asset.warrantyStatus === 'active'" class="progress" style="height: 4px;">
                 <div
                   class="progress-bar"
-                  :class="asset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-success'"
+                  :class="asset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-primary'"
                   :style="{ width: getWarrantyProgress(asset) + '%' }"
                 ></div>
               </div>
@@ -133,7 +133,7 @@
               <button class="btn btn-sm btn-outline-primary flex-grow-1" @click="viewDetails(asset)">
                 View Details
               </button>
-              <button class="btn btn-sm btn-outline-success" @click="openServiceModal(asset)">
+              <button class="btn btn-sm btn-outline-primary" @click="openServiceModal(asset)">
                 Service
               </button>
               <button class="btn btn-sm btn-outline-info" @click="openAttachmentsModal(asset)">
@@ -315,7 +315,7 @@
                         </div>
                         <div class="d-flex gap-1">
                           <button type="button" class="btn btn-sm btn-outline-primary" @click="viewAttachment(attachment)">👁️</button>
-                          <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-success">⬇️</a>
+                          <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-primary">⬇️</a>
                           <button type="button" class="btn btn-sm btn-outline-danger" @click="deleteEditFormAttachment(attachment.id)">🗑️</button>
                         </div>
                       </div>
@@ -426,7 +426,7 @@
                   <div v-if="selectedAsset.warrantyStatus === 'active'" class="progress" style="height: 6px;">
                     <div
                       class="progress-bar"
-                      :class="selectedAsset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-success'"
+                      :class="selectedAsset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-primary'"
                       :style="{ width: getWarrantyProgress(selectedAsset) + '%' }"
                     ></div>
                   </div>
@@ -466,7 +466,7 @@
                       <div>
                         <div class="d-flex align-items-center gap-2">
                           <strong>{{ service.serviceType }}</strong>
-                          <span v-if="service.warrantyCovered" class="badge bg-success">Warranty</span>
+                          <span v-if="service.warrantyCovered" class="badge bg-primary">Warranty</span>
                         </div>
                         <div class="text-muted small">{{ formatDate(service.serviceDate) }}</div>
                       </div>
@@ -514,7 +514,7 @@
                 <button class="btn btn-outline-secondary flex-grow-1" @click="editGood(selectedAsset); closeDetailsModal()">
                   Edit Asset
                 </button>
-                <button class="btn btn-outline-success" @click="openServiceModal(selectedAsset); closeDetailsModal()">
+                <button class="btn btn-outline-primary" @click="openServiceModal(selectedAsset); closeDetailsModal()">
                   Add Service
                 </button>
                 <button class="btn btn-outline-info" @click="openAttachmentsModal(selectedAsset); closeDetailsModal()">
@@ -595,7 +595,7 @@
                     <div>
                       <div class="d-flex align-items-center gap-2 mb-1">
                         <strong>{{ service.serviceType }}</strong>
-                        <span v-if="service.warrantyCovered" class="badge bg-success">Warranty</span>
+                        <span v-if="service.warrantyCovered" class="badge bg-primary">Warranty</span>
                       </div>
                       <div class="text-muted small">{{ formatDate(service.serviceDate) }}</div>
                       <div v-if="service.serviceProvider" class="small">{{ service.serviceProvider }}</div>
@@ -686,7 +686,7 @@
                         <button class="btn btn-sm btn-outline-primary" @click="viewAttachment(attachment)" title="View">
                           👁️
                         </button>
-                        <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-success" title="Download">
+                        <a :href="getAttachmentUrl(attachment)" :download="attachment.originalName" class="btn btn-sm btn-outline-primary" title="Download">
                           ⬇️
                         </a>
                         <button class="btn btn-sm btn-outline-danger" @click="deleteAttachment(attachment.id)" title="Delete">
@@ -832,7 +832,7 @@ const formatStatus = (status) => {
 
 const getStatusClass = (status) => {
   const classes = {
-    active: 'bg-success',
+    active: 'bg-primary',
     archived: 'bg-secondary',
     sold: 'bg-info',
     disposed: 'bg-dark'
@@ -847,7 +847,7 @@ const getWarrantyStatusText = (status) => {
 }
 
 const getWarrantyBadgeClass = (status) => {
-  return status === 'active' ? 'bg-success' : 'bg-danger'
+  return status === 'active' ? 'bg-primary' : 'bg-danger'
 }
 
 const getWarrantyBgClass = (status) => {
