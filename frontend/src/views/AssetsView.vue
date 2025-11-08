@@ -1,8 +1,8 @@
 <template>
-  <div class="goods-view fade-in">
+  <div class="assets-view fade-in">
     <div class="d-flex justify-content-between align-items-center mb-4">
-      <h1 class="text-blue">My Goods</h1>
-      <button class="btn btn-primary" @click="showAddModal = true">+ Add Good</button>
+      <h1 class="text-blue">My Assets</h1>
+      <button class="btn btn-primary" @click="showAddModal = true">+ Add Asset</button>
     </div>
 
     <!-- Summary Stats -->
@@ -10,39 +10,39 @@
       <div class="col-12 col-md-3">
         <div class="stat-card">
           <div class="stat-icon blue">📦</div>
-          <div class="stat-value">{{ goodsStore.activeGoods.length }}</div>
+          <div class="stat-value">{{ assetsStore.activeAssets.length }}</div>
           <div class="stat-label">Active Goods</div>
         </div>
       </div>
       <div class="col-12 col-md-3">
         <div class="stat-card">
           <div class="stat-icon purple">💰</div>
-          <div class="stat-value">{{ formatCurrency(goodsStore.totalValue) }}</div>
+          <div class="stat-value">{{ formatCurrency(assetsStore.totalValue) }}</div>
           <div class="stat-label">Total Value</div>
         </div>
       </div>
       <div class="col-12 col-md-3">
         <div class="stat-card">
           <div class="stat-icon orange">🔧</div>
-          <div class="stat-value">{{ formatCurrency(goodsStore.totalServiceCost) }}</div>
+          <div class="stat-value">{{ formatCurrency(assetsStore.totalServiceCost) }}</div>
           <div class="stat-label">Total Service Cost</div>
         </div>
       </div>
       <div class="col-12 col-md-3">
         <div class="stat-card">
           <div class="stat-icon green">📜</div>
-          <div class="stat-value">{{ goodsStore.goodsUnderWarranty.length }}</div>
+          <div class="stat-value">{{ assetsStore.assetsUnderWarranty.length }}</div>
           <div class="stat-label">Under Warranty</div>
         </div>
       </div>
     </div>
 
     <!-- Warranty Alerts -->
-    <div v-if="goodsStore.goodsWarrantyExpiringSoon.length > 0" class="alert alert-warning mb-4">
+    <div v-if="assetsStore.assetsWarrantyExpiringSoon.length > 0" class="alert alert-warning mb-4">
       <h6 class="alert-heading">⚠️ Warranty Expiring Soon</h6>
       <ul class="mb-0">
-        <li v-for="good in goodsStore.goodsWarrantyExpiringSoon" :key="good.id">
-          {{ good.name }}: {{ good.warrantyDaysRemaining }} days remaining
+        <li v-for="asset in assetsStore.assetsWarrantyExpiringSoon" :key="asset.id">
+          {{ asset.name }}: {{ asset.warrantyDaysRemaining }} days remaining
         </li>
       </ul>
     </div>
@@ -51,22 +51,22 @@
     <ul class="nav nav-tabs mb-3">
       <li class="nav-item">
         <a class="nav-link" :class="{ active: filter === 'all' }" @click="filter = 'all'" href="javascript:void(0)">
-          All ({{ goodsStore.allGoods.length }})
+          All ({{ assetsStore.allAssets.length }})
         </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" :class="{ active: filter === 'active' }" @click="filter = 'active'" href="javascript:void(0)">
-          Active ({{ goodsStore.activeGoods.length }})
+          Active ({{ assetsStore.activeAssets.length }})
         </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" :class="{ active: filter === 'warranty' }" @click="filter = 'warranty'" href="javascript:void(0)">
-          Under Warranty ({{ goodsStore.goodsUnderWarranty.length }})
+          Under Warranty ({{ assetsStore.assetsUnderWarranty.length }})
         </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" :class="{ active: filter === 'archived' }" @click="filter = 'archived'" href="javascript:void(0)">
-          Archived ({{ goodsStore.archivedGoods.length }})
+          Archived ({{ assetsStore.archivedAssets.length }})
         </a>
       </li>
     </ul>
@@ -77,74 +77,74 @@
     </div>
 
     <div v-else class="row g-3">
-      <div v-for="good in filteredGoods" :key="good.id" class="col-12 col-md-6 col-lg-4">
+      <div v-for="asset in filteredAssets" :key="asset.id" class="col-12 col-md-6 col-lg-4">
         <div class="card h-100">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
-              <h5 class="card-title mb-0">{{ good.name }}</h5>
-              <span class="badge" :class="getStatusClass(good.status)">{{ formatStatus(good.status) }}</span>
+              <h5 class="card-title mb-0">{{ asset.name }}</h5>
+              <span class="badge" :class="getStatusClass(asset.status)">{{ formatStatus(asset.status) }}</span>
             </div>
 
-            <p class="text-muted small mb-2" v-if="good.category">{{ good.category }}</p>
-            <p class="text-muted mb-2" v-if="good.description">{{ good.description }}</p>
+            <p class="text-muted small mb-2" v-if="asset.category">{{ asset.category }}</p>
+            <p class="text-muted mb-2" v-if="asset.description">{{ asset.description }}</p>
 
             <div class="mb-3">
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Purchase Price</span>
-                <strong>{{ formatCurrency(good.purchasePrice) }}</strong>
+                <strong>{{ formatCurrency(asset.purchasePrice) }}</strong>
               </div>
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Purchase Date</span>
-                <span>{{ formatDate(good.purchaseDate) }}</span>
+                <span>{{ formatDate(asset.purchaseDate) }}</span>
               </div>
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Days Owned</span>
-                <span>{{ good.daysOwned || 0 }} days</span>
+                <span>{{ asset.daysOwned || 0 }} days</span>
               </div>
               <div class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Price/Day</span>
-                <span>{{ formatCurrency(good.pricePerDay || 0) }}</span>
+                <span>{{ formatCurrency(asset.pricePerDay || 0) }}</span>
               </div>
-              <div v-if="good.totalServiceCost > 0" class="d-flex justify-content-between mb-1">
+              <div v-if="asset.totalServiceCost > 0" class="d-flex justify-content-between mb-1">
                 <span class="text-muted">Service Cost</span>
-                <span class="text-warning">{{ formatCurrency(good.totalServiceCost) }}</span>
+                <span class="text-warning">{{ formatCurrency(asset.totalServiceCost) }}</span>
               </div>
             </div>
 
             <!-- Warranty Info -->
-            <div v-if="good.warrantyStatus !== 'no_warranty'" class="mb-3 p-2 rounded" :class="getWarrantyBgClass(good.warrantyStatus)">
+            <div v-if="asset.warrantyStatus !== 'no_warranty'" class="mb-3 p-2 rounded" :class="getWarrantyBgClass(asset.warrantyStatus)">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="small">{{ getWarrantyStatusText(good.warrantyStatus) }}</span>
-                <span class="badge" :class="getWarrantyBadgeClass(good.warrantyStatus)">
-                  {{ good.warrantyStatus === 'active' ? good.warrantyDaysRemaining + ' days' : 'Expired' }}
+                <span class="small">{{ getWarrantyStatusText(asset.warrantyStatus) }}</span>
+                <span class="badge" :class="getWarrantyBadgeClass(asset.warrantyStatus)">
+                  {{ asset.warrantyStatus === 'active' ? asset.warrantyDaysRemaining + ' days' : 'Expired' }}
                 </span>
               </div>
-              <div v-if="good.warrantyStatus === 'active'" class="progress" style="height: 4px;">
+              <div v-if="asset.warrantyStatus === 'active'" class="progress" style="height: 4px;">
                 <div
                   class="progress-bar"
-                  :class="good.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-success'"
-                  :style="{ width: getWarrantyProgress(good) + '%' }"
+                  :class="asset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-success'"
+                  :style="{ width: getWarrantyProgress(asset) + '%' }"
                 ></div>
               </div>
             </div>
 
             <!-- Action Buttons -->
             <div class="d-flex flex-wrap gap-1 mb-2">
-              <button class="btn btn-sm btn-outline-primary flex-grow-1" @click="viewDetails(good)">
+              <button class="btn btn-sm btn-outline-primary flex-grow-1" @click="viewDetails(asset)">
                 View Details
               </button>
-              <button class="btn btn-sm btn-outline-success" @click="openServiceModal(good)">
+              <button class="btn btn-sm btn-outline-success" @click="openServiceModal(asset)">
                 Service
               </button>
-              <button class="btn btn-sm btn-outline-info" @click="openAttachmentsModal(good)">
+              <button class="btn btn-sm btn-outline-info" @click="openAttachmentsModal(asset)">
                 Files
               </button>
             </div>
             <div class="d-flex gap-1">
-              <button class="btn btn-sm btn-outline-secondary flex-grow-1" @click="editGood(good)">
+              <button class="btn btn-sm btn-outline-secondary flex-grow-1" @click="editGood(asset)">
                 Edit
               </button>
-              <button class="btn btn-sm btn-outline-danger" @click="confirmDelete(good.id)">
+              <button class="btn btn-sm btn-outline-danger" @click="confirmDelete(asset.id)">
                 Delete
               </button>
             </div>
@@ -152,15 +152,15 @@
         </div>
       </div>
 
-      <div v-if="filteredGoods.length === 0" class="col-12">
+      <div v-if="filteredAssets.length === 0" class="col-12">
         <div class="text-center py-5 text-muted">
-          <p class="h5">No goods found</p>
-          <p>Add your first good to start tracking!</p>
+          <p class="h5">No assets found</p>
+          <p>Add your first asset to start tracking!</p>
         </div>
       </div>
     </div>
 
-    <!-- Add/Edit Good Modal -->
+    <!-- Add/Edit Asset Modal -->
     <div
       class="modal fade"
       :class="{ 'show d-block': showAddModal || showEditModal }"
@@ -170,7 +170,7 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">{{ showEditModal ? 'Edit Good' : 'Add Good' }}</h5>
+            <h5 class="modal-title">{{ showEditModal ? 'Edit Asset' : 'Add Asset' }}</h5>
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
@@ -185,7 +185,7 @@
                   <input v-model="form.category" type="text" class="form-control"
                          list="categories" placeholder="e.g., Electronics, Furniture" />
                   <datalist id="categories">
-                    <option v-for="cat in goodsStore.categories" :key="cat" :value="cat"></option>
+                    <option v-for="cat in assetsStore.categories" :key="cat" :value="cat"></option>
                   </datalist>
                 </div>
               </div>
@@ -293,7 +293,7 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Service Records - {{ selectedGood?.name }}</h5>
+            <h5 class="modal-title">Service Records - {{ selectedAsset?.name }}</h5>
             <button type="button" class="btn-close" @click="closeServiceModal"></button>
           </div>
           <div class="modal-body">
@@ -382,11 +382,11 @@
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Attachments - {{ selectedGood?.name }}</h5>
+            <h5 class="modal-title">Attachments - {{ selectedAsset?.name }}</h5>
             <button type="button" class="btn-close" @click="closeAttachmentsModal"></button>
           </div>
           <div class="modal-body">
-            <p class="text-muted small mb-3">Upload receipts, warranty documents, photos, and other files related to this good.</p>
+            <p class="text-muted small mb-3">Upload receipts, warranty documents, photos, and other files related to this asset.</p>
 
             <!-- File Upload Info -->
             <div class="alert alert-info small">
@@ -425,10 +425,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useGoodsStore } from '@/stores/goods'
+import { useAssetsStore } from '@/stores/assets'
 import { useSettingsStore } from '@/stores/settings'
 
-const goodsStore = useGoodsStore()
+const assetsStore = useAssetsStore()
 const settingsStore = useSettingsStore()
 
 const loading = ref(false)
@@ -437,8 +437,8 @@ const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showServiceModal = ref(false)
 const showAttachmentsModal = ref(false)
-const selectedGood = ref(null)
-const editingGoodId = ref(null)
+const selectedAsset = ref(null)
+const editingAssetId = ref(null)
 
 const form = ref({
   name: '',
@@ -467,29 +467,29 @@ const serviceForm = ref({
   warrantyCovered: false
 })
 
-const filteredGoods = computed(() => {
-  if (filter.value === 'all') return goodsStore.allGoods
-  if (filter.value === 'active') return goodsStore.activeGoods
-  if (filter.value === 'archived') return goodsStore.archivedGoods
-  if (filter.value === 'warranty') return goodsStore.goodsUnderWarranty
-  return goodsStore.allGoods
+const filteredAssets = computed(() => {
+  if (filter.value === 'all') return assetsStore.allAssets
+  if (filter.value === 'active') return assetsStore.activeAssets
+  if (filter.value === 'archived') return assetsStore.archivedAssets
+  if (filter.value === 'warranty') return assetsStore.assetsUnderWarranty
+  return assetsStore.allAssets
 })
 
 const currentServiceRecords = computed(() => {
-  if (!selectedGood.value) return []
-  return goodsStore.getServiceRecordsForGood(selectedGood.value.id)
+  if (!selectedAsset.value) return []
+  return assetsStore.getServiceRecordsForGood(selectedAsset.value.id)
 })
 
 const currentAttachments = computed(() => {
-  if (!selectedGood.value) return []
-  return goodsStore.getAttachmentsForGood(selectedGood.value.id)
+  if (!selectedAsset.value) return []
+  return assetsStore.getAttachmentsForGood(selectedAsset.value.id)
 })
 
 onMounted(async () => {
   loading.value = true
   try {
-    await goodsStore.fetchGoods()
-    await goodsStore.fetchStats()
+    await assetsStore.fetchAssets()
+    await assetsStore.fetchStats()
   } catch (error) {
     console.error('Error loading goods:', error)
   } finally {
@@ -534,30 +534,30 @@ const getWarrantyBgClass = (status) => {
   return status === 'active' ? 'bg-light-success' : 'bg-light-danger'
 }
 
-const getWarrantyProgress = (good) => {
-  if (!good.warrantyDaysTotal || good.warrantyDaysTotal === 0) return 0
-  const passed = good.warrantyDaysPassed || 0
-  return Math.min(100, (passed / good.warrantyDaysTotal) * 100)
+const getWarrantyProgress = (asset) => {
+  if (!asset.warrantyDaysTotal || asset.warrantyDaysTotal === 0) return 0
+  const passed = asset.warrantyDaysPassed || 0
+  return Math.min(100, (passed / asset.warrantyDaysTotal) * 100)
 }
 
-const editGood = (good) => {
-  editingGoodId.value = good.id
+const editGood = (asset) => {
+  editingAssetId.value = asset.id
   form.value = {
-    name: good.name,
-    description: good.description || '',
-    category: good.category || '',
-    brand: good.brand || '',
-    model: good.model || '',
-    serialNumber: good.serialNumber || '',
-    purchaseDate: good.purchaseDate?.split('T')[0] || '',
-    purchasePrice: good.purchasePrice,
-    purchaseLocation: good.purchaseLocation || '',
-    warrantyStartDate: good.warrantyStartDate?.split('T')[0] || null,
-    warrantyEndDate: good.warrantyEndDate?.split('T')[0] || null,
-    warrantyProvider: good.warrantyProvider || '',
-    warrantyType: good.warrantyType || '',
-    status: good.status,
-    notes: good.notes || ''
+    name: asset.name,
+    description: asset.description || '',
+    category: asset.category || '',
+    brand: asset.brand || '',
+    model: asset.model || '',
+    serialNumber: asset.serialNumber || '',
+    purchaseDate: asset.purchaseDate?.split('T')[0] || '',
+    purchasePrice: asset.purchasePrice,
+    purchaseLocation: asset.purchaseLocation || '',
+    warrantyStartDate: asset.warrantyStartDate?.split('T')[0] || null,
+    warrantyEndDate: asset.warrantyEndDate?.split('T')[0] || null,
+    warrantyProvider: asset.warrantyProvider || '',
+    warrantyType: asset.warrantyType || '',
+    status: asset.status,
+    notes: asset.notes || ''
   }
   showEditModal.value = true
 }
@@ -566,27 +566,27 @@ const saveGood = async () => {
   loading.value = true
   try {
     if (showEditModal.value) {
-      await goodsStore.updateGood(editingGoodId.value, form.value)
+      await assetsStore.updateAsset(editingAssetId.value, form.value)
     } else {
-      await goodsStore.createGood(form.value)
+      await assetsStore.createAsset(form.value)
     }
     closeModal()
   } catch (error) {
-    console.error('Error saving good:', error)
-    alert('Error saving good. Please try again.')
+    console.error('Error saving asset:', error)
+    alert('Error saving asset. Please try again.')
   } finally {
     loading.value = false
   }
 }
 
 const confirmDelete = async (id) => {
-  if (confirm('Are you sure you want to delete this good? This will also delete all service records and attachments.')) {
+  if (confirm('Are you sure you want to delete this asset? This will also delete all service records and attachments.')) {
     loading.value = true
     try {
-      await goodsStore.deleteGood(id)
+      await assetsStore.deleteAsset(id)
     } catch (error) {
-      console.error('Error deleting good:', error)
-      alert('Error deleting good. Please try again.')
+      console.error('Error deleting asset:', error)
+      alert('Error deleting asset. Please try again.')
     } finally {
       loading.value = false
     }
@@ -596,7 +596,7 @@ const confirmDelete = async (id) => {
 const closeModal = () => {
   showAddModal.value = false
   showEditModal.value = false
-  editingGoodId.value = null
+  editingAssetId.value = null
   form.value = {
     name: '',
     description: '',
@@ -616,22 +616,22 @@ const closeModal = () => {
   }
 }
 
-const viewDetails = async (good) => {
-  selectedGood.value = good
-  await goodsStore.fetchServiceRecords(good.id)
-  await goodsStore.fetchAttachments(good.id)
+const viewDetails = async (asset) => {
+  selectedAsset.value = asset
+  await assetsStore.fetchServiceRecords(asset.id)
+  await assetsStore.fetchAttachments(asset.id)
   showServiceModal.value = true
 }
 
-const openServiceModal = async (good) => {
-  selectedGood.value = good
-  await goodsStore.fetchServiceRecords(good.id)
+const openServiceModal = async (asset) => {
+  selectedAsset.value = asset
+  await assetsStore.fetchServiceRecords(asset.id)
   showServiceModal.value = true
 }
 
 const closeServiceModal = () => {
   showServiceModal.value = false
-  selectedGood.value = null
+  selectedAsset.value = null
   serviceForm.value = {
     serviceDate: '',
     serviceType: '',
@@ -643,11 +643,11 @@ const closeServiceModal = () => {
 }
 
 const addService = async () => {
-  if (!selectedGood.value) return
+  if (!selectedAsset.value) return
 
   loading.value = true
   try {
-    await goodsStore.createServiceRecord(selectedGood.value.id, serviceForm.value)
+    await assetsStore.createServiceRecord(selectedAsset.value.id, serviceForm.value)
     serviceForm.value = {
       serviceDate: '',
       serviceType: '',
@@ -665,12 +665,12 @@ const addService = async () => {
 }
 
 const deleteService = async (serviceId) => {
-  if (!selectedGood.value) return
+  if (!selectedAsset.value) return
   if (!confirm('Are you sure you want to delete this service record?')) return
 
   loading.value = true
   try {
-    await goodsStore.deleteServiceRecord(selectedGood.value.id, serviceId)
+    await assetsStore.deleteServiceRecord(selectedAsset.value.id, serviceId)
   } catch (error) {
     console.error('Error deleting service record:', error)
     alert('Error deleting service record. Please try again.')
@@ -679,24 +679,24 @@ const deleteService = async (serviceId) => {
   }
 }
 
-const openAttachmentsModal = async (good) => {
-  selectedGood.value = good
-  await goodsStore.fetchAttachments(good.id)
+const openAttachmentsModal = async (asset) => {
+  selectedAsset.value = asset
+  await assetsStore.fetchAttachments(asset.id)
   showAttachmentsModal.value = true
 }
 
 const closeAttachmentsModal = () => {
   showAttachmentsModal.value = false
-  selectedGood.value = null
+  selectedAsset.value = null
 }
 
 const deleteAttachment = async (attachmentId) => {
-  if (!selectedGood.value) return
+  if (!selectedAsset.value) return
   if (!confirm('Are you sure you want to delete this attachment?')) return
 
   loading.value = true
   try {
-    await goodsStore.deleteAttachment(selectedGood.value.id, attachmentId)
+    await assetsStore.deleteAttachment(selectedAsset.value.id, attachmentId)
   } catch (error) {
     console.error('Error deleting attachment:', error)
     alert('Error deleting attachment. Please try again.')

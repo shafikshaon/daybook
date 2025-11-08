@@ -191,25 +191,25 @@ func SetupRoutes(router *gin.Engine) {
 				lendRoutes.GET("/:id/payments", handlers.ListLendPayments)
 			}
 
-			// Goods tracking routes
-			goodRoutes := protected.Group("/goods")
+			// Assets tracking routes
+			assetRoutes := protected.Group("/assets")
 			{
-				goodRoutes.GET("", handlers.ListGoods)
-				goodRoutes.GET("/stats", handlers.GetGoodsStats)
-				goodRoutes.GET("/:id", handlers.GetGood)
-				goodRoutes.POST("", handlers.CreateGood)
-				goodRoutes.PUT("/:id", handlers.UpdateGood)
-				goodRoutes.DELETE("/:id", handlers.DeleteGood)
+				assetRoutes.GET("", handlers.ListAssets)
+				assetRoutes.GET("/stats", handlers.GetAssetsStats)
+				assetRoutes.GET("/:id", handlers.GetAsset)
+				assetRoutes.POST("", handlers.CreateAsset)
+				assetRoutes.PUT("/:id", handlers.UpdateAsset)
+				assetRoutes.DELETE("/:id", handlers.DeleteAsset)
 
 				// Service records
-				goodRoutes.POST("/:id/services", handlers.CreateServiceRecord)
-				goodRoutes.GET("/:id/services", handlers.ListServiceRecords)
-				goodRoutes.DELETE("/:id/services/:serviceId", handlers.DeleteServiceRecord)
+				assetRoutes.POST("/:id/services", handlers.CreateServiceRecord)
+				assetRoutes.GET("/:id/services", handlers.ListServiceRecords)
+				assetRoutes.DELETE("/:id/services/:serviceId", handlers.DeleteServiceRecord)
 
 				// Attachments
-				goodRoutes.POST("/:id/attachments", handlers.AddAttachment)
-				goodRoutes.GET("/:id/attachments", handlers.ListAttachments)
-				goodRoutes.DELETE("/:id/attachments/:attachmentId", handlers.DeleteAttachment)
+				assetRoutes.POST("/:id/attachments", handlers.AddAttachment)
+				assetRoutes.GET("/:id/attachments", handlers.ListAttachments)
+				assetRoutes.DELETE("/:id/attachments/:attachmentId", handlers.DeleteAttachment)
 			}
 
 			// File upload routes

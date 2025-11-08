@@ -2,9 +2,9 @@ import { defineStore } from 'pinia'
 import apiService from '@/services/api-backend'
 import { useSettingsStore } from './settings'
 
-export const useGoodsStore = defineStore('goods', {
+export const useAssetsStore = defineStore('assets', {
   state: () => ({
-    goods: [],
+    assets: [],
     serviceRecords: {},
     attachments: {},
     stats: null,
@@ -13,45 +13,45 @@ export const useGoodsStore = defineStore('goods', {
   }),
 
   getters: {
-    allGoods: (state) => state.goods,
+    allAssets: (state) => state.assets,
 
-    activeGoods: (state) => {
-      return state.goods.filter(g => g.status === 'active')
+    activeAssets: (state) => {
+      return state.assets.filter(g => g.status === 'active')
     },
 
-    archivedGoods: (state) => {
-      return state.goods.filter(g => g.status === 'archived')
+    archivedAssets: (state) => {
+      return state.assets.filter(g => g.status === 'archived')
     },
 
-    soldGoods: (state) => {
-      return state.goods.filter(g => g.status === 'sold')
+    soldAssets: (state) => {
+      return state.assets.filter(g => g.status === 'sold')
     },
 
-    disposedGoods: (state) => {
-      return state.goods.filter(g => g.status === 'disposed')
+    disposedAssets: (state) => {
+      return state.assets.filter(g => g.status === 'disposed')
     },
 
     getGoodById: (state) => (id) => {
-      return state.goods.find(g => g.id === id)
+      return state.assets.find(g => g.id === id)
     },
 
-    goodsByCategory: (state) => (category) => {
-      return state.goods.filter(g =>
+    assetsByCategory: (state) => (category) => {
+      return state.assets.filter(g =>
         g.category && g.category.toLowerCase().includes(category.toLowerCase())
       )
     },
 
-    goodsUnderWarranty: (state) => {
-      return state.goods.filter(g => g.warrantyStatus === 'active')
+    assetsUnderWarranty: (state) => {
+      return state.assets.filter(g => g.warrantyStatus === 'active')
     },
 
-    goodsWarrantyExpired: (state) => {
-      return state.goods.filter(g => g.warrantyStatus === 'expired')
+    assetsWarrantyExpired: (state) => {
+      return state.assets.filter(g => g.warrantyStatus === 'expired')
     },
 
-    goodsWarrantyExpiringSoon: (state) => {
+    assetsWarrantyExpiringSoon: (state) => {
       // Warranty expiring in next 30 days
-      return state.goods.filter(g => {
+      return state.assets.filter(g => {
         return g.warrantyStatus === 'active' &&
                g.warrantyDaysRemaining !== null &&
                g.warrantyDaysRemaining <= 30
@@ -59,32 +59,32 @@ export const useGoodsStore = defineStore('goods', {
     },
 
     totalValue: (state) => {
-      return state.goods
+      return state.assets
         .filter(g => g.status === 'active')
         .reduce((sum, g) => sum + g.purchasePrice, 0)
     },
 
     totalServiceCost: (state) => {
-      return state.goods.reduce((sum, g) => sum + (g.totalServiceCost || 0), 0)
+      return state.assets.reduce((sum, g) => sum + (g.totalServiceCost || 0), 0)
     },
 
     totalCost: (state) => {
-      return state.goods
+      return state.assets
         .filter(g => g.status === 'active')
         .reduce((sum, g) => sum + (g.totalCost || g.purchasePrice), 0)
     },
 
-    getServiceRecordsForGood: (state) => (goodId) => {
-      return state.serviceRecords[goodId] || []
+    getServiceRecordsForAsset: (state) => (assetId) => {
+      return state.serviceRecords[assetId] || []
     },
 
-    getAttachmentsForGood: (state) => (goodId) => {
-      return state.attachments[goodId] || []
+    getAttachmentsForAsset: (state) => (assetId) => {
+      return state.attachments[assetId] || []
     },
 
     categories: (state) => {
       const cats = new Set()
-      state.goods.forEach(g => {
+      state.assets.forEach(g => {
         if (g.category) cats.add(g.category)
       })
       return Array.from(cats).sort()
@@ -92,7 +92,7 @@ export const useGoodsStore = defineStore('goods', {
 
     brands: (state) => {
       const brands = new Set()
-      state.goods.forEach(g => {
+      state.assets.forEach(g => {
         if (g.brand) brands.add(g.brand)
       })
       return Array.from(brands).sort()
@@ -100,7 +100,7 @@ export const useGoodsStore = defineStore('goods', {
   },
 
   actions: {
-    async fetchGoods(filters = {}) {
+    async fetchAssets(filters = {}) {
       this.loading = true
       this.error = null
       try {
@@ -108,27 +108,27 @@ export const useGoodsStore = defineStore('goods', {
         if (filters.status) params.status = filters.status
         if (filters.category) params.category = filters.category
 
-        const response = await apiService.query('goods', params)
-        this.goods = response.data || []
+        const response = await apiService.query('assets', params)
+        this.assets = response.data || []
       } catch (error) {
         this.error = error.message
-        console.error('Error fetching goods:', error)
+        console.error('Error fetching assets:', error)
         throw error
       } finally {
         this.loading = false
       }
     },
 
-    async fetchGood(id) {
+    async fetchAsset(id) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get('goods', id)
-        const index = this.goods.findIndex(g => g.id === id)
+        const response = await apiService.get('assets', id)
+        const index = this.assets.findIndex(g => g.id === id)
         if (index !== -1) {
-          this.goods[index] = response.data
+          this.assets[index] = response.data
         } else {
-          this.goods.push(response.data)
+          this.assets.push(response.data)
         }
         return response.data
       } catch (error) {
@@ -140,12 +140,12 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async createGood(goodData) {
+    async createAsset(assetData) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.post('goods', goodData)
-        this.goods.push(response.data)
+        const response = await apiService.post('assets', assetData)
+        this.assets.push(response.data)
         return response.data
       } catch (error) {
         this.error = error.message
@@ -156,14 +156,14 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async updateGood(id, goodData) {
+    async updateAsset(id, assetData) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.put('goods', id, goodData)
-        const index = this.goods.findIndex(g => g.id === id)
+        const response = await apiService.put('assets', id, assetData)
+        const index = this.assets.findIndex(g => g.id === id)
         if (index !== -1) {
-          this.goods[index] = response.data
+          this.assets[index] = response.data
         }
         return response.data
       } catch (error) {
@@ -175,12 +175,12 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async deleteGood(id) {
+    async deleteAsset(id) {
       this.loading = true
       this.error = null
       try {
-        await apiService.delete('goods', id)
-        this.goods = this.goods.filter(g => g.id !== id)
+        await apiService.delete('assets', id)
+        this.assets = this.assets.filter(g => g.id !== id)
         delete this.serviceRecords[id]
         delete this.attachments[id]
       } catch (error) {
@@ -192,20 +192,20 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async createServiceRecord(goodId, serviceData) {
+    async createServiceRecord(assetId, serviceData) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.post(`goods/${goodId}/services`, serviceData)
+        const response = await apiService.post(`goods/${assetId}/services`, serviceData)
 
         // Add to local cache
-        if (!this.serviceRecords[goodId]) {
-          this.serviceRecords[goodId] = []
+        if (!this.serviceRecords[assetId]) {
+          this.serviceRecords[assetId] = []
         }
-        this.serviceRecords[goodId].unshift(response.data)
+        this.serviceRecords[assetId].unshift(response.data)
 
         // Refresh the good to update stats
-        await this.fetchGood(goodId)
+        await this.fetchAsset(assetId)
 
         return response.data
       } catch (error) {
@@ -217,12 +217,12 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async fetchServiceRecords(goodId) {
+    async fetchServiceRecords(assetId) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get(`goods/${goodId}/services`)
-        this.serviceRecords[goodId] = response.data || []
+        const response = await apiService.get(`goods/${assetId}/services`)
+        this.serviceRecords[assetId] = response.data || []
         return response.data
       } catch (error) {
         this.error = error.message
@@ -233,21 +233,21 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async deleteServiceRecord(goodId, serviceId) {
+    async deleteServiceRecord(assetId, serviceId) {
       this.loading = true
       this.error = null
       try {
-        await apiService.delete(`goods/${goodId}/services/${serviceId}`)
+        await apiService.delete(`goods/${assetId}/services/${serviceId}`)
 
         // Remove from local cache
-        if (this.serviceRecords[goodId]) {
-          this.serviceRecords[goodId] = this.serviceRecords[goodId].filter(
+        if (this.serviceRecords[assetId]) {
+          this.serviceRecords[assetId] = this.serviceRecords[assetId].filter(
             s => s.id !== serviceId
           )
         }
 
         // Refresh the good to update stats
-        await this.fetchGood(goodId)
+        await this.fetchAsset(assetId)
       } catch (error) {
         this.error = error.message
         console.error('Error deleting service record:', error)
@@ -257,17 +257,17 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async addAttachment(goodId, attachmentData) {
+    async addAttachment(assetId, attachmentData) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.post(`goods/${goodId}/attachments`, attachmentData)
+        const response = await apiService.post(`goods/${assetId}/attachments`, attachmentData)
 
         // Add to local cache
-        if (!this.attachments[goodId]) {
-          this.attachments[goodId] = []
+        if (!this.attachments[assetId]) {
+          this.attachments[assetId] = []
         }
-        this.attachments[goodId].unshift(response.data)
+        this.attachments[assetId].unshift(response.data)
 
         return response.data
       } catch (error) {
@@ -279,12 +279,12 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async fetchAttachments(goodId) {
+    async fetchAttachments(assetId) {
       this.loading = true
       this.error = null
       try {
-        const response = await apiService.get(`goods/${goodId}/attachments`)
-        this.attachments[goodId] = response.data || []
+        const response = await apiService.get(`goods/${assetId}/attachments`)
+        this.attachments[assetId] = response.data || []
         return response.data
       } catch (error) {
         this.error = error.message
@@ -295,15 +295,15 @@ export const useGoodsStore = defineStore('goods', {
       }
     },
 
-    async deleteAttachment(goodId, attachmentId) {
+    async deleteAttachment(assetId, attachmentId) {
       this.loading = true
       this.error = null
       try {
-        await apiService.delete(`goods/${goodId}/attachments/${attachmentId}`)
+        await apiService.delete(`goods/${assetId}/attachments/${attachmentId}`)
 
         // Remove from local cache
-        if (this.attachments[goodId]) {
-          this.attachments[goodId] = this.attachments[goodId].filter(
+        if (this.attachments[assetId]) {
+          this.attachments[assetId] = this.attachments[assetId].filter(
             a => a.id !== attachmentId
           )
         }

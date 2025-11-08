@@ -14,9 +14,9 @@ import (
 	"gorm.io/gorm"
 )
 
-// GoodWithStats includes a good with calculated statistics
-type GoodWithStats struct {
-	models.Good
+// AssetWithStats includes an asset with calculated statistics
+type AssetWithStats struct {
+	models.Asset
 	WarrantyDaysTotal     *int     `json:"warrantyDaysTotal"`
 	WarrantyDaysPassed    *int     `json:"warrantyDaysPassed"`
 	WarrantyDaysRemaining *int     `json:"warrantyDaysRemaining"`
@@ -28,8 +28,8 @@ type GoodWithStats struct {
 	TotalCost             float64  `json:"totalCost"` // Purchase price + service costs
 }
 
-// ListGoods returns all goods for the authenticated user
-func ListGoods(c *gin.Context) {
+// ListAssets returns all assets for the authenticated user
+func ListAssets(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
@@ -46,100 +46,100 @@ func ListGoods(c *gin.Context) {
 		query = query.Where("category = ?", category)
 	}
 
-	var goods []models.Good
+	var assets []models.Asset
 	if err := query.Order("purchase_date DESC, created_at DESC").
 		Preload("Attachments").
 		Preload("ServiceRecords").
-		Find(&goods).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch goods")
+		Find(&assets).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch assets")
 		return
 	}
 
 	// Enrich with statistics
-	enrichedGoods := make([]GoodWithStats, len(goods))
-	for i, good := range goods {
-		enrichedGoods[i] = calculateGoodStats(good)
+	enrichedAssets := make([]AssetWithStats, len(assets))
+	for i, asset := range assets {
+		enrichedAssets[i] = calculateAssetStats(asset)
 	}
 
-	utilities.SuccessResponse(c, enrichedGoods, "Goods retrieved successfully")
+	utilities.SuccessResponse(c, enrichedAssets, "Assets retrieved successfully")
 }
 
-// GetGood returns a specific good by ID with statistics
-func GetGood(c *gin.Context) {
+// GetAsset returns a specific asset by ID with statistics
+func GetAsset(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).
 		Preload("Attachments").
 		Preload("ServiceRecords", "deleted_at IS NULL", func(db *gorm.DB) *gorm.DB {
 			return db.Order("service_date DESC")
 		}).
-		First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+		First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
-	response := calculateGoodStats(good)
-	utilities.SuccessResponse(c, response, "Good retrieved successfully")
+	response := calculateAssetStats(asset)
+	utilities.SuccessResponse(c, response, "Asset retrieved successfully")
 }
 
-// CreateGood creates a new good record
-func CreateGood(c *gin.Context) {
+// CreateAsset creates a new asset record
+func CreateAsset(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	var good models.Good
-	if err := c.ShouldBindJSON(&good); err != nil {
+	var asset models.Asset
+	if err := c.ShouldBindJSON(&asset); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Validate purchase date is provided
-	if good.PurchaseDate.IsZero() {
+	if asset.PurchaseDate.IsZero() {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Purchase date is required")
 		return
 	}
 
-	good.UserID = userID
+	asset.UserID = userID
 
-	if err := database.DB.Create(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create good")
+	if err := database.DB.Create(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create asset")
 		return
 	}
 
-	utilities.CreatedResponse(c, good, "Good created successfully")
+	utilities.CreatedResponse(c, asset, "Asset created successfully")
 }
 
-// UpdateGood updates a good record
-func UpdateGood(c *gin.Context) {
+// UpdateAsset updates an asset record
+func UpdateAsset(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	var existingGood models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&existingGood).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	var existingGood models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&existingGood).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
@@ -155,34 +155,34 @@ func UpdateGood(c *gin.Context) {
 	delete(updateData, "createdAt")
 
 	if err := database.DB.Model(&existingGood).Updates(updateData).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update good")
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update asset")
 		return
 	}
 
-	utilities.SuccessResponse(c, existingGood, "Good updated successfully")
+	utilities.SuccessResponse(c, existingGood, "Asset updated successfully")
 }
 
-// DeleteGood soft deletes a good record
-func DeleteGood(c *gin.Context) {
+// DeleteAsset soft deletes an asset record
+func DeleteAsset(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
-	// Start transaction to delete good and related records
+	// Start transaction to delete asset and related records
 	tx := database.DB.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -191,23 +191,23 @@ func DeleteGood(c *gin.Context) {
 	}()
 
 	// Soft delete attachments
-	if err := tx.Where("good_id = ?", goodID).Delete(&models.GoodAttachment{}).Error; err != nil {
+	if err := tx.Where("good_id = ?", assetID).Delete(&models.AssetAttachment{}).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete attachments")
 		return
 	}
 
 	// Soft delete service records
-	if err := tx.Where("good_id = ?", goodID).Delete(&models.ServiceRecord{}).Error; err != nil {
+	if err := tx.Where("good_id = ?", assetID).Delete(&models.ServiceRecord{}).Error; err != nil {
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete service records")
 		return
 	}
 
-	// Soft delete the good
-	if err := tx.Delete(&good).Error; err != nil {
+	// Soft delete the asset
+	if err := tx.Delete(&asset).Error; err != nil {
 		tx.Rollback()
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete good")
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete asset")
 		return
 	}
 
@@ -216,10 +216,10 @@ func DeleteGood(c *gin.Context) {
 		return
 	}
 
-	utilities.SuccessResponse(c, nil, "Good deleted successfully")
+	utilities.SuccessResponse(c, nil, "Asset deleted successfully")
 }
 
-// CreateServiceRecord adds a service record for a good
+// CreateServiceRecord adds a service record for an asset
 func CreateServiceRecord(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
@@ -227,16 +227,16 @@ func CreateServiceRecord(c *gin.Context) {
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	// Verify good belongs to user
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	// Verify asset belongs to user
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
@@ -253,7 +253,7 @@ func CreateServiceRecord(c *gin.Context) {
 	}
 
 	serviceRecord.UserID = userID
-	serviceRecord.GoodID = goodID
+	serviceRecord.AssetID = assetID
 
 	if err := database.DB.Create(&serviceRecord).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create service record")
@@ -263,7 +263,7 @@ func CreateServiceRecord(c *gin.Context) {
 	utilities.CreatedResponse(c, serviceRecord, "Service record created successfully")
 }
 
-// ListServiceRecords returns all service records for a specific good
+// ListServiceRecords returns all service records for a specific asset
 func ListServiceRecords(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
@@ -271,21 +271,21 @@ func ListServiceRecords(c *gin.Context) {
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	// Verify good belongs to user
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	// Verify asset belongs to user
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
 	var serviceRecords []models.ServiceRecord
-	if err := database.DB.Where("good_id = ? AND user_id = ?", goodID, userID).
+	if err := database.DB.Where("good_id = ? AND user_id = ?", assetID, userID).
 		Order("service_date DESC, created_at DESC").
 		Find(&serviceRecords).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch service records")
@@ -323,7 +323,7 @@ func DeleteServiceRecord(c *gin.Context) {
 	utilities.SuccessResponse(c, nil, "Service record deleted successfully")
 }
 
-// AddAttachment links an uploaded file to a good
+// AddAttachment links an uploaded file to an asset
 func AddAttachment(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
@@ -331,27 +331,27 @@ func AddAttachment(c *gin.Context) {
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	// Verify good belongs to user
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	// Verify asset belongs to user
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
-	var attachment models.GoodAttachment
+	var attachment models.AssetAttachment
 	if err := c.ShouldBindJSON(&attachment); err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	attachment.UserID = userID
-	attachment.GoodID = goodID
+	attachment.AssetID = assetID
 
 	if err := database.DB.Create(&attachment).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to add attachment")
@@ -361,7 +361,7 @@ func AddAttachment(c *gin.Context) {
 	utilities.CreatedResponse(c, attachment, "Attachment added successfully")
 }
 
-// ListAttachments returns all attachments for a specific good
+// ListAttachments returns all attachments for a specific asset
 func ListAttachments(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
@@ -369,21 +369,21 @@ func ListAttachments(c *gin.Context) {
 		return
 	}
 
-	goodID, err := uuid.Parse(c.Param("id"))
+	assetID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid good ID")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
 
-	// Verify good belongs to user
-	var good models.Good
-	if err := database.DB.Where("id = ? AND user_id = ?", goodID, userID).First(&good).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusNotFound, "Good not found")
+	// Verify asset belongs to user
+	var asset models.Asset
+	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
-	var attachments []models.GoodAttachment
-	if err := database.DB.Where("good_id = ? AND user_id = ?", goodID, userID).
+	var attachments []models.AssetAttachment
+	if err := database.DB.Where("good_id = ? AND user_id = ?", assetID, userID).
 		Order("created_at DESC").
 		Find(&attachments).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch attachments")
@@ -407,7 +407,7 @@ func DeleteAttachment(c *gin.Context) {
 		return
 	}
 
-	var attachment models.GoodAttachment
+	var attachment models.AssetAttachment
 	if err := database.DB.Where("id = ? AND user_id = ?", attachmentID, userID).First(&attachment).Error; err != nil {
 		utilities.ErrorResponse(c, http.StatusNotFound, "Attachment not found")
 		return
@@ -421,19 +421,19 @@ func DeleteAttachment(c *gin.Context) {
 	utilities.SuccessResponse(c, nil, "Attachment deleted successfully")
 }
 
-// GetGoodsStats returns summary statistics for all goods
-func GetGoodsStats(c *gin.Context) {
+// GetAssetsStats returns summary statistics for all assets
+func GetAssetsStats(c *gin.Context) {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	var goods []models.Good
+	var assets []models.Asset
 	if err := database.DB.Where("user_id = ?", userID).
 		Preload("ServiceRecords").
-		Find(&goods).Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch goods")
+		Find(&assets).Error; err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch assets")
 		return
 	}
 
@@ -449,24 +449,24 @@ func GetGoodsStats(c *gin.Context) {
 	now := time.Now()
 	thirtyDaysFromNow := now.AddDate(0, 0, 30)
 
-	stats.TotalGoods = len(goods)
+	stats.TotalGoods = len(assets)
 
-	for _, good := range goods {
-		if good.Status == "active" {
+	for _, asset := range assets {
+		if asset.Status == "active" {
 			stats.ActiveGoods++
-			stats.TotalValue += good.PurchasePrice
+			stats.TotalValue += asset.PurchasePrice
 		}
 
 		// Calculate service costs
-		for _, service := range good.ServiceRecords {
+		for _, service := range asset.ServiceRecords {
 			stats.TotalServiceCost += service.Cost
 		}
 
 		// Check warranty status
-		if good.WarrantyEndDate != nil {
-			if good.WarrantyEndDate.After(now) {
+		if asset.WarrantyEndDate != nil {
+			if asset.WarrantyEndDate.After(now) {
 				stats.GoodsUnderWarranty++
-				if good.WarrantyEndDate.Before(thirtyDaysFromNow) {
+				if asset.WarrantyEndDate.Before(thirtyDaysFromNow) {
 					stats.GoodsWarrantyExpiring++
 				}
 			}
@@ -476,18 +476,18 @@ func GetGoodsStats(c *gin.Context) {
 	utilities.SuccessResponse(c, stats, "Statistics retrieved successfully")
 }
 
-// Helper function to calculate statistics for a good
-func calculateGoodStats(good models.Good) GoodWithStats {
-	stats := GoodWithStats{
-		Good: good,
+// Helper function to calculate statistics for an asset
+func calculateAssetStats(asset models.Asset) AssetWithStats {
+	stats := AssetWithStats{
+		Asset: asset,
 	}
 
 	now := time.Now()
 
 	// Calculate warranty statistics
-	if good.WarrantyStartDate != nil && good.WarrantyEndDate != nil {
-		startDate := *good.WarrantyStartDate
-		endDate := *good.WarrantyEndDate
+	if asset.WarrantyStartDate != nil && asset.WarrantyEndDate != nil {
+		startDate := *asset.WarrantyStartDate
+		endDate := *asset.WarrantyEndDate
 
 		totalDays := int(endDate.Sub(startDate).Hours() / 24)
 		daysPassed := int(now.Sub(startDate).Hours() / 24)
@@ -514,19 +514,19 @@ func calculateGoodStats(good models.Good) GoodWithStats {
 	}
 
 	// Calculate days owned
-	stats.DaysOwned = int(now.Sub(good.PurchaseDate.Time).Hours() / 24)
+	stats.DaysOwned = int(now.Sub(asset.PurchaseDate.Time).Hours() / 24)
 	if stats.DaysOwned < 1 {
 		stats.DaysOwned = 1 // Avoid division by zero
 	}
 
 	// Calculate total service cost
-	for _, service := range good.ServiceRecords {
+	for _, service := range asset.ServiceRecords {
 		stats.TotalServiceCost += service.Cost
 		stats.ServiceCount++
 	}
 
 	// Calculate total cost
-	stats.TotalCost = good.PurchasePrice + stats.TotalServiceCost
+	stats.TotalCost = asset.PurchasePrice + stats.TotalServiceCost
 
 	// Calculate price per day
 	stats.PricePerDay = stats.TotalCost / float64(stats.DaysOwned)
