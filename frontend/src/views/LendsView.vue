@@ -78,7 +78,7 @@
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <h5 class="card-title mb-0">{{ lend.debtorName }}</h5>
-              <span class="badge" :class="getStatusClass(lend.status)">{{ lend.status }}</span>
+              <span class="badge" :class="getStatusClass(lend.status)">{{ formatStatus(lend.status) }}</span>
             </div>
 
             <p class="text-muted mb-2" v-if="lend.description">{{ lend.description }}</p>
@@ -263,6 +263,7 @@ import { useLendsStore } from '@/stores/lends'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
+import { formatStatus } from '@/utils/textUtils'
 
 const lendsStore = useLendsStore()
 const accountsStore = useAccountsStore()

@@ -428,7 +428,7 @@
                     <td>{{ formatDate(holding.purchaseDate) }}</td>
                     <td>
                       <span class="badge" :class="holdingStatusBadgeClass(holding.status)">
-                        {{ holding.status }}
+                        {{ formatStatus(holding.status) }}
                       </span>
                     </td>
                     <td>
@@ -745,6 +745,7 @@ import { useAccountsStore } from '@/stores/accounts'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
+import { formatStatus } from '@/utils/textUtils'
 
 const goalsStore = useGoalsStore()
 const accountsStore = useAccountsStore()
