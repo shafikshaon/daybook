@@ -238,3 +238,91 @@ func DeleteOldActivityLogs(c *gin.Context) {
 		"cutoffDate":   cutoffDate,
 	}, "Old activity logs deleted successfully")
 }
+
+// BackfillActivityLogs generates activity logs for existing historical data
+func BackfillActivityLogs(c *gin.Context) {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Parse request body for backfill options
+	var requestBody struct {
+		Module    string  `json:"module"`     // Optional: specific module to backfill
+		DryRun    bool    `json:"dryRun"`     // Optional: if true, only count without creating logs
+		StartDate *string `json:"startDate"`  // Optional: only backfill records after this date (YYYY-MM-DD)
+		EndDate   *string `json:"endDate"`    // Optional: only backfill records before this date (YYYY-MM-DD)
+		BatchSize int     `json:"batchSize"`  // Optional: number of records to process in each batch
+		AllUsers  bool    `json:"allUsers"`   // Optional: admin only - backfill for all users
+	}
+
+	if err := c.ShouldBindJSON(&requestBody); err != nil {
+		// If no body provided, use defaults
+		requestBody.DryRun = false
+	}
+
+	// Build backfill options
+	options := utilities.BackfillOptions{
+		UserID:    &userID,
+		Module:    requestBody.Module,
+		DryRun:    requestBody.DryRun,
+		BatchSize: requestBody.BatchSize,
+	}
+
+	// Handle all users option (you may want to add admin check here)
+	if requestBody.AllUsers {
+		options.UserID = nil
+	}
+
+	// Parse dates if provided
+	if requestBody.StartDate != nil {
+		startDate, err := time.Parse("2006-01-02", *requestBody.StartDate)
+		if err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid start date format. Use YYYY-MM-DD")
+			return
+		}
+		options.StartDate = &startDate
+	}
+
+	if requestBody.EndDate != nil {
+		endDate, err := time.Parse("2006-01-02", *requestBody.EndDate)
+		if err != nil {
+			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid end date format. Use YYYY-MM-DD")
+			return
+		}
+		options.EndDate = &endDate
+	}
+
+	// Execute backfill
+	results, err := utilities.BackfillAllActivities(options)
+	if err != nil {
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to backfill activity logs: "+err.Error())
+		return
+	}
+
+	// Calculate totals
+	var totalRecords, totalCreated, totalSkipped, totalErrors int64
+	for _, result := range results {
+		totalRecords += result.TotalRecords
+		totalCreated += result.LogsCreated
+		totalSkipped += result.LogsSkipped
+		totalErrors += result.Errors
+	}
+
+	message := "Activity logs backfilled successfully"
+	if requestBody.DryRun {
+		message = "Dry run completed - no logs were created"
+	}
+
+	utilities.SuccessResponse(c, map[string]interface{}{
+		"summary": map[string]interface{}{
+			"totalRecords":   totalRecords,
+			"logsCreated":    totalCreated,
+			"logsSkipped":    totalSkipped,
+			"errors":         totalErrors,
+			"dryRun":         requestBody.DryRun,
+		},
+		"details": results,
+	}, message)
+}
