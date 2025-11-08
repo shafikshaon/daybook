@@ -736,10 +736,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useAssetsStore } from '@/stores/assets'
 import { useSettingsStore } from '@/stores/settings'
+import { useNotification } from '@/composables/useNotification'
 import FileUpload from '@/components/FileUpload.vue'
 
 const assetsStore = useAssetsStore()
 const settingsStore = useSettingsStore()
+const { confirm, success, error } = useNotification()
 
 const loading = ref(false)
 const filter = ref('all')
@@ -910,13 +912,22 @@ const saveGood = async () => {
 }
 
 const confirmDelete = async (id) => {
-  if (confirm('Are you sure you want to delete this asset? This will also delete all service records and attachments.')) {
+  const confirmed = await confirm({
+    title: 'Delete Asset',
+    message: 'Are you sure you want to delete this asset? This will also delete all service records and attachments.',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (confirmed) {
     loading.value = true
     try {
       await assetsStore.deleteAsset(id)
-    } catch (error) {
-      console.error('Error deleting asset:', error)
-      alert('Error deleting asset. Please try again.')
+      success('Asset deleted successfully')
+    } catch (err) {
+      console.error('Error deleting asset:', err)
+      error(err.response?.data?.message || err.message || 'Error deleting asset. Please try again.')
     } finally {
       loading.value = false
     }
@@ -1004,14 +1015,24 @@ const addService = async () => {
 
 const deleteService = async (serviceId) => {
   if (!selectedAsset.value) return
-  if (!confirm('Are you sure you want to delete this service record?')) return
+
+  const confirmed = await confirm({
+    title: 'Delete Service Record',
+    message: 'Are you sure you want to delete this service record?',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (!confirmed) return
 
   loading.value = true
   try {
     await assetsStore.deleteServiceRecord(selectedAsset.value.id, serviceId)
-  } catch (error) {
-    console.error('Error deleting service record:', error)
-    alert('Error deleting service record. Please try again.')
+    success('Service record deleted successfully')
+  } catch (err) {
+    console.error('Error deleting service record:', err)
+    error(err.response?.data?.message || err.message || 'Error deleting service record. Please try again.')
   } finally {
     loading.value = false
   }
@@ -1030,14 +1051,24 @@ const closeAttachmentsModal = () => {
 
 const deleteAttachment = async (attachmentId) => {
   if (!selectedAsset.value) return
-  if (!confirm('Are you sure you want to delete this attachment?')) return
+
+  const confirmed = await confirm({
+    title: 'Delete Attachment',
+    message: 'Are you sure you want to delete this attachment?',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (!confirmed) return
 
   loading.value = true
   try {
     await assetsStore.deleteAttachment(selectedAsset.value.id, attachmentId)
-  } catch (error) {
-    console.error('Error deleting attachment:', error)
-    alert('Error deleting attachment. Please try again.')
+    success('Attachment deleted successfully')
+  } catch (err) {
+    console.error('Error deleting attachment:', err)
+    error(err.response?.data?.message || err.message || 'Error deleting attachment. Please try again.')
   } finally {
     loading.value = false
   }
@@ -1122,16 +1153,26 @@ const handleEditFormFilesUploaded = async (files) => {
 
 const deleteEditFormAttachment = async (attachmentId) => {
   if (!editingAssetId.value) return
-  if (!confirm('Are you sure you want to delete this attachment?')) return
+
+  const confirmed = await confirm({
+    title: 'Delete Attachment',
+    message: 'Are you sure you want to delete this attachment?',
+    confirmText: 'Delete',
+    cancelText: 'Cancel',
+    variant: 'danger'
+  })
+
+  if (!confirmed) return
 
   loading.value = true
   try {
     await assetsStore.deleteAttachment(editingAssetId.value, attachmentId)
     // Refresh the attachments list
     editFormAttachments.value = assetsStore.getAttachmentsForAsset(editingAssetId.value)
-  } catch (error) {
-    console.error('Error deleting attachment:', error)
-    alert('Error deleting attachment. Please try again.')
+    success('Attachment deleted successfully')
+  } catch (err) {
+    console.error('Error deleting attachment:', err)
+    error(err.response?.data?.message || err.message || 'Error deleting attachment. Please try again.')
   } finally {
     loading.value = false
   }
