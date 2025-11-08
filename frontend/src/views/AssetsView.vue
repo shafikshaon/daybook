@@ -336,6 +336,197 @@
       </div>
     </div>
 
+    <!-- Asset Details Modal -->
+    <div
+      class="modal fade"
+      :class="{ 'show d-block': showDetailsModal }"
+      style="background-color: rgba(0,0,0,0.5);"
+      v-if="showDetailsModal"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Asset Details - {{ selectedAsset?.name }}</h5>
+            <button type="button" class="btn-close" @click="closeDetailsModal"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="selectedAsset">
+              <!-- Basic Information -->
+              <div class="mb-4">
+                <h6 class="text-primary mb-3">Basic Information</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="text-muted small">Name</label>
+                    <div class="fw-bold">{{ selectedAsset.name }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Status</label>
+                    <div><span class="badge" :class="getStatusClass(selectedAsset.status)">{{ formatStatus(selectedAsset.status) }}</span></div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.category">
+                    <label class="text-muted small">Category</label>
+                    <div>{{ selectedAsset.category }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.brand">
+                    <label class="text-muted small">Brand</label>
+                    <div>{{ selectedAsset.brand }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.model">
+                    <label class="text-muted small">Model</label>
+                    <div>{{ selectedAsset.model }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.serialNumber">
+                    <label class="text-muted small">Serial Number</label>
+                    <div>{{ selectedAsset.serialNumber }}</div>
+                  </div>
+                  <div class="col-12" v-if="selectedAsset.description">
+                    <label class="text-muted small">Description</label>
+                    <div>{{ selectedAsset.description }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Purchase Information -->
+              <div class="mb-4">
+                <h6 class="text-primary mb-3">Purchase Information</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="text-muted small">Purchase Date</label>
+                    <div>{{ formatDate(selectedAsset.purchaseDate) }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Purchase Price</label>
+                    <div class="fw-bold">{{ formatCurrency(selectedAsset.purchasePrice) }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.purchaseLocation">
+                    <label class="text-muted small">Purchase Location</label>
+                    <div>{{ selectedAsset.purchaseLocation }}</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Days Owned</label>
+                    <div>{{ selectedAsset.daysOwned || 0 }} days</div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="text-muted small">Price per Day</label>
+                    <div>{{ formatCurrency(selectedAsset.pricePerDay || 0) }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Warranty Information -->
+              <div class="mb-4" v-if="selectedAsset.warrantyStatus !== 'no_warranty'">
+                <h6 class="text-primary mb-3">Warranty Information</h6>
+                <div class="warranty-info-card p-3 rounded mb-3" :class="getWarrantyBgClass(selectedAsset.warrantyStatus)">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="fw-bold">{{ getWarrantyStatusText(selectedAsset.warrantyStatus) }}</span>
+                    <span class="badge" :class="getWarrantyBadgeClass(selectedAsset.warrantyStatus)">
+                      {{ selectedAsset.warrantyStatus === 'active' ? selectedAsset.warrantyDaysRemaining + ' days remaining' : 'Expired' }}
+                    </span>
+                  </div>
+                  <div v-if="selectedAsset.warrantyStatus === 'active'" class="progress" style="height: 6px;">
+                    <div
+                      class="progress-bar"
+                      :class="selectedAsset.warrantyDaysRemaining <= 30 ? 'bg-warning' : 'bg-success'"
+                      :style="{ width: getWarrantyProgress(selectedAsset) + '%' }"
+                    ></div>
+                  </div>
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6" v-if="selectedAsset.warrantyStartDate">
+                    <label class="text-muted small">Warranty Start Date</label>
+                    <div>{{ formatDate(selectedAsset.warrantyStartDate) }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.warrantyEndDate">
+                    <label class="text-muted small">Warranty End Date</label>
+                    <div>{{ formatDate(selectedAsset.warrantyEndDate) }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.warrantyProvider">
+                    <label class="text-muted small">Warranty Provider</label>
+                    <div>{{ selectedAsset.warrantyProvider }}</div>
+                  </div>
+                  <div class="col-md-6" v-if="selectedAsset.warrantyType">
+                    <label class="text-muted small">Warranty Type</label>
+                    <div>{{ formatStatus(selectedAsset.warrantyType) }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service History Summary -->
+              <div class="mb-4" v-if="currentServiceRecords.length > 0">
+                <h6 class="text-primary mb-3">Service History</h6>
+                <div class="alert alert-info">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span>Total Service Records: <strong>{{ currentServiceRecords.length }}</strong></span>
+                    <span>Total Service Cost: <strong>{{ formatCurrency(selectedAsset.totalServiceCost || 0) }}</strong></span>
+                  </div>
+                </div>
+                <div class="list-group">
+                  <div v-for="service in currentServiceRecords.slice(0, 3)" :key="service.id" class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                      <div>
+                        <div class="d-flex align-items-center gap-2">
+                          <strong>{{ service.serviceType }}</strong>
+                          <span v-if="service.warrantyCovered" class="badge bg-success">Warranty</span>
+                        </div>
+                        <div class="text-muted small">{{ formatDate(service.serviceDate) }}</div>
+                      </div>
+                      <div class="fw-bold">{{ formatCurrency(service.cost) }}</div>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-2 w-100" @click="openServiceModal(selectedAsset); closeDetailsModal()">
+                  View All Service Records
+                </button>
+              </div>
+
+              <!-- Attachments Summary -->
+              <div class="mb-4" v-if="currentAttachments.length > 0">
+                <h6 class="text-primary mb-3">Attachments</h6>
+                <div class="alert alert-info">
+                  Total Attachments: <strong>{{ currentAttachments.length }}</strong>
+                </div>
+                <div class="list-group">
+                  <div v-for="attachment in currentAttachments.slice(0, 3)" :key="attachment.id" class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <div class="fw-bold small">{{ attachment.originalName }}</div>
+                        <span class="badge bg-secondary">{{ formatAttachmentType(attachment.attachmentType) }}</span>
+                      </div>
+                      <button class="btn btn-sm btn-outline-primary" @click="viewAttachment(attachment)">View</button>
+                    </div>
+                  </div>
+                </div>
+                <button class="btn btn-sm btn-outline-primary mt-2 w-100" @click="openAttachmentsModal(selectedAsset); closeDetailsModal()">
+                  View All Attachments
+                </button>
+              </div>
+
+              <!-- Notes -->
+              <div v-if="selectedAsset.notes">
+                <h6 class="text-primary mb-3">Notes</h6>
+                <div class="alert alert-secondary">
+                  {{ selectedAsset.notes }}
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="d-flex gap-2 mt-4">
+                <button class="btn btn-outline-secondary flex-grow-1" @click="editGood(selectedAsset); closeDetailsModal()">
+                  Edit Asset
+                </button>
+                <button class="btn btn-outline-success" @click="openServiceModal(selectedAsset); closeDetailsModal()">
+                  Add Service
+                </button>
+                <button class="btn btn-outline-info" @click="openAttachmentsModal(selectedAsset); closeDetailsModal()">
+                  Add Files
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Service Records Modal -->
     <div
       class="modal fade"
@@ -555,6 +746,7 @@ const filter = ref('all')
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showServiceModal = ref(false)
+const showDetailsModal = ref(false)
 const showAttachmentsModal = ref(false)
 const showViewAttachmentModal = ref(false)
 const selectedAsset = ref(null)
@@ -761,7 +953,7 @@ const viewDetails = async (asset) => {
   selectedAsset.value = asset
   await assetsStore.fetchServiceRecords(asset.id)
   await assetsStore.fetchAttachments(asset.id)
-  showServiceModal.value = true
+  showDetailsModal.value = true
 }
 
 const openServiceModal = async (asset) => {
@@ -781,6 +973,11 @@ const closeServiceModal = () => {
     description: '',
     warrantyCovered: false
   }
+}
+
+const closeDetailsModal = () => {
+  showDetailsModal.value = false
+  selectedAsset.value = null
 }
 
 const addService = async () => {
@@ -986,10 +1183,18 @@ const formatFileSize = (bytes) => {
 
 <style scoped>
 .bg-light-success {
-  background-color: #d4edda;
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
 }
 
 .bg-light-danger {
-  background-color: #f8d7da;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  color: #c62828;
+}
+
+.warranty-info-card {
+  border: 1px solid;
 }
 </style>
