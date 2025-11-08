@@ -2,9 +2,14 @@
   <div class="activity-logs-view fade-in">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="text-purple">Activity Logs</h1>
-      <button class="btn btn-outline-danger" @click="showCleanupModal = true">
-        🗑️ Cleanup Old Logs
-      </button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-success" @click="showRefillModal = true">
+          🔄 Refill All Logs
+        </button>
+        <button class="btn btn-outline-danger" @click="showCleanupModal = true">
+          🗑️ Cleanup Old Logs
+        </button>
+      </div>
     </div>
 
     <!-- Summary Cards -->
@@ -286,6 +291,50 @@
       </div>
     </div>
     <div v-if="showCleanupModal" class="modal-backdrop fade show"></div>
+
+    <!-- Refill Modal -->
+    <div
+      class="modal fade"
+      id="refillModal"
+      tabindex="-1"
+      :class="{ show: showRefillModal }"
+      :style="{ display: showRefillModal ? 'block' : 'none' }"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Refill Activity Logs</h5>
+            <button type="button" class="btn-close" @click="showRefillModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info">
+              <strong>Info:</strong> This will generate activity logs for all existing historical data in your account. This process may take a few moments.
+            </div>
+            <p class="mb-0">
+              The refill process will create activity logs for:
+            </p>
+            <ul class="mt-2">
+              <li>All existing accounts</li>
+              <li>All existing transactions</li>
+              <li>All existing budgets</li>
+              <li>All existing credit cards</li>
+              <li>All existing debts and lends</li>
+              <li>All existing assets and goals</li>
+            </ul>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="showRefillModal = false">
+              Cancel
+            </button>
+            <button type="button" class="btn btn-success" @click="refillLogs" :disabled="refilling">
+              <span v-if="refilling" class="spinner-border spinner-border-sm me-2" role="status"></span>
+              {{ refilling ? 'Refilling...' : 'Refill Logs' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-if="showRefillModal" class="modal-backdrop fade show"></div>
   </div>
 </template>
 
@@ -297,8 +346,10 @@ import { format } from 'date-fns'
 const activityLogsStore = useActivityLogsStore()
 
 const showCleanupModal = ref(false)
+const showRefillModal = ref(false)
 const cleanupDays = ref(90)
 const summaryDays = ref(30)
+const refilling = ref(false)
 
 const localFilters = ref({
   module: null,
@@ -363,6 +414,25 @@ const cleanupLogs = async () => {
     } catch (error) {
       alert('Failed to cleanup logs: ' + error.message)
     }
+  }
+}
+
+const refillLogs = async () => {
+  try {
+    refilling.value = true
+    const result = await activityLogsStore.backfillActivityLogs({})
+    showRefillModal.value = false
+
+    // Show success message with details
+    const message = `Activity logs refilled successfully!\n\nTotal Records: ${result.totalRecords || 0}\nLogs Created: ${result.logsCreated || 0}\nSkipped: ${result.skipped || 0}`
+    alert(message)
+
+    await refreshLogs()
+    await activityLogsStore.fetchActivitySummary(summaryDays.value)
+  } catch (error) {
+    alert('Failed to refill activity logs: ' + error.message)
+  } finally {
+    refilling.value = false
   }
 }
 

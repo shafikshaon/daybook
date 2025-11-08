@@ -117,6 +117,19 @@ export const useActivityLogsStore = defineStore('activityLogs', {
       }
     },
 
+    async backfillActivityLogs(options = {}) {
+      try {
+        const response = await apiService.activityLogs.backfill(options)
+        // Refresh the list and summary after backfill
+        await this.fetchActivityLogs()
+        await this.fetchActivitySummary()
+        return response.data
+      } catch (error) {
+        console.error('Error backfilling activity logs:', error)
+        throw error
+      }
+    },
+
     setFilters(filters) {
       this.filters = { ...this.filters, ...filters }
     },
