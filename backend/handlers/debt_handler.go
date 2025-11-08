@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
 	"daybook-backend/database"
 	"daybook-backend/middleware"
