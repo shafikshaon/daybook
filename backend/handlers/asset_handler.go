@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -30,13 +31,18 @@ type AssetWithStats struct {
 
 // ListAssets returns all assets for the authenticated user
 func ListAssets(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListAssets - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Fetching assets for user")
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Apply filters
 	if status := c.Query("status"); status != "" {
@@ -51,6 +57,7 @@ func ListAssets(c *gin.Context) {
 		Preload("Attachments").
 		Preload("ServiceRecords").
 		Find(&assets).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch assets")
 		return
 	}
@@ -61,13 +68,18 @@ func ListAssets(c *gin.Context) {
 		enrichedAssets[i] = calculateAssetStats(asset)
 	}
 
+	logger.Infof(ctx, "Assets retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, enrichedAssets, "Assets retrieved successfully")
 }
 
 // GetAsset returns a specific asset by ID with statistics
 func GetAsset(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetAsset - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -78,25 +90,32 @@ func GetAsset(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching asset with ID: %s", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).
 		Preload("Attachments").
 		Preload("ServiceRecords", "deleted_at IS NULL", func(db *gorm.DB) *gorm.DB {
 			return db.Order("service_date DESC")
 		}).
 		First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
 	response := calculateAssetStats(asset)
+	logger.Infof(ctx, "Asset retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, response, "Asset retrieved successfully")
 }
 
 // CreateAsset creates a new asset record
 func CreateAsset(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateAsset - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -115,7 +134,9 @@ func CreateAsset(c *gin.Context) {
 
 	asset.UserID = userID
 
-	if err := database.DB.Create(&asset).Error; err != nil {
+	logger.Debugf(ctx, "Creating asset: %s", asset.Name)
+	if err := database.DB.WithContext(ctx).Create(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create asset")
 		return
 	}
@@ -124,13 +145,18 @@ func CreateAsset(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
 		"Asset", asset.ID, "Created asset: "+asset.Name, nil)
 
+	logger.Infof(ctx, "Asset created successfully for user: %s", userID)
 	utilities.CreatedResponse(c, asset, "Asset created successfully")
 }
 
 // UpdateAsset updates an asset record
 func UpdateAsset(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateAsset - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -141,8 +167,10 @@ func UpdateAsset(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing asset with ID: %s", assetID)
 	var existingAsset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&existingAsset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&existingAsset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
@@ -158,16 +186,20 @@ func UpdateAsset(c *gin.Context) {
 	updateData.UserID = existingAsset.UserID
 	updateData.CreatedAt = existingAsset.CreatedAt
 
-	if err := database.DB.Model(&existingAsset).Updates(&updateData).Error; err != nil {
+	logger.Debugf(ctx, "Updating asset: %s", existingAsset.Name)
+	if err := database.DB.WithContext(ctx).Model(&existingAsset).Updates(&updateData).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update asset")
 		return
 	}
 
 	// Reload the asset to get the updated data with all calculated fields
-	if err := database.DB.Where("id = ?", assetID).
+	logger.Debugf(ctx, "Reloading asset data")
+	if err := database.DB.WithContext(ctx).Where("id = ?", assetID).
 		Preload("Attachments").
 		Preload("ServiceRecords").
 		First(&existingAsset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to reload asset")
 		return
 	}
@@ -176,13 +208,18 @@ func UpdateAsset(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAsset,
 		"Asset", existingAsset.ID, "Updated asset: "+existingAsset.Name, nil)
 
+	logger.Infof(ctx, "Asset updated successfully for user: %s", userID)
 	utilities.SuccessResponse(c, existingAsset, "Asset updated successfully")
 }
 
 // DeleteAsset soft deletes an asset record
 func DeleteAsset(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteAsset - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -193,14 +230,17 @@ func DeleteAsset(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching asset with ID: %s for deletion", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
 	// Start transaction to delete asset and related records
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting transaction for asset deletion")
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -208,27 +248,34 @@ func DeleteAsset(c *gin.Context) {
 	}()
 
 	// Soft delete attachments
+	logger.Debugf(ctx, "Deleting asset attachments")
 	if err := tx.Where("asset_id = ?", assetID).Delete(&models.AssetAttachment{}).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete attachments")
 		return
 	}
 
 	// Soft delete service records
+	logger.Debugf(ctx, "Deleting service records")
 	if err := tx.Where("asset_id = ?", assetID).Delete(&models.ServiceRecord{}).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete service records")
 		return
 	}
 
 	// Soft delete the asset
+	logger.Debugf(ctx, "Deleting asset")
 	if err := tx.Delete(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete asset")
 		return
 	}
 
 	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
 		return
 	}
@@ -237,13 +284,18 @@ func DeleteAsset(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
 		"Asset", asset.ID, "Deleted asset: "+asset.Name, nil)
 
+	logger.Infof(ctx, "Asset deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Asset deleted successfully")
 }
 
 // CreateServiceRecord adds a service record for an asset
 func CreateServiceRecord(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateServiceRecord - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -255,8 +307,10 @@ func CreateServiceRecord(c *gin.Context) {
 	}
 
 	// Verify asset belongs to user
+	logger.Debugf(ctx, "Verifying asset ownership for asset ID: %s", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
@@ -276,7 +330,9 @@ func CreateServiceRecord(c *gin.Context) {
 	serviceRecord.UserID = userID
 	serviceRecord.AssetID = assetID
 
-	if err := database.DB.Create(&serviceRecord).Error; err != nil {
+	logger.Debugf(ctx, "Creating service record for asset: %s", asset.Name)
+	if err := database.DB.WithContext(ctx).Create(&serviceRecord).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create service record")
 		return
 	}
@@ -285,13 +341,18 @@ func CreateServiceRecord(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
 		"ServiceRecord", serviceRecord.ID, "Created service record for asset: "+asset.Name, nil)
 
+	logger.Infof(ctx, "Service record created successfully for user: %s", userID)
 	utilities.CreatedResponse(c, serviceRecord, "Service record created successfully")
 }
 
 // ListServiceRecords returns all service records for a specific asset
 func ListServiceRecords(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListServiceRecords - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -303,27 +364,36 @@ func ListServiceRecords(c *gin.Context) {
 	}
 
 	// Verify asset belongs to user
+	logger.Debugf(ctx, "Verifying asset ownership for asset ID: %s", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching service records for asset")
 	var serviceRecords []models.ServiceRecord
-	if err := database.DB.Where("asset_id = ? AND user_id = ?", assetID, userID).
+	if err := database.DB.WithContext(ctx).Where("asset_id = ? AND user_id = ?", assetID, userID).
 		Order("service_date DESC, created_at DESC").
 		Find(&serviceRecords).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch service records")
 		return
 	}
 
+	logger.Infof(ctx, "Service records retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, serviceRecords, "Service records retrieved successfully")
 }
 
 // DeleteServiceRecord deletes a service record
 func DeleteServiceRecord(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteServiceRecord - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -334,13 +404,17 @@ func DeleteServiceRecord(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching service record with ID: %s for deletion", serviceID)
 	var serviceRecord models.ServiceRecord
-	if err := database.DB.Where("id = ? AND user_id = ?", serviceID, userID).First(&serviceRecord).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", serviceID, userID).First(&serviceRecord).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Service record not found")
 		return
 	}
 
-	if err := database.DB.Delete(&serviceRecord).Error; err != nil {
+	logger.Debugf(ctx, "Deleting service record")
+	if err := database.DB.WithContext(ctx).Delete(&serviceRecord).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete service record")
 		return
 	}
@@ -349,13 +423,18 @@ func DeleteServiceRecord(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
 		"ServiceRecord", serviceRecord.ID, "Deleted service record", nil)
 
+	logger.Infof(ctx, "Service record deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Service record deleted successfully")
 }
 
 // AddAttachment links an uploaded file to an asset
 func AddAttachment(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "AddAttachment - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -367,8 +446,10 @@ func AddAttachment(c *gin.Context) {
 	}
 
 	// Verify asset belongs to user
+	logger.Debugf(ctx, "Verifying asset ownership for asset ID: %s", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
@@ -382,7 +463,9 @@ func AddAttachment(c *gin.Context) {
 	attachment.UserID = userID
 	attachment.AssetID = assetID
 
-	if err := database.DB.Create(&attachment).Error; err != nil {
+	logger.Debugf(ctx, "Creating attachment for asset: %s", asset.Name)
+	if err := database.DB.WithContext(ctx).Create(&attachment).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to add attachment")
 		return
 	}
@@ -391,13 +474,18 @@ func AddAttachment(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAsset,
 		"AssetAttachment", attachment.ID, "Added attachment to asset: "+asset.Name, nil)
 
+	logger.Infof(ctx, "Attachment added successfully for user: %s", userID)
 	utilities.CreatedResponse(c, attachment, "Attachment added successfully")
 }
 
 // ListAttachments returns all attachments for a specific asset
 func ListAttachments(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListAttachments - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -409,27 +497,36 @@ func ListAttachments(c *gin.Context) {
 	}
 
 	// Verify asset belongs to user
+	logger.Debugf(ctx, "Verifying asset ownership for asset ID: %s", assetID)
 	var asset models.Asset
-	if err := database.DB.Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", assetID, userID).First(&asset).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Asset not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching attachments for asset")
 	var attachments []models.AssetAttachment
-	if err := database.DB.Where("asset_id = ? AND user_id = ?", assetID, userID).
+	if err := database.DB.WithContext(ctx).Where("asset_id = ? AND user_id = ?", assetID, userID).
 		Order("created_at DESC").
 		Find(&attachments).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch attachments")
 		return
 	}
 
+	logger.Infof(ctx, "Attachments retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, attachments, "Attachments retrieved successfully")
 }
 
 // DeleteAttachment deletes an attachment
 func DeleteAttachment(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteAttachment - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -440,13 +537,17 @@ func DeleteAttachment(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching attachment with ID: %s for deletion", attachmentID)
 	var attachment models.AssetAttachment
-	if err := database.DB.Where("id = ? AND user_id = ?", attachmentID, userID).First(&attachment).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", attachmentID, userID).First(&attachment).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Attachment not found")
 		return
 	}
 
-	if err := database.DB.Delete(&attachment).Error; err != nil {
+	logger.Debugf(ctx, "Deleting attachment")
+	if err := database.DB.WithContext(ctx).Delete(&attachment).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete attachment")
 		return
 	}
@@ -455,21 +556,28 @@ func DeleteAttachment(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAsset,
 		"AssetAttachment", attachment.ID, "Deleted attachment", nil)
 
+	logger.Infof(ctx, "Attachment deleted successfully for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Attachment deleted successfully")
 }
 
 // GetAssetsStats returns summary statistics for all assets
 func GetAssetsStats(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetAssetsStats - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching assets for statistics calculation")
 	var assets []models.Asset
-	if err := database.DB.Where("user_id = ?", userID).
+	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).
 		Preload("ServiceRecords").
 		Find(&assets).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch assets")
 		return
 	}
@@ -516,6 +624,7 @@ func GetAssetsStats(c *gin.Context) {
 		}
 	}
 
+	logger.Infof(ctx, "Asset statistics retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, stats, "Statistics retrieved successfully")
 }
 

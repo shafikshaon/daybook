@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -15,61 +16,89 @@ import (
 
 // ListCreditCards returns all credit cards for the authenticated user
 func ListCreditCards(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListCreditCards - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	var cards []models.CreditCard
-	if err := database.DB.Where("user_id = ?", userID).Order("created_at DESC").Find(&cards).Error; err != nil {
+	logger.Debugf(ctx, "Fetching credit cards from database...")
+	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Find(&cards).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit cards: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch credit cards")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d credit cards for user: %s", len(cards), userID)
 	utilities.SuccessResponse(c, cards, "Credit cards retrieved successfully")
 }
 
 // GetCreditCard returns a specific credit card by ID
 func GetCreditCard(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetCreditCard - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching credit card: %s", cardID)
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved credit card for user: %s", userID)
 	utilities.SuccessResponse(c, card, "Credit card retrieved successfully")
 }
 
 // CreateCreditCard creates a new credit card
 func CreateCreditCard(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateCreditCard - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	var card models.CreditCard
 	if err := c.ShouldBindJSON(&card); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	card.UserID = userID
 
-	if err := database.DB.Create(&card).Error; err != nil {
+	logger.Debugf(ctx, "Creating credit card in database...")
+	if err := database.DB.WithContext(ctx).Create(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error creating credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create credit card")
 		return
 	}
@@ -78,31 +107,42 @@ func CreateCreditCard(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
 		"CreditCard", card.ID, "Created credit card: "+card.Name, nil)
 
+	logger.Infof(ctx, "Successfully created credit card for user: %s", userID)
 	utilities.CreatedResponse(c, card, "Credit card created successfully")
 }
 
 // UpdateCreditCard updates an existing credit card
 func UpdateCreditCard(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateCreditCard - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing credit card: %s", cardID)
 	var existingCard models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&existingCard).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&existingCard).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
 	var updateData models.CreditCard
 	if err := c.ShouldBindJSON(&updateData); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -121,7 +161,9 @@ func UpdateCreditCard(c *gin.Context) {
 	existingCard.Active = updateData.Active
 	existingCard.Notes = updateData.Notes
 
-	if err := database.DB.Save(&existingCard).Error; err != nil {
+	logger.Debugf(ctx, "Updating credit card in database...")
+	if err := database.DB.WithContext(ctx).Save(&existingCard).Error; err != nil {
+		logger.Errorf(ctx, "Database error updating credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update credit card")
 		return
 	}
@@ -130,31 +172,43 @@ func UpdateCreditCard(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleCreditCard,
 		"CreditCard", existingCard.ID, "Updated credit card: "+existingCard.Name, nil)
 
+	logger.Infof(ctx, "Successfully updated credit card for user: %s", userID)
 	utilities.SuccessResponse(c, existingCard, "Credit card updated successfully")
 }
 
 // DeleteCreditCard deletes a credit card
 func DeleteCreditCard(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteCreditCard - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching credit card to delete: %s", cardID)
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
 	// Soft delete
-	if err := database.DB.Delete(&card).Error; err != nil {
+	logger.Debugf(ctx, "Deleting credit card from database...")
+	if err := database.DB.WithContext(ctx).Delete(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error deleting credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete credit card")
 		return
 	}
@@ -163,32 +217,43 @@ func DeleteCreditCard(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleCreditCard,
 		"CreditCard", card.ID, "Deleted credit card: "+card.Name, nil)
 
+	logger.Infof(ctx, "Successfully deleted credit card for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Credit card deleted successfully")
 }
 
 // RecordCreditCardTransaction records a new credit card transaction (purchase)
 func RecordCreditCardTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "RecordCreditCardTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
 	var ccTransaction models.CreditCardTransaction
 	if err := c.ShouldBindJSON(&ccTransaction); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
@@ -197,6 +262,7 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	ccTransaction.CardID = cardID
 
 	// Start database transaction
+	logger.Debugf(ctx, "Starting database transaction...")
 	tx := database.DB.Begin()
 
 	// Create entry in main transactions table so it appears in transaction list
@@ -221,6 +287,7 @@ func RecordCreditCardTransaction(c *gin.Context) {
 
 	if err := tx.Create(&mainTransaction).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error creating transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction record")
 		return
 	}
@@ -231,6 +298,7 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	// Create credit card transaction record
 	if err := tx.Create(&ccTransaction).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error creating credit card transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to record credit card transaction")
 		return
 	}
@@ -247,6 +315,7 @@ func RecordCreditCardTransaction(c *gin.Context) {
 
 	if err := tx.Save(&card).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error updating card balance: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update card balance")
 		return
 	}
@@ -257,81 +326,108 @@ func RecordCreditCardTransaction(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
 		"CreditCardTransaction", ccTransaction.ID, "Created credit card transaction: "+ccTransaction.Description, nil)
 
+	logger.Infof(ctx, "Successfully recorded credit card transaction for user: %s", userID)
 	utilities.CreatedResponse(c, ccTransaction, "Transaction recorded successfully")
 }
 
 // GetCreditCardTransactions returns all transactions for a credit card
 func GetCreditCardTransactions(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetCreditCardTransactions - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching credit card transactions...")
 	var transactions []models.CreditCardTransaction
-	if err := database.DB.Where("card_id = ? AND user_id = ?", cardID, userID).
+	if err := database.DB.WithContext(ctx).Where("card_id = ? AND user_id = ?", cardID, userID).
 		Order("date DESC").Find(&transactions).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching transactions: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch transactions")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d transactions for user: %s", len(transactions), userID)
 	utilities.SuccessResponse(c, transactions, "Transactions retrieved successfully")
 }
 
 // DeleteCreditCardTransaction deletes a credit card transaction
 func DeleteCreditCardTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteCreditCardTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
 	transactionID, err := uuid.Parse(c.Param("transactionId"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
 
 	// Get the transaction
+	logger.Debugf(ctx, "Fetching transaction to delete: %s", transactionID)
 	var transaction models.CreditCardTransaction
-	if err := database.DB.Where("id = ? AND card_id = ? AND user_id = ?", transactionID, cardID, userID).First(&transaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND card_id = ? AND user_id = ?", transactionID, cardID, userID).First(&transaction).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Transaction not found")
 		return
 	}
 
 	// Get the card
+	logger.Debugf(ctx, "Fetching credit card...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
 	// Start database transaction
+	logger.Debugf(ctx, "Starting database transaction...")
 	tx := database.DB.Begin()
 
 	// Delete the linked main transaction first (if it exists)
 	if transaction.TransactionID != uuid.Nil {
 		if err := tx.Delete(&models.Transaction{}, "id = ?", transaction.TransactionID).Error; err != nil {
 			tx.Rollback()
+			logger.Errorf(ctx, "Database error deleting linked transaction: %v", err)
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete linked transaction")
 			return
 		}
@@ -349,6 +445,7 @@ func DeleteCreditCardTransaction(c *gin.Context) {
 
 	if err := tx.Save(&card).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error updating card balance: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update card balance")
 		return
 	}
@@ -356,6 +453,7 @@ func DeleteCreditCardTransaction(c *gin.Context) {
 	// Delete the credit card transaction
 	if err := tx.Delete(&transaction).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error deleting transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete credit card transaction")
 		return
 	}
@@ -366,19 +464,27 @@ func DeleteCreditCardTransaction(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleCreditCard,
 		"CreditCardTransaction", transaction.ID, "Deleted credit card transaction: "+transaction.Description, nil)
 
+	logger.Infof(ctx, "Successfully deleted credit card transaction for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Transaction deleted successfully")
 }
 
 // RecordPayment records a payment for a credit card
 func RecordPayment(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "RecordPayment - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
@@ -391,37 +497,45 @@ func RecordPayment(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&paymentData); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	accountID, err := uuid.Parse(paymentData.AccountID)
 	if err != nil {
+		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
 
 	// Get the credit card
+	logger.Debugf(ctx, "Fetching credit card...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
 	// Get the payment account
+	logger.Debugf(ctx, "Fetching payment account...")
 	var account models.Account
-	if err := database.DB.Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching account: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Payment account not found")
 		return
 	}
 
 	// Validate payment amount
 	if paymentData.Amount > card.CurrentBalance {
+		logger.Warnf(ctx, "Payment amount exceeds current balance")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Payment amount exceeds current balance")
 		return
 	}
 
 	if paymentData.Amount > account.Balance {
+		logger.Warnf(ctx, "Insufficient funds in payment account")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Insufficient funds in payment account")
 		return
 	}
@@ -432,6 +546,7 @@ func RecordPayment(c *gin.Context) {
 	}
 
 	// Start transaction
+	logger.Debugf(ctx, "Starting database transaction...")
 	tx := database.DB.Begin()
 
 	// Create transaction record for the expense
@@ -454,6 +569,7 @@ func RecordPayment(c *gin.Context) {
 
 	if err := tx.Create(&transaction).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error creating transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
 		return
 	}
@@ -462,6 +578,7 @@ func RecordPayment(c *gin.Context) {
 	account.Balance -= paymentData.Amount
 	if err := tx.Save(&account).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error updating account balance: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 		return
 	}
@@ -476,6 +593,7 @@ func RecordPayment(c *gin.Context) {
 
 	if err := tx.Save(&card).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error updating card balance: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update card balance")
 		return
 	}
@@ -493,6 +611,7 @@ func RecordPayment(c *gin.Context) {
 
 	if err := tx.Create(&payment).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error creating payment record: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create payment record")
 		return
 	}
@@ -509,6 +628,7 @@ func RecordPayment(c *gin.Context) {
 
 	if err := tx.Create(&ccTransaction).Error; err != nil {
 		tx.Rollback()
+		logger.Errorf(ctx, "Database error creating card transaction: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create card transaction")
 		return
 	}
@@ -524,81 +644,113 @@ func RecordPayment(c *gin.Context) {
 		"payment": payment,
 	}
 
+	logger.Infof(ctx, "Successfully recorded credit card payment for user: %s", userID)
 	utilities.SuccessResponse(c, response, "Payment recorded successfully")
 }
 
 // GetPayments returns all payments for a credit card
 func GetPayments(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetPayments - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching payments...")
 	var payments []models.CreditCardPayment
-	if err := database.DB.Where("card_id = ? AND user_id = ?", cardID, userID).
+	if err := database.DB.WithContext(ctx).Where("card_id = ? AND user_id = ?", cardID, userID).
 		Order("payment_date DESC").Find(&payments).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching payments: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch payments")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d payments for user: %s", len(payments), userID)
 	utilities.SuccessResponse(c, payments, "Payments retrieved successfully")
 }
 
 // GetStatements returns statements for a credit card
 func GetStatements(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetStatements - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	cardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", cardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Credit card not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching statements...")
 	var statements []models.Statement
-	if err := database.DB.Where("card_id = ? AND user_id = ?", cardID, userID).
+	if err := database.DB.WithContext(ctx).Where("card_id = ? AND user_id = ?", cardID, userID).
 		Order("statement_date DESC").Find(&statements).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching statements: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch statements")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d statements for user: %s", len(statements), userID)
 	utilities.SuccessResponse(c, statements, "Statements retrieved successfully")
 }
 
 // CreateStatement creates a new statement
 func CreateStatement(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateStatement - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	var statement models.Statement
 	if err := c.ShouldBindJSON(&statement); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -606,13 +758,17 @@ func CreateStatement(c *gin.Context) {
 	statement.UserID = userID
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", statement.CardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", statement.CardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
-	if err := database.DB.Create(&statement).Error; err != nil {
+	logger.Debugf(ctx, "Creating statement in database...")
+	if err := database.DB.WithContext(ctx).Create(&statement).Error; err != nil {
+		logger.Errorf(ctx, "Database error creating statement: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create statement")
 		return
 	}
@@ -621,18 +777,25 @@ func CreateStatement(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
 		"Statement", statement.ID, "Created credit card statement", nil)
 
+	logger.Infof(ctx, "Successfully created statement for user: %s", userID)
 	utilities.CreatedResponse(c, statement, "Statement created successfully")
 }
 
 // ListRewards returns rewards for the authenticated user
 func ListRewards(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListRewards - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Optional filter by card
 	if cardID := c.Query("cardId"); cardID != "" {
@@ -644,25 +807,35 @@ func ListRewards(c *gin.Context) {
 		query = query.Where("redeemed = ?", redeemed == "true")
 	}
 
+	logger.Debugf(ctx, "Fetching rewards from database...")
 	var rewards []models.Reward
 	if err := query.Order("earned_date DESC").Find(&rewards).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching rewards: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch rewards")
 		return
 	}
 
+	logger.Infof(ctx, "Successfully retrieved %d rewards for user: %s", len(rewards), userID)
 	utilities.SuccessResponse(c, rewards, "Rewards retrieved successfully")
 }
 
 // RecordReward records a new reward
 func RecordReward(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "RecordReward - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	var reward models.Reward
 	if err := c.ShouldBindJSON(&reward); err != nil {
+		logger.Warnf(ctx, "Validation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -670,13 +843,17 @@ func RecordReward(c *gin.Context) {
 	reward.UserID = userID
 
 	// Verify card belongs to user
+	logger.Debugf(ctx, "Verifying credit card ownership...")
 	var card models.CreditCard
-	if err := database.DB.Where("id = ? AND user_id = ?", reward.CardID, userID).First(&card).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", reward.CardID, userID).First(&card).Error; err != nil {
+		logger.Errorf(ctx, "Database error fetching credit card: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
 
-	if err := database.DB.Create(&reward).Error; err != nil {
+	logger.Debugf(ctx, "Recording reward in database...")
+	if err := database.DB.WithContext(ctx).Create(&reward).Error; err != nil {
+		logger.Errorf(ctx, "Database error creating reward: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to record reward")
 		return
 	}
@@ -685,5 +862,6 @@ func RecordReward(c *gin.Context) {
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCreditCard,
 		"Reward", reward.ID, "Recorded credit card reward", nil)
 
+	logger.Infof(ctx, "Successfully recorded reward for user: %s", userID)
 	utilities.CreatedResponse(c, reward, "Reward recorded successfully")
 }

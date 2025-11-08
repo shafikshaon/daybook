@@ -3,15 +3,15 @@ package database
 import (
 	"context"
 	"fmt"
-	"log"
+	"time"
 
 	"daybook-backend/config"
+	customLogger "daybook-backend/logger"
 	"daybook-backend/models"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 var (
@@ -25,18 +25,29 @@ func InitDatabase(cfg *config.Config) error {
 
 	// Initialize PostgreSQL
 	dsn := cfg.Database.GetDSN()
-	log.Printf("Connecting to database: %s\n", dsn)
+
+	// Create custom GORM logger with 200ms slow query threshold
+	gormLogger := customLogger.NewGormLogger(customLogger.DefaultLogger, 200*time.Millisecond)
+
+	ctx := context.Background()
+	customLogger.Infof(ctx, "Connecting to database: %s", dsn)
+
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: gormLogger,
 	})
 	if err != nil {
+		customLogger.Errorf(ctx, "Failed to connect to database: %v", err)
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
+	customLogger.Infof(ctx, "Database connection established successfully")
+
 	// Enable UUID extension
 	DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+	customLogger.Infof(ctx, "UUID extension enabled")
 
 	// Auto-migrate all models
+	customLogger.Infof(ctx, "Starting database migration...")
 	err = DB.AutoMigrate(
 		&models.User{},
 		&models.Account{},
@@ -66,15 +77,18 @@ func InitDatabase(cfg *config.Config) error {
 		&models.ActivityLog{},
 	)
 	if err != nil {
+		customLogger.Errorf(ctx, "Database migration failed: %v", err)
 		return fmt.Errorf("failed to migrate database: %w", err)
 	}
 
-	log.Println("Database migrated successfully")
+	customLogger.Infof(ctx, "Database migrated successfully")
 
 	return nil
 }
 
 func InitRedis(cfg *config.Config) error {
+	ctx := context.Background()
+
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.GetAddr(),
 		Password: cfg.Redis.Password,
@@ -83,30 +97,47 @@ func InitRedis(cfg *config.Config) error {
 
 	_, err := RedisClient.Ping(ctx).Result()
 	if err != nil {
-		log.Printf("Warning: Failed to connect to Redis: %v\n", err)
-		log.Println("Application will continue without Redis caching")
+		customLogger.Warnf(ctx, "Failed to connect to Redis: %v", err)
+		customLogger.Warnf(ctx, "Application will continue without Redis caching")
 		RedisClient = nil
 		return nil // Don't fail if Redis is not available
 	}
 
-	log.Println("Redis connected successfully")
+	customLogger.Infof(ctx, "Redis connected successfully at %s", cfg.Redis.GetAddr())
 	return nil
 }
 
 func CloseDatabase() error {
+	ctx := context.Background()
+
 	if DB != nil {
+		customLogger.Infof(ctx, "Closing database connection...")
 		sqlDB, err := DB.DB()
 		if err != nil {
+			customLogger.Errorf(ctx, "Error getting database instance: %v", err)
 			return err
 		}
-		return sqlDB.Close()
+		err = sqlDB.Close()
+		if err != nil {
+			customLogger.Errorf(ctx, "Error closing database: %v", err)
+			return err
+		}
+		customLogger.Infof(ctx, "Database connection closed successfully")
 	}
 	return nil
 }
 
 func CloseRedis() error {
+	ctx := context.Background()
+
 	if RedisClient != nil {
-		return RedisClient.Close()
+		customLogger.Infof(ctx, "Closing Redis connection...")
+		err := RedisClient.Close()
+		if err != nil {
+			customLogger.Errorf(ctx, "Error closing Redis: %v", err)
+			return err
+		}
+		customLogger.Infof(ctx, "Redis connection closed successfully")
 	}
 	return nil
 }

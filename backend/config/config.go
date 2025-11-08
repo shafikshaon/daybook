@@ -1,8 +1,8 @@
 package config
 
 import (
+	"context"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -57,25 +57,30 @@ type CORSConfig struct {
 var AppConfig *Config
 
 func LoadConfig() (*Config, error) {
+	ctx := context.Background()
+
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
-		log.Printf("Error loading .env file: %v\n", err)
-		return nil, err
+		// Note: We can't use custom logger here as it might not be initialized yet
+		// Using fmt.Printf for early stage logging
+		fmt.Printf("[WARN] Error loading .env file: %v (will use environment variables)\n", err)
 	}
 
 	// Parse JWT expiration
 	jwtExpiration, err := strconv.Atoi(getEnv("JWT_EXPIRATION", "168"))
 	if err != nil {
-		log.Printf("Invalid JWT_EXPIRATION value, using default: %v\n", err)
+		fmt.Printf("[WARN] Invalid JWT_EXPIRATION value, using default: %v\n", err)
 		jwtExpiration = 168
 	}
 
 	// Parse Redis DB
 	redisDB, err := strconv.Atoi(getEnv("REDIS_DB", "0"))
 	if err != nil {
-		log.Printf("Invalid REDIS_DB value, using default: %v\n", err)
+		fmt.Printf("[WARN] Invalid REDIS_DB value, using default: %v\n", err)
 		redisDB = 0
 	}
+
+	_ = ctx // Context prepared for future use
 
 	// Build config from environment variables
 	config := &Config{

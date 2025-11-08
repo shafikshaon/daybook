@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -16,8 +17,12 @@ import (
 
 // ListActivityLogs returns all activity logs for the authenticated user with filtering
 func ListActivityLogs(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListActivityLogs - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -34,7 +39,8 @@ func ListActivityLogs(c *gin.Context) {
 	endDate := c.Query("endDate")
 
 	// Build query
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Building query for activity logs with filters")
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	if module != "" {
 		query = query.Where("module = ?", module)
@@ -61,15 +67,19 @@ func ListActivityLogs(c *gin.Context) {
 	}
 
 	// Get total count
+	logger.Debugf(ctx, "Counting activity logs")
 	var total int64
 	if err := query.Model(&models.ActivityLog{}).Count(&total).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to count activity logs")
 		return
 	}
 
 	// Get paginated results
+	logger.Debugf(ctx, "Fetching paginated activity logs")
 	var activityLogs []models.ActivityLog
 	if err := query.Order("created_at DESC").Limit(limit).Offset(offset).Find(&activityLogs).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch activity logs")
 		return
 	}
@@ -82,13 +92,18 @@ func ListActivityLogs(c *gin.Context) {
 		"totalPages": (total + int64(limit) - 1) / int64(limit),
 	}
 
+	logger.Infof(ctx, "Activity logs retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, response, "Activity logs retrieved successfully")
 }
 
 // GetActivityLog returns a specific activity log by ID
 func GetActivityLog(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetActivityLog - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -99,19 +114,26 @@ func GetActivityLog(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching activity log with ID: %s", logID)
 	var activityLog models.ActivityLog
-	if err := database.DB.Where("id = ? AND user_id = ?", logID, userID).First(&activityLog).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", logID, userID).First(&activityLog).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Activity log not found")
 		return
 	}
 
+	logger.Infof(ctx, "Activity log retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, activityLog, "Activity log retrieved successfully")
 }
 
 // GetActivitySummary returns summary statistics of user activities
 func GetActivitySummary(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetActivitySummary - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -121,10 +143,12 @@ func GetActivitySummary(c *gin.Context) {
 	startDate := time.Now().AddDate(0, 0, -days)
 
 	// Total activities count
+	logger.Debugf(ctx, "Counting total activities")
 	var totalCount int64
-	if err := database.DB.Model(&models.ActivityLog{}).
+	if err := database.DB.WithContext(ctx).Model(&models.ActivityLog{}).
 		Where("user_id = ? AND created_at >= ?", userID, startDate).
 		Count(&totalCount).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get total count")
 		return
 	}
@@ -134,13 +158,15 @@ func GetActivitySummary(c *gin.Context) {
 		Action string `json:"action"`
 		Count  int64  `json:"count"`
 	}
+	logger.Debugf(ctx, "Fetching action counts")
 	var actionCounts []ActionCount
-	if err := database.DB.Model(&models.ActivityLog{}).
+	if err := database.DB.WithContext(ctx).Model(&models.ActivityLog{}).
 		Select("action, COUNT(*) as count").
 		Where("user_id = ? AND created_at >= ?", userID, startDate).
 		Group("action").
 		Order("count DESC").
 		Scan(&actionCounts).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get action counts")
 		return
 	}
@@ -150,13 +176,15 @@ func GetActivitySummary(c *gin.Context) {
 		Module string `json:"module"`
 		Count  int64  `json:"count"`
 	}
+	logger.Debugf(ctx, "Fetching module counts")
 	var moduleCounts []ModuleCount
-	if err := database.DB.Model(&models.ActivityLog{}).
+	if err := database.DB.WithContext(ctx).Model(&models.ActivityLog{}).
 		Select("module, COUNT(*) as count").
 		Where("user_id = ? AND created_at >= ?", userID, startDate).
 		Group("module").
 		Order("count DESC").
 		Scan(&moduleCounts).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get module counts")
 		return
 	}
@@ -166,37 +194,43 @@ func GetActivitySummary(c *gin.Context) {
 		Date  string `json:"date"`
 		Count int64  `json:"count"`
 	}
+	logger.Debugf(ctx, "Fetching daily activities")
 	var dailyActivities []DailyActivity
 	last7Days := time.Now().AddDate(0, 0, -7)
-	if err := database.DB.Model(&models.ActivityLog{}).
+	if err := database.DB.WithContext(ctx).Model(&models.ActivityLog{}).
 		Select("DATE(created_at) as date, COUNT(*) as count").
 		Where("user_id = ? AND created_at >= ?", userID, last7Days).
 		Group("DATE(created_at)").
 		Order("date DESC").
 		Scan(&dailyActivities).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get daily activities")
 		return
 	}
 
 	// Most active modules
+	logger.Debugf(ctx, "Fetching top modules")
 	var topModules []ModuleCount
-	if err := database.DB.Model(&models.ActivityLog{}).
+	if err := database.DB.WithContext(ctx).Model(&models.ActivityLog{}).
 		Select("module, COUNT(*) as count").
 		Where("user_id = ? AND created_at >= ?", userID, startDate).
 		Group("module").
 		Order("count DESC").
 		Limit(5).
 		Scan(&topModules).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get top modules")
 		return
 	}
 
 	// Recent activities
+	logger.Debugf(ctx, "Fetching recent activities")
 	var recentActivities []models.ActivityLog
-	if err := database.DB.Where("user_id = ?", userID).
+	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).
 		Order("created_at DESC").
 		Limit(10).
 		Find(&recentActivities).Error; err != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to get recent activities")
 		return
 	}
@@ -211,13 +245,18 @@ func GetActivitySummary(c *gin.Context) {
 		"recentActivities": recentActivities,
 	}
 
+	logger.Infof(ctx, "Activity summary retrieved successfully for user: %s", userID)
 	utilities.SuccessResponse(c, summary, "Activity summary retrieved successfully")
 }
 
 // DeleteOldActivityLogs deletes activity logs older than specified days (admin function)
 func DeleteOldActivityLogs(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteOldActivityLogs - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -225,14 +264,17 @@ func DeleteOldActivityLogs(c *gin.Context) {
 	days, _ := strconv.Atoi(c.DefaultQuery("days", "90"))
 	cutoffDate := time.Now().AddDate(0, 0, -days)
 
-	result := database.DB.Where("user_id = ? AND created_at < ?", userID, cutoffDate).
+	logger.Debugf(ctx, "Deleting activity logs older than %d days", days)
+	result := database.DB.WithContext(ctx).Where("user_id = ? AND created_at < ?", userID, cutoffDate).
 		Delete(&models.ActivityLog{})
 
 	if result.Error != nil {
+		logger.Errorf(ctx, "Database operation failed: %v", result.Error)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete old logs")
 		return
 	}
 
+	logger.Infof(ctx, "Old activity logs deleted successfully for user: %s (deleted: %d)", userID, result.RowsAffected)
 	utilities.SuccessResponse(c, map[string]interface{}{
 		"deletedCount": result.RowsAffected,
 		"cutoffDate":   cutoffDate,
@@ -241,8 +283,12 @@ func DeleteOldActivityLogs(c *gin.Context) {
 
 // BackfillActivityLogs generates activity logs for existing historical data
 func BackfillActivityLogs(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "BackfillActivityLogs - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -315,6 +361,7 @@ func BackfillActivityLogs(c *gin.Context) {
 		message = "Dry run completed - no logs were created"
 	}
 
+	logger.Infof(ctx, "Activity logs backfill completed for user: %s (created: %d, skipped: %d, errors: %d)", userID, totalCreated, totalSkipped, totalErrors)
 	utilities.SuccessResponse(c, map[string]interface{}{
 		"summary": map[string]interface{}{
 			"totalRecords":   totalRecords,

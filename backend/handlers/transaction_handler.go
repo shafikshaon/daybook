@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"daybook-backend/database"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
 	"daybook-backend/utilities"
@@ -16,13 +17,18 @@ import (
 
 // ListTransactions returns all transactions for the authenticated user with optional filters
 func ListTransactions(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ListTransactions - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
-	query := database.DB.Where("user_id = ?", userID)
+	logger.Debugf(ctx, "Fetching transactions for user: %s", userID)
+	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Exclude tracking transactions (used for external holdings) unless explicitly requested
 	if c.Query("includeTracking") != "true" {
@@ -82,7 +88,9 @@ func ListTransactions(c *gin.Context) {
 
 	// Get total count before pagination
 	var totalCount int64
+	logger.Debugf(ctx, "Counting transactions for user: %s", userID)
 	if err := query.Model(&models.Transaction{}).Count(&totalCount).Error; err != nil {
+		logger.Errorf(ctx, "Failed to count transactions: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to count transactions")
 		return
 	}
@@ -91,10 +99,13 @@ func ListTransactions(c *gin.Context) {
 	offset := (page - 1) * limit
 
 	var transactions []models.Transaction
+	logger.Debugf(ctx, "Fetching transactions page %d with limit %d for user: %s", page, limit, userID)
 	if err := query.Order("date DESC, created_at DESC").Limit(limit).Offset(offset).Find(&transactions).Error; err != nil {
+		logger.Errorf(ctx, "Failed to fetch transactions: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch transactions")
 		return
 	}
+	logger.Debugf(ctx, "Found %d transactions for user: %s", len(transactions), userID)
 
 	// Enrich transactions with account/credit card names
 	type TransactionResponse struct {
@@ -112,14 +123,14 @@ func ListTransactions(c *gin.Context) {
 		// So we need to fetch the credit card name as the account name
 		if txn.CreditCardID != nil {
 			var card models.CreditCard
-			if err := database.DB.Select("name").Where("id = ?", *txn.CreditCardID).First(&card).Error; err == nil {
+			if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", *txn.CreditCardID).First(&card).Error; err == nil {
 				enrichedTransactions[i].CreditCardName = &card.Name
 				enrichedTransactions[i].AccountName = &card.Name // Use credit card name as account name
 			}
 		} else {
 			// For regular transactions, fetch the account name
 			var account models.Account
-			if err := database.DB.Select("name").Where("id = ?", txn.AccountID).First(&account).Error; err == nil {
+			if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", txn.AccountID).First(&account).Error; err == nil {
 				enrichedTransactions[i].AccountName = &account.Name
 			}
 		}
@@ -127,7 +138,7 @@ func ListTransactions(c *gin.Context) {
 		// For transfers, fetch the destination account name
 		if txn.ToAccountID != nil {
 			var toAccount models.Account
-			if err := database.DB.Select("name").Where("id = ?", *txn.ToAccountID).First(&toAccount).Error; err == nil {
+			if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", *txn.ToAccountID).First(&toAccount).Error; err == nil {
 				enrichedTransactions[i].ToAccountName = &toAccount.Name
 			}
 		}
@@ -148,25 +159,33 @@ func ListTransactions(c *gin.Context) {
 		},
 	}
 
+	logger.Infof(ctx, "Transactions retrieved successfully for user: %s, count: %d, total: %d", userID, len(enrichedTransactions), totalCount)
 	utilities.SuccessResponse(c, response, "Transactions retrieved successfully")
 }
 
 // GetTransaction returns a specific transaction by ID
 func GetTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching transaction %s for user: %s", transactionID, userID)
 	var transaction models.Transaction
-	if err := database.DB.Where("id = ? AND user_id = ?", transactionID, userID).First(&transaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", transactionID, userID).First(&transaction).Error; err != nil {
+		logger.Warnf(ctx, "Transaction not found: %s, error: %v", transactionID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Transaction not found")
 		return
 	}
@@ -185,14 +204,14 @@ func GetTransaction(c *gin.Context) {
 	// So we need to fetch the credit card name as the account name
 	if transaction.CreditCardID != nil {
 		var card models.CreditCard
-		if err := database.DB.Select("name").Where("id = ?", *transaction.CreditCardID).First(&card).Error; err == nil {
+		if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", *transaction.CreditCardID).First(&card).Error; err == nil {
 			response.CreditCardName = &card.Name
 			response.AccountName = &card.Name // Use credit card name as account name
 		}
 	} else {
 		// For regular transactions, fetch the account name
 		var account models.Account
-		if err := database.DB.Select("name").Where("id = ?", transaction.AccountID).First(&account).Error; err == nil {
+		if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", transaction.AccountID).First(&account).Error; err == nil {
 			response.AccountName = &account.Name
 		}
 	}
@@ -200,30 +219,38 @@ func GetTransaction(c *gin.Context) {
 	// For transfers, fetch the destination account name
 	if transaction.ToAccountID != nil {
 		var toAccount models.Account
-		if err := database.DB.Select("name").Where("id = ?", *transaction.ToAccountID).First(&toAccount).Error; err == nil {
+		if err := database.DB.WithContext(ctx).Select("name").Where("id = ?", *transaction.ToAccountID).First(&toAccount).Error; err == nil {
 			response.ToAccountName = &toAccount.Name
 		}
 	}
 
+	logger.Infof(ctx, "Transaction retrieved successfully: %s for user: %s", transactionID, userID)
 	utilities.SuccessResponse(c, response, "Transaction retrieved successfully")
 }
 
 // CreateTransaction creates a new transaction
 func CreateTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "CreateTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Parsing transaction request for user: %s", userID)
 	var transaction models.Transaction
 	if err := c.ShouldBindJSON(&transaction); err != nil {
+		logger.Warnf(ctx, "Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Validate that date is provided
 	if transaction.Date.IsZero() {
+		logger.Warnf(ctx, "Validation failed: Date is required")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Date is required")
 		return
 	}
@@ -235,22 +262,28 @@ func CreateTransaction(c *gin.Context) {
 
 	// Verify account or credit card belongs to user
 	if isCreditCardTransaction {
+		logger.Debugf(ctx, "Verifying credit card ownership for user: %s", userID)
 		var creditCard models.CreditCard
-		if err := database.DB.Where("id = ? AND user_id = ?", transaction.CreditCardID, userID).First(&creditCard).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", transaction.CreditCardID, userID).First(&creditCard).Error; err != nil {
+			logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 			return
 		}
 	} else {
+		logger.Debugf(ctx, "Verifying account ownership for user: %s", userID)
 		var account models.Account
-		if err := database.DB.Where("id = ? AND user_id = ?", transaction.AccountID, userID).First(&account).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", transaction.AccountID, userID).First(&account).Error; err != nil {
+			logger.Warnf(ctx, "Invalid account ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 			return
 		}
 
 		// For transfers, verify the destination account
 		if transaction.Type == "transfer" && transaction.ToAccountID != nil {
+			logger.Debugf(ctx, "Verifying destination account for transfer")
 			var toAccount models.Account
-			if err := database.DB.Where("id = ? AND user_id = ?", *transaction.ToAccountID, userID).First(&toAccount).Error; err != nil {
+			if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", *transaction.ToAccountID, userID).First(&toAccount).Error; err != nil {
+				logger.Warnf(ctx, "Invalid destination account ID: %v", err)
 				utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid destination account ID")
 				return
 			}
@@ -258,7 +291,8 @@ func CreateTransaction(c *gin.Context) {
 	}
 
 	// Start transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting database transaction for creating transaction")
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -266,7 +300,9 @@ func CreateTransaction(c *gin.Context) {
 	}()
 
 	// Create the transaction
+	logger.Debugf(ctx, "Creating transaction in database")
 	if err := tx.Create(&transaction).Error; err != nil {
+		logger.Errorf(ctx, "Failed to create transaction: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create transaction")
 		return
@@ -275,8 +311,10 @@ func CreateTransaction(c *gin.Context) {
 	// Update balance
 	if isCreditCardTransaction {
 		// Update credit card balance
+		logger.Debugf(ctx, "Updating credit card balance")
 		var creditCard models.CreditCard
 		if err := tx.Where("id = ?", transaction.CreditCardID).First(&creditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch credit card: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch credit card")
 			return
@@ -289,14 +327,17 @@ func CreateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&creditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update credit card balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update credit card balance")
 			return
 		}
 	} else {
 		// Update account balance
+		logger.Debugf(ctx, "Updating account balance for type: %s", transaction.Type)
 		var account models.Account
 		if err := tx.Where("id = ?", transaction.AccountID).First(&account).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch account: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account")
 			return
@@ -315,49 +356,62 @@ func CreateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&account).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update account balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 			return
 		}
 	}
 
+	logger.Debugf(ctx, "Committing database transaction")
 	tx.Commit()
 
 	// Log transaction creation activity
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
 		"Transaction", transaction.ID, "Created transaction: "+transaction.Description, nil)
 
+	logger.Infof(ctx, "Transaction created successfully: %s for user: %s", transaction.ID, userID)
 	utilities.CreatedResponse(c, transaction, "Transaction created successfully")
 }
 
 // UpdateTransaction updates an existing transaction
 func UpdateTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching existing transaction %s for user: %s", transactionID, userID)
 	var existingTransaction models.Transaction
-	if err := database.DB.Where("id = ? AND user_id = ?", transactionID, userID).First(&existingTransaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", transactionID, userID).First(&existingTransaction).Error; err != nil {
+		logger.Warnf(ctx, "Transaction not found: %s, error: %v", transactionID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Transaction not found")
 		return
 	}
 
+	logger.Debugf(ctx, "Parsing update data for transaction: %s", transactionID)
 	var updateData models.Transaction
 	if err := c.ShouldBindJSON(&updateData); err != nil {
+		logger.Warnf(ctx, "Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	// Validate that date is provided
 	if updateData.Date.IsZero() {
+		logger.Warnf(ctx, "Validation failed: Date is required")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Date is required")
 		return
 	}
@@ -368,21 +422,26 @@ func UpdateTransaction(c *gin.Context) {
 
 	// Verify account or credit card belongs to user
 	if isCreditCardTransaction {
+		logger.Debugf(ctx, "Verifying credit card ownership for update")
 		var creditCard models.CreditCard
-		if err := database.DB.Where("id = ? AND user_id = ?", updateData.CreditCardID, userID).First(&creditCard).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", updateData.CreditCardID, userID).First(&creditCard).Error; err != nil {
+			logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 			return
 		}
 	} else {
+		logger.Debugf(ctx, "Verifying account ownership for update")
 		var account models.Account
-		if err := database.DB.Where("id = ? AND user_id = ?", updateData.AccountID, userID).First(&account).Error; err != nil {
+		if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", updateData.AccountID, userID).First(&account).Error; err != nil {
+			logger.Warnf(ctx, "Invalid account ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 			return
 		}
 	}
 
 	// Start transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting database transaction for updating transaction: %s", transactionID)
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -390,10 +449,12 @@ func UpdateTransaction(c *gin.Context) {
 	}()
 
 	// Revert old balance changes
+	logger.Debugf(ctx, "Reverting old balance changes for transaction: %s", transactionID)
 	if wasOldCreditCardTransaction {
 		// Revert credit card balance
 		var oldCreditCard models.CreditCard
 		if err := tx.Where("id = ?", existingTransaction.CreditCardID).First(&oldCreditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch old credit card: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch old credit card")
 			return
@@ -406,6 +467,7 @@ func UpdateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&oldCreditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to revert old credit card balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to revert old credit card balance")
 			return
@@ -414,6 +476,7 @@ func UpdateTransaction(c *gin.Context) {
 		// Revert account balance
 		var oldAccount models.Account
 		if err := tx.Where("id = ?", existingTransaction.AccountID).First(&oldAccount).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch old account: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch old account")
 			return
@@ -430,6 +493,7 @@ func UpdateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&oldAccount).Error; err != nil {
+			logger.Errorf(ctx, "Failed to revert old balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to revert old balance")
 			return
@@ -437,6 +501,7 @@ func UpdateTransaction(c *gin.Context) {
 	}
 
 	// Update transaction
+	logger.Debugf(ctx, "Updating transaction record: %s", transactionID)
 	existingTransaction.AccountID = updateData.AccountID
 	existingTransaction.CreditCardID = updateData.CreditCardID
 	existingTransaction.ToAccountID = updateData.ToAccountID
@@ -449,16 +514,19 @@ func UpdateTransaction(c *gin.Context) {
 	existingTransaction.Attachments = updateData.Attachments
 
 	if err := tx.Save(&existingTransaction).Error; err != nil {
+		logger.Errorf(ctx, "Failed to update transaction: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update transaction")
 		return
 	}
 
 	// Apply new balance changes
+	logger.Debugf(ctx, "Applying new balance changes for transaction: %s", transactionID)
 	if isCreditCardTransaction {
 		// Update credit card balance
 		var newCreditCard models.CreditCard
 		if err := tx.Where("id = ?", updateData.CreditCardID).First(&newCreditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch new credit card: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch new credit card")
 			return
@@ -471,6 +539,7 @@ func UpdateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&newCreditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update new credit card balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update new credit card balance")
 			return
@@ -479,6 +548,7 @@ func UpdateTransaction(c *gin.Context) {
 		// Update account balance
 		var newAccount models.Account
 		if err := tx.Where("id = ?", updateData.AccountID).First(&newAccount).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch new account: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch new account")
 			return
@@ -495,43 +565,54 @@ func UpdateTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&newAccount).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update new balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update new balance")
 			return
 		}
 	}
 
+	logger.Debugf(ctx, "Committing database transaction for update")
 	tx.Commit()
 
 	// Log transaction update activity
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleTransaction,
 		"Transaction", existingTransaction.ID, "Updated transaction: "+existingTransaction.Description, nil)
 
+	logger.Infof(ctx, "Transaction updated successfully: %s for user: %s", transactionID, userID)
 	utilities.SuccessResponse(c, existingTransaction, "Transaction updated successfully")
 }
 
 // DeleteTransaction deletes a transaction
 func DeleteTransaction(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "DeleteTransaction - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
 
+	logger.Debugf(ctx, "Fetching transaction %s for deletion", transactionID)
 	var transaction models.Transaction
-	if err := database.DB.Where("id = ? AND user_id = ?", transactionID, userID).First(&transaction).Error; err != nil {
+	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", transactionID, userID).First(&transaction).Error; err != nil {
+		logger.Warnf(ctx, "Transaction not found: %s, error: %v", transactionID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Transaction not found")
 		return
 	}
 
 	// Start transaction
-	tx := database.DB.Begin()
+	logger.Debugf(ctx, "Starting database transaction for deleting transaction: %s", transactionID)
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -542,10 +623,12 @@ func DeleteTransaction(c *gin.Context) {
 	isCreditCardTransaction := transaction.CreditCardID != nil
 
 	// Revert balance changes
+	logger.Debugf(ctx, "Reverting balance changes for transaction deletion: %s", transactionID)
 	if isCreditCardTransaction {
 		// Revert credit card balance
 		var creditCard models.CreditCard
 		if err := tx.Where("id = ?", transaction.CreditCardID).First(&creditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch credit card: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch credit card")
 			return
@@ -558,6 +641,7 @@ func DeleteTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&creditCard).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update credit card balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update credit card balance")
 			return
@@ -566,6 +650,7 @@ func DeleteTransaction(c *gin.Context) {
 		// Revert account balance
 		var account models.Account
 		if err := tx.Where("id = ?", transaction.AccountID).First(&account).Error; err != nil {
+			logger.Errorf(ctx, "Failed to fetch account: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account")
 			return
@@ -582,6 +667,7 @@ func DeleteTransaction(c *gin.Context) {
 		}
 
 		if err := tx.Save(&account).Error; err != nil {
+			logger.Errorf(ctx, "Failed to update account balance: %v", err)
 			tx.Rollback()
 			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account balance")
 			return
@@ -589,37 +675,48 @@ func DeleteTransaction(c *gin.Context) {
 	}
 
 	// Delete transaction (soft delete)
+	logger.Debugf(ctx, "Deleting transaction: %s", transactionID)
 	if err := tx.Delete(&transaction).Error; err != nil {
+		logger.Errorf(ctx, "Failed to delete transaction: %v", err)
 		tx.Rollback()
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete transaction")
 		return
 	}
 
+	logger.Debugf(ctx, "Committing database transaction for deletion")
 	tx.Commit()
 
 	// Log transaction deletion activity
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleTransaction,
 		"Transaction", transaction.ID, "Deleted transaction: "+transaction.Description, nil)
 
+	logger.Infof(ctx, "Transaction deleted successfully: %s for user: %s", transactionID, userID)
 	utilities.SuccessResponse(c, nil, "Transaction deleted successfully")
 }
 
 // BulkImportTransactions imports multiple transactions at once
 func BulkImportTransactions(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "BulkImportTransactions - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
+	logger.Debugf(ctx, "Parsing bulk import request for user: %s", userID)
 	var transactions []models.Transaction
 	if err := c.ShouldBindJSON(&transactions); err != nil {
+		logger.Warnf(ctx, "Invalid request body: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	logger.Infof(ctx, "Starting bulk import of %d transactions for user: %s", len(transactions), userID)
 	// Start transaction
-	tx := database.DB.Begin()
+	tx := database.DB.WithContext(ctx).Begin()
 	defer func() {
 		if r := recover(); r != nil {
 			tx.Rollback()
@@ -668,6 +765,7 @@ func BulkImportTransactions(c *gin.Context) {
 		successCount++
 	}
 
+	logger.Debugf(ctx, "Committing bulk import transaction")
 	tx.Commit()
 
 	result := map[string]interface{}{
@@ -676,13 +774,18 @@ func BulkImportTransactions(c *gin.Context) {
 		"totalCount":   len(transactions),
 	}
 
+	logger.Infof(ctx, "Bulk import completed for user: %s - success: %d, failed: %d, total: %d", userID, successCount, failedCount, len(transactions))
 	utilities.SuccessResponse(c, result, "Bulk import completed")
 }
 
 // GetTransactionStats returns transaction statistics
 func GetTransactionStats(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "GetTransactionStats - Entry")
+
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
 		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -690,8 +793,9 @@ func GetTransactionStats(c *gin.Context) {
 	// Get date range from query params
 	startDate := c.Query("startDate")
 	endDate := c.Query("endDate")
+	logger.Debugf(ctx, "Fetching transaction statistics for user: %s, startDate: %s, endDate: %s", userID, startDate, endDate)
 
-	query := database.DB.Model(&models.Transaction{}).Where("user_id = ?", userID)
+	query := database.DB.WithContext(ctx).Model(&models.Transaction{}).Where("user_id = ?", userID)
 
 	// Exclude tracking transactions from statistics
 	query = query.Where("type != ?", "tracking")
@@ -732,5 +836,7 @@ func GetTransactionStats(c *gin.Context) {
 	// Transaction count
 	query.Count(&stats.TransactionCount)
 
+	logger.Infof(ctx, "Statistics retrieved successfully for user: %s - count: %d, income: %.2f, expense: %.2f",
+		userID, stats.TransactionCount, stats.TotalIncome, stats.TotalExpense)
 	utilities.SuccessResponse(c, stats, "Statistics retrieved successfully")
 }
