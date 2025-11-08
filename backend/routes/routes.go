@@ -229,6 +229,7 @@ func SetupRoutes(router *gin.Engine) {
 				activityRoutes.GET("/summary", handlers.GetActivitySummary)
 				activityRoutes.GET("/:id", handlers.GetActivityLog)
 				activityRoutes.DELETE("/cleanup", handlers.DeleteOldActivityLogs)
+				activityRoutes.POST("/backfill", handlers.BackfillActivityLogs)
 			}
 		}
 	}
