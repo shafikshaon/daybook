@@ -16,7 +16,7 @@ type DebtRecord struct {
 	RemainingAmount float64        `gorm:"not null" json:"remainingAmount"`
 	AccountID       *uuid.UUID     `gorm:"type:uuid;index" json:"accountId"`        // Account affected (if any)
 	Status          string         `gorm:"not null;index" json:"status"`            // active, partially_paid, fully_paid
-	BorrowedDate    time.Time      `gorm:"not null;index" json:"borrowedDate"`
+	BorrowedDate    Date           `gorm:"not null;index" json:"borrowedDate"`
 	DueDate         *time.Time     `json:"dueDate"`
 	InterestRate    *float64       `json:"interestRate"` // Annual interest rate in percentage
 	Description     string         `json:"description"`
@@ -48,7 +48,7 @@ type DebtPayment struct {
 	DebtID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"debtId"`
 	AccountID   uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"`      // Account from which payment is made
 	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	PaymentDate time.Time      `gorm:"not null;index" json:"paymentDate"`
+	PaymentDate Date           `gorm:"not null;index" json:"paymentDate"`
 	Description string         `json:"description"`
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
