@@ -259,6 +259,40 @@ const apiService = {
     }
   },
 
+  // Activity Logs
+  activityLogs: {
+    // Get all activity logs with optional filters
+    async getAll(filters = {}) {
+      const params = new URLSearchParams()
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key])
+        }
+      })
+      const url = params.toString() ? `/activity-logs?${params.toString()}` : '/activity-logs'
+      const response = await api.get(url)
+      return response
+    },
+
+    // Get a single activity log by ID
+    async getById(logId) {
+      const response = await api.get(`/activity-logs/${logId}`)
+      return response
+    },
+
+    // Get activity summary with statistics
+    async getSummary(days = 30) {
+      const response = await api.get(`/activity-logs/summary?days=${days}`)
+      return response
+    },
+
+    // Delete old activity logs
+    async cleanup(days = 90) {
+      const response = await api.delete(`/activity-logs/cleanup?days=${days}`)
+      return response
+    }
+  },
+
   // Utility methods
   generateId() {
     // Note: Backend generates UUIDs, so this is not used with real backend

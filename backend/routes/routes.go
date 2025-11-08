@@ -221,6 +221,15 @@ func SetupRoutes(router *gin.Engine) {
 				uploadRoutes.DELETE("/:filename", handlers.DeleteFile)
 				uploadRoutes.GET("/info/:filename", handlers.GetFileInfo)
 			}
+
+			// Activity log routes
+			activityRoutes := protected.Group("/activity-logs")
+			{
+				activityRoutes.GET("", handlers.ListActivityLogs)
+				activityRoutes.GET("/summary", handlers.GetActivitySummary)
+				activityRoutes.GET("/:id", handlers.GetActivityLog)
+				activityRoutes.DELETE("/cleanup", handlers.DeleteOldActivityLogs)
+			}
 		}
 	}
 }

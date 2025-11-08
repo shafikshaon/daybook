@@ -82,6 +82,9 @@ func Signup(c *gin.Context) {
 		User:  &user,
 	}
 
+	// Log signup activity
+	utilities.LogAuthActivity(c, user.ID, models.ActionCreate, "User registered successfully")
+
 	utilities.CreatedResponse(c, response, "User registered successfully")
 }
 
@@ -123,6 +126,9 @@ func Login(c *gin.Context) {
 		Token: token,
 		User:  &user,
 	}
+
+	// Log login activity
+	utilities.LogAuthActivity(c, user.ID, models.ActionLogin, "User logged in successfully")
 
 	utilities.SuccessResponse(c, response, "Login successful")
 }
@@ -184,6 +190,9 @@ func UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	// Log profile update activity
+	utilities.LogAuthActivity(c, userID, models.ActionUpdate, "User profile updated")
+
 	utilities.SuccessResponse(c, user, "Profile updated successfully")
 }
 
@@ -226,6 +235,9 @@ func ChangePassword(c *gin.Context) {
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update password")
 		return
 	}
+
+	// Log password change activity
+	utilities.LogAuthActivity(c, userID, models.ActionUpdate, "User password changed")
 
 	utilities.SuccessResponse(c, nil, "Password changed successfully")
 }
