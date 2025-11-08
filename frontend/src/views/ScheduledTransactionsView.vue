@@ -228,6 +228,7 @@ import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
+import { toISOString } from '@/utils/dateUtils'
 
 const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
@@ -323,8 +324,8 @@ const toggleEnabled = async (schedule) => {
     const updatedData = {
       transactionTemplate: schedule.transactionTemplate,
       frequency: schedule.frequency,
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
+      startDate: toISOString(schedule.startDate),
+      endDate: schedule.endDate ? toISOString(schedule.endDate) : null,
       enabled: !schedule.enabled
     }
     await transactionsStore.updateRecurringTransaction(schedule.id, updatedData)
@@ -385,8 +386,8 @@ const saveSchedule = async () => {
         notes: form.value.notes
       },
       frequency: form.value.frequency,
-      startDate: form.value.startDate,
-      endDate: form.value.endDate || null,
+      startDate: toISOString(form.value.startDate),
+      endDate: form.value.endDate ? toISOString(form.value.endDate) : null,
       enabled: form.value.enabled
     }
 
