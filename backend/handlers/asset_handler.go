@@ -553,8 +553,12 @@ func calculateAssetStats(asset models.Asset) AssetWithStats {
 		stats.WarrantyStatus = "no_warranty"
 	}
 
-	// Calculate days owned
-	stats.DaysOwned = int(now.Sub(asset.PurchaseDate.Time).Hours() / 24)
+	// Calculate days owned (using day precision from purchase date to current date)
+	nowDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	purchaseDate := asset.PurchaseDate.Time
+	purchaseDateTrunc := time.Date(purchaseDate.Year(), purchaseDate.Month(), purchaseDate.Day(), 0, 0, 0, 0, purchaseDate.Location())
+
+	stats.DaysOwned = int(nowDate.Sub(purchaseDateTrunc).Hours() / 24)
 	if stats.DaysOwned < 1 {
 		stats.DaysOwned = 1 // Avoid division by zero
 	}
