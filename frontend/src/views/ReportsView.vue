@@ -251,9 +251,13 @@ const transactionsStore = useTransactionsStore()
 const creditCardsStore = useCreditCardsStore()
 const settingsStore = useSettingsStore()
 
+// Initialize date range to current month (from 1st to today)
+const today = new Date()
+const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+
 const dateRange = ref({
-  start: new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0],
-  end: new Date().toISOString().split('T')[0]
+  start: currentMonthStart.toISOString().split('T')[0],
+  end: today.toISOString().split('T')[0]
 })
 
 const periodIncome = ref(0)

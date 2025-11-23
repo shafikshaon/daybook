@@ -95,8 +95,9 @@ export const useTransactionsStore = defineStore('transactions', {
 
       if (startDate && endDate) {
         transactions = transactions.filter(t => {
-          const date = new Date(t.date)
-          return date >= new Date(startDate) && date <= new Date(endDate)
+          // Extract only the date part (YYYY-MM-DD) for comparison to avoid time zone issues
+          const transactionDate = new Date(t.date).toISOString().split('T')[0]
+          return transactionDate >= startDate && transactionDate <= endDate
         })
       }
 
@@ -108,8 +109,9 @@ export const useTransactionsStore = defineStore('transactions', {
 
       if (startDate && endDate) {
         transactions = transactions.filter(t => {
-          const date = new Date(t.date)
-          return date >= new Date(startDate) && date <= new Date(endDate)
+          // Extract only the date part (YYYY-MM-DD) for comparison to avoid time zone issues
+          const transactionDate = new Date(t.date).toISOString().split('T')[0]
+          return transactionDate >= startDate && transactionDate <= endDate
         })
       }
 
@@ -144,8 +146,9 @@ export const useTransactionsStore = defineStore('transactions', {
 
       if (startDate && endDate) {
         transactions = transactions.filter(t => {
-          const date = new Date(t.date)
-          return date >= new Date(startDate) && date <= new Date(endDate)
+          // Extract only the date part (YYYY-MM-DD) for comparison to avoid time zone issues
+          const transactionDate = new Date(t.date).toISOString().split('T')[0]
+          return transactionDate >= startDate && transactionDate <= endDate
         })
       }
 
@@ -173,8 +176,9 @@ export const useTransactionsStore = defineStore('transactions', {
 
       if (startDate && endDate) {
         transactions = transactions.filter(t => {
-          const date = new Date(t.date)
-          return date >= new Date(startDate) && date <= new Date(endDate)
+          // Extract only the date part (YYYY-MM-DD) for comparison to avoid time zone issues
+          const transactionDate = new Date(t.date).toISOString().split('T')[0]
+          return transactionDate >= startDate && transactionDate <= endDate
         })
       }
 

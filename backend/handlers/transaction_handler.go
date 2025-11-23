@@ -819,12 +819,18 @@ func GetTransactionStats(c *gin.Context) {
 	if startDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
 			query = query.Where("date >= ?", parsedDate)
+		} else {
+			logger.Warnf(ctx, "Invalid start date format: %s", startDate)
 		}
 	}
 
 	if endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			query = query.Where("date <= ?", parsedDate)
+			// Set to end of day to include all transactions on the end date
+			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+			query = query.Where("date <= ?", endOfDay)
+		} else {
+			logger.Warnf(ctx, "Invalid end date format: %s", endDate)
 		}
 	}
 
@@ -837,19 +843,61 @@ func GetTransactionStats(c *gin.Context) {
 		TransactionCount int64
 	}
 
-	// Total income
-	query.Where("type = ?", "income").Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalIncome)
+	// Total income - clone the base query and add type filter
+	incomeQuery := database.DB.WithContext(ctx).Model(&models.Transaction{}).
+		Where("user_id = ?", userID).
+		Where("type = ?", "income")
+	if startDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
+			incomeQuery = incomeQuery.Where("date >= ?", parsedDate)
+		}
+	}
+	if endDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
+			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+			incomeQuery = incomeQuery.Where("date <= ?", endOfDay)
+		}
+	}
+	incomeQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalIncome)
 
-	// Total expense
-	query.Where("type = ?", "expense").Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalExpense)
+	// Total expense - clone the base query and add type filter
+	expenseQuery := database.DB.WithContext(ctx).Model(&models.Transaction{}).
+		Where("user_id = ?", userID).
+		Where("type = ?", "expense")
+	if startDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
+			expenseQuery = expenseQuery.Where("date >= ?", parsedDate)
+		}
+	}
+	if endDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
+			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+			expenseQuery = expenseQuery.Where("date <= ?", endOfDay)
+		}
+	}
+	expenseQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalExpense)
 
-	// Total transfers
-	query.Where("type = ?", "transfer").Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalTransfer)
+	// Total transfers - clone the base query and add type filter
+	transferQuery := database.DB.WithContext(ctx).Model(&models.Transaction{}).
+		Where("user_id = ?", userID).
+		Where("type = ?", "transfer")
+	if startDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
+			transferQuery = transferQuery.Where("date >= ?", parsedDate)
+		}
+	}
+	if endDate != "" {
+		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
+			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
+			transferQuery = transferQuery.Where("date <= ?", endOfDay)
+		}
+	}
+	transferQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalTransfer)
 
 	// Net income
 	stats.NetIncome = stats.TotalIncome - stats.TotalExpense
 
-	// Transaction count
+	// Transaction count - use the original query
 	query.Count(&stats.TransactionCount)
 
 	logger.Infof(ctx, "Statistics retrieved successfully for user: %s - count: %d, income: %.2f, expense: %.2f",
