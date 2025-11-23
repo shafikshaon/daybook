@@ -14,7 +14,7 @@ type User struct {
 	Password  string         `gorm:"not null" json:"-"`
 	FullName  string         `json:"fullName"`
 	Role      string         `gorm:"default:'user'" json:"role"`
-	LastLogin *time.Time     `json:"lastLogin"`
+	LastLogin *time.Time     `gorm:"type:timestamptz" json:"lastLogin"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`

@@ -18,7 +18,7 @@ type Account struct {
 	Description              string         `json:"description"`
 	Institution              string         `json:"institution"`
 	AccountNumber            string         `json:"accountNumber"`
-	LastReconciled           *time.Time     `json:"lastReconciled"`
+	LastReconciled           *time.Time     `gorm:"type:timestamptz" json:"lastReconciled"`
 	ReconciliationDifference float64        `gorm:"default:0" json:"reconciliationDifference"`
 	Active                   bool           `gorm:"default:true" json:"active"`
 	CreatedAt                time.Time      `json:"createdAt"`

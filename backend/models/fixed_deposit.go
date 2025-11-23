@@ -16,12 +16,12 @@ type FixedDeposit struct {
 	InterestRate         float64        `gorm:"not null" json:"interestRate" binding:"required,gt=0"`
 	TenureMonths         int            `gorm:"not null" json:"tenureMonths" binding:"required,gt=0"`
 	Compounding          string         `gorm:"not null;default:'monthly'" json:"compounding"` // simple, daily, monthly, quarterly, semi-annually, annually
-	StartDate            time.Time      `gorm:"not null" json:"startDate"`
-	MaturityDate         time.Time      `gorm:"not null" json:"maturityDate"`
+	StartDate            time.Time      `gorm:"type:timestamptz;not null" json:"startDate"`
+	MaturityDate         time.Time      `gorm:"type:timestamptz;not null" json:"maturityDate"`
 	MaturityAmount       float64        `json:"maturityAmount"`
 	ActualMaturityAmount float64        `json:"actualMaturityAmount"`
 	Withdrawn            bool           `gorm:"default:false" json:"withdrawn"`
-	WithdrawnDate        *time.Time     `json:"withdrawnDate"`
+	WithdrawnDate        *time.Time     `gorm:"type:timestamptz" json:"withdrawnDate"`
 	AutoRenew            bool           `gorm:"default:false" json:"autoRenew"`
 	Notes                string         `json:"notes"`
 	Attachments          []string       `gorm:"type:text[]" json:"attachments"`

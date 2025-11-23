@@ -15,7 +15,7 @@ type Transaction struct {
 	Type             string         `gorm:"not null" json:"type" binding:"required"` // income, expense, transfer
 	Amount           float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	CategoryID       string         `gorm:"not null;index" json:"categoryId" binding:"required"`
-	Date             time.Time      `gorm:"not null;index" json:"date"`
+	Date             time.Time      `gorm:"type:timestamptz;not null;index" json:"date"`
 	Description      string         `json:"description"`
 	Tags             []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	SavingsGoalID    *uuid.UUID     `gorm:"type:uuid;index" json:"savingsGoalId"`
@@ -45,7 +45,7 @@ type RecurringTransaction struct {
 	Frequency           string         `gorm:"not null" json:"frequency"` // daily, weekly, biweekly, monthly, quarterly, yearly
 	StartDate           Date           `gorm:"not null" json:"startDate"`
 	EndDate             *Date          `json:"endDate"`
-	LastProcessed       *time.Time     `json:"lastProcessed"`
+	LastProcessed       *time.Time     `gorm:"type:timestamptz" json:"lastProcessed"`
 	Enabled             bool           `gorm:"default:true" json:"enabled"`
 	CreatedAt           time.Time      `json:"createdAt"`
 	UpdatedAt           time.Time      `json:"updatedAt"`

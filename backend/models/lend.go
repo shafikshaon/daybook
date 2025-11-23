@@ -17,7 +17,7 @@ type LendRecord struct {
 	AccountID       *uuid.UUID     `gorm:"type:uuid;index" json:"accountId"`        // Account affected (if any)
 	Status          string         `gorm:"not null;index" json:"status"`            // active, partially_received, fully_received
 	LentDate        Date           `gorm:"not null;index" json:"lentDate"`
-	DueDate         *time.Time     `json:"dueDate"`
+	DueDate         *time.Time     `gorm:"type:timestamptz" json:"dueDate"`
 	InterestRate    *float64       `json:"interestRate"` // Annual interest rate in percentage
 	Description     string         `json:"description"`
 	IsInitial       bool           `gorm:"default:false" json:"isInitial"` // True if this is a pre-existing lend

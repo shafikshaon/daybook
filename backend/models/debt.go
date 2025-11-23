@@ -17,7 +17,7 @@ type DebtRecord struct {
 	AccountID       *uuid.UUID     `gorm:"type:uuid;index" json:"accountId"`        // Account affected (if any)
 	Status          string         `gorm:"not null;index" json:"status"`            // active, partially_paid, fully_paid
 	BorrowedDate    Date           `gorm:"not null;index" json:"borrowedDate"`
-	DueDate         *time.Time     `json:"dueDate"`
+	DueDate         *time.Time     `gorm:"type:timestamptz" json:"dueDate"`
 	InterestRate    *float64       `json:"interestRate"` // Annual interest rate in percentage
 	Description     string         `json:"description"`
 	IsInitial       bool           `gorm:"default:false" json:"isInitial"` // True if this is a pre-existing debt

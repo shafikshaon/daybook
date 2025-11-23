@@ -14,16 +14,16 @@ type SavingsGoal struct {
 	Description          string         `json:"description"`
 	TargetAmount         float64        `gorm:"not null" json:"targetAmount" binding:"required,gt=0"`
 	CurrentAmount        float64        `gorm:"default:0" json:"currentAmount"`
-	TargetDate           *time.Time     `json:"targetDate"`
+	TargetDate           *time.Time     `gorm:"type:timestamptz" json:"targetDate"`
 	MonthlyContribution  float64        `gorm:"default:0" json:"monthlyContribution"`
 	Category             string         `json:"category"` // emergency, vacation, purchase, etc
 	Priority             string         `json:"priority"` // high, medium, low
 	Achieved             bool           `gorm:"default:false" json:"achieved"`
-	AchievedDate         *time.Time     `json:"achievedDate"`
+	AchievedDate         *time.Time     `gorm:"type:timestamptz" json:"achievedDate"`
 	Archived             bool           `gorm:"default:false" json:"archived"`
-	ArchivedDate         *time.Time     `json:"archivedDate"`
+	ArchivedDate         *time.Time     `gorm:"type:timestamptz" json:"archivedDate"`
 	LastContribution     float64        `gorm:"default:0" json:"lastContribution"`
-	LastContributionDate *time.Time     `json:"lastContributionDate"`
+	LastContributionDate *time.Time     `gorm:"type:timestamptz" json:"lastContributionDate"`
 	Attachments          []string       `gorm:"type:text[]" json:"attachments"`
 	CreatedAt            time.Time      `json:"createdAt"`
 	UpdatedAt            time.Time      `json:"updatedAt"`
@@ -42,7 +42,7 @@ type SavingsContribution struct {
 	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	GoalID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
 	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	Date        time.Time      `gorm:"not null;index" json:"date"`
+	Date        time.Time      `gorm:"type:timestamptz;not null;index" json:"date"`
 	Notes       string         `json:"notes"`
 	Attachments []string       `gorm:"type:text[]" json:"attachments"`
 	CreatedAt   time.Time      `json:"createdAt"`

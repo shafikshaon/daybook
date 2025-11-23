@@ -21,7 +21,7 @@ type Reconciliation struct {
 	ID                 uuid.UUID            `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID             uuid.UUID            `gorm:"type:uuid;not null;index" json:"userId"`
 	AccountID          uuid.UUID            `gorm:"type:uuid;not null;index" json:"accountId"`
-	ReconciliationDate time.Time            `gorm:"not null" json:"reconciliationDate" binding:"required"`
+	ReconciliationDate time.Time            `gorm:"type:timestamptz;not null" json:"reconciliationDate" binding:"required"`
 	StatementBalance   float64              `gorm:"type:decimal(15,2);not null" json:"statementBalance" binding:"required"`
 	BookBalance        float64              `gorm:"type:decimal(15,2);not null" json:"bookBalance"`
 	Difference         float64              `gorm:"type:decimal(15,2);not null" json:"difference"`

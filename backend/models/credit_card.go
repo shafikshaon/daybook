@@ -16,10 +16,10 @@ type CreditCard struct {
 	CreditLimit       float64        `gorm:"not null" json:"creditLimit" binding:"required,gt=0"`
 	CurrentBalance    float64        `gorm:"default:0" json:"currentBalance"`
 	APR               float64        `json:"apr"`
-	DueDate           *time.Time     `json:"dueDate"`
-	StatementDate     *time.Time     `json:"statementDate"`
+	DueDate           *time.Time     `gorm:"type:timestamptz" json:"dueDate"`
+	StatementDate     *time.Time     `gorm:"type:timestamptz" json:"statementDate"`
 	MinimumPayment    float64        `gorm:"default:0" json:"minimumPayment"`
-	LastPaymentDate   *time.Time     `json:"lastPaymentDate"`
+	LastPaymentDate   *time.Time     `gorm:"type:timestamptz" json:"lastPaymentDate"`
 	LastPaymentAmount float64        `gorm:"default:0" json:"lastPaymentAmount"`
 	RewardsProgram    string         `json:"rewardsProgram"`
 	Active            bool           `gorm:"default:true" json:"active"`
@@ -40,8 +40,8 @@ type Statement struct {
 	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	CardID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
-	StatementDate   time.Time      `gorm:"not null" json:"statementDate"`
-	DueDate         time.Time      `gorm:"not null" json:"dueDate"`
+	StatementDate   time.Time      `gorm:"type:timestamptz;not null" json:"statementDate"`
+	DueDate         time.Time      `gorm:"type:timestamptz;not null" json:"dueDate"`
 	OpeningBalance  float64        `json:"openingBalance"`
 	ClosingBalance  float64        `json:"closingBalance"`
 	MinimumPayment  float64        `json:"minimumPayment"`
@@ -49,7 +49,7 @@ type Statement struct {
 	TotalPayments   float64        `json:"totalPayments"`
 	InterestCharged float64        `json:"interestCharged"`
 	Paid            bool           `gorm:"default:false" json:"paid"`
-	PaidDate        *time.Time     `json:"paidDate"`
+	PaidDate        *time.Time     `gorm:"type:timestamptz" json:"paidDate"`
 	CreatedAt       time.Time      `json:"createdAt"`
 	UpdatedAt       time.Time      `json:"updatedAt"`
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
@@ -69,9 +69,9 @@ type Reward struct {
 	Type        string         `json:"type"` // cashback, points, miles
 	Amount      float64        `json:"amount"`
 	Description string         `json:"description"`
-	EarnedDate  time.Time      `gorm:"not null" json:"earnedDate"`
+	EarnedDate  time.Time      `gorm:"type:timestamptz;not null" json:"earnedDate"`
 	Redeemed    bool           `gorm:"default:false" json:"redeemed"`
-	RedeemedAt  *time.Time     `json:"redeemedAt"`
+	RedeemedAt  *time.Time     `gorm:"type:timestamptz" json:"redeemedAt"`
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
@@ -94,7 +94,7 @@ type CreditCardTransaction struct {
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Description   string         `json:"description"`
 	Merchant      string         `json:"merchant"`
-	Date          time.Time      `gorm:"not null" json:"date"`
+	Date          time.Time      `gorm:"type:timestamptz;not null" json:"date"`
 	Type          string         `gorm:"not null" json:"type"` // purchase, payment, refund, fee, interest
 	Tags          []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	Attachments   []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
@@ -117,7 +117,7 @@ type CreditCardPayment struct {
 	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
 	AccountID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"` // Account used to pay
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	PaymentDate   time.Time      `gorm:"not null" json:"paymentDate"`
+	PaymentDate   time.Time      `gorm:"type:timestamptz;not null" json:"paymentDate"`
 	Description   string         `json:"description"`
 	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to Transaction record
 	CreatedAt     time.Time      `json:"createdAt"`

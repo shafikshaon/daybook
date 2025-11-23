@@ -25,17 +25,17 @@ type Goal struct {
 	// Financial Targets
 	TargetAmount        float64    `gorm:"not null" json:"targetAmount"`
 	CurrentAmount       float64    `gorm:"default:0" json:"currentAmount"`
-	TargetDate          *time.Time `json:"targetDate"`
+	TargetDate          *time.Time `gorm:"type:timestamptz" json:"targetDate"`
 	MonthlyContribution float64    `json:"monthlyContribution"`
 
 	// Status
 	Status       string     `gorm:"default:active" json:"status"` // active, achieved, paused, archived
 	Achieved     bool       `gorm:"default:false" json:"achieved"`
-	AchievedDate *time.Time `json:"achievedDate"`
+	AchievedDate *time.Time `gorm:"type:timestamptz" json:"achievedDate"`
 
 	// Tracking
 	LastContribution     float64    `json:"lastContribution"`
-	LastContributionDate *time.Time `json:"lastContributionDate"`
+	LastContributionDate *time.Time `gorm:"type:timestamptz" json:"lastContributionDate"`
 
 	// Relationships
 	Holdings      []GoalHolding      `gorm:"foreignKey:GoalID" json:"holdings,omitempty"`
@@ -57,17 +57,17 @@ type GoalHolding struct {
 	Name         string    `gorm:"not null" json:"name"`
 	Type         string    `gorm:"not null;index" json:"type"`   // savings, fixed_deposit, dps, recurring_deposit, stocks, mutual_fund, etf, bonds, crypto, real_estate, gold, pension_fund, ulip, ppf, nsc, custom
 	Status       string    `gorm:"default:active" json:"status"` // active, matured, sold, closed, withdrawn
-	PurchaseDate time.Time `gorm:"not null" json:"purchaseDate"`
+	PurchaseDate time.Time `gorm:"type:timestamptz;not null" json:"purchaseDate"`
 	Amount       float64   `gorm:"not null" json:"amount"` // Initial investment amount
 	CurrentValue float64   `json:"currentValue"`           // Current market value
 
 	// Common Fields (for bank products)
-	Institution    *string    `json:"institution"`    // Bank/Fund house name
-	AccountNumber  *string    `json:"accountNumber"`  // Account/Policy number
-	InterestRate   *float64   `json:"interestRate"`   // Annual interest rate
-	MaturityDate   *time.Time `json:"maturityDate"`   // When it matures
-	MaturityAmount *float64   `json:"maturityAmount"` // Expected maturity value
-	TenureMonths   *int       `json:"tenureMonths"`   // Duration in months
+	Institution    *string    `json:"institution"`                          // Bank/Fund house name
+	AccountNumber  *string    `json:"accountNumber"`                        // Account/Policy number
+	InterestRate   *float64   `json:"interestRate"`                         // Annual interest rate
+	MaturityDate   *time.Time `gorm:"type:timestamptz" json:"maturityDate"` // When it matures
+	MaturityAmount *float64   `json:"maturityAmount"`                       // Expected maturity value
+	TenureMonths   *int       `json:"tenureMonths"`                         // Duration in months
 
 	// For market instruments (stocks, mutual funds, ETF, crypto)
 	Symbol       *string  `json:"symbol"`       // Ticker symbol (AAPL, VTSAX, BTC)
@@ -98,7 +98,7 @@ type GoalContribution struct {
 
 	Type   string    `gorm:"not null" json:"type"` // contribution, withdrawal, dividend, interest, appreciation, depreciation, maturity
 	Amount float64   `gorm:"not null" json:"amount"`
-	Date   time.Time `gorm:"not null;index" json:"date"`
+	Date   time.Time `gorm:"type:timestamptz;not null;index" json:"date"`
 	Notes  string    `json:"notes"`
 
 	// Transaction link (creates a transaction for account balance)

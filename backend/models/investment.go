@@ -56,7 +56,7 @@ type Dividend struct {
 	UserID       uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	InvestmentID uuid.UUID      `gorm:"type:uuid;not null;index" json:"investmentId"`
 	Amount       float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	PaymentDate  time.Time      `gorm:"not null" json:"paymentDate"`
+	PaymentDate  time.Time      `gorm:"type:timestamptz;not null" json:"paymentDate"`
 	Reinvested   bool           `gorm:"default:false" json:"reinvested"`
 	CreatedAt    time.Time      `json:"createdAt"`
 	UpdatedAt    time.Time      `json:"updatedAt"`
