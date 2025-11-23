@@ -50,6 +50,13 @@ export const useTransactionsStore = defineStore('transactions', {
       { id: 'investment_purchase', name: 'Investment Purchase', type: 'expense', group: 'savings', icon: '📈', color: '#6366f1' },
       { id: 'goal_contribution', name: 'Goal Contribution', type: 'expense', group: 'savings', icon: '🎯', color: '#8b5cf6' },
       { id: 'goal_holding_added', name: 'Goal Holding Added', type: 'expense', group: 'savings', icon: '💹', color: '#6366f1' },
+      { id: 'dps', name: 'DPS (Deposit Pension Scheme)', type: 'expense', group: 'savings', icon: '🏦', color: '#3b82f6' },
+
+      // Lending & Borrowing categories
+      { id: 'lend', name: 'Money Lent', type: 'expense', group: 'expense', icon: '🤝', color: '#ef4444' },
+      { id: 'lend_received', name: 'Lend Repayment Received', type: 'income', group: 'income', icon: '🤝', color: '#10b981' },
+      { id: 'debt', name: 'Debt Payment', type: 'expense', group: 'expense', icon: '💳', color: '#ef4444' },
+      { id: 'debt_taken', name: 'Debt Borrowed', type: 'income', group: 'income', icon: '💳', color: '#10b981' },
 
       // Transfer category
       { id: 'transfer', name: 'Transfer', type: 'transfer', group: 'transfer', icon: '🔄', color: '#3b82f6' }
