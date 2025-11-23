@@ -260,9 +260,18 @@ const dateRange = ref({
   end: today.toISOString().split('T')[0]
 })
 
-const periodIncome = ref(0)
-const periodRegularExpense = ref(0)
-const periodSavings = ref(0)
+// Make these computed properties so they auto-update when date range changes
+const periodIncome = computed(() => {
+  return transactionsStore.totalByGroup('income', dateRange.value.start, dateRange.value.end)
+})
+
+const periodRegularExpense = computed(() => {
+  return transactionsStore.totalByGroup('expense', dateRange.value.start, dateRange.value.end)
+})
+
+const periodSavings = computed(() => {
+  return transactionsStore.totalByGroup('savings', dateRange.value.start, dateRange.value.end)
+})
 
 const netWorth = computed(() => {
   return accountsStore.totalBalance - creditCardsStore.totalOutstanding
@@ -340,17 +349,55 @@ const getCategoryColor = (id) => {
 }
 
 const applyDateRange = () => {
-  periodIncome.value = transactionsStore.totalByGroup('income', dateRange.value.start, dateRange.value.end)
-  periodRegularExpense.value = transactionsStore.totalByGroup('expense', dateRange.value.start, dateRange.value.end)
-  periodSavings.value = transactionsStore.totalByGroup('savings', dateRange.value.start, dateRange.value.end)
+  // Since we converted to computed properties, this function now just logs debug info
+  console.log('=== Report Date Range Applied ===')
+  console.log('Date Range:', dateRange.value.start, 'to', dateRange.value.end)
+  console.log('Period Income:', periodIncome.value)
+  console.log('Period Regular Expense:', periodRegularExpense.value)
+  console.log('Period Savings:', periodSavings.value)
+
+  // Debug: Show all transactions in date range
+  const allTransactions = transactionsStore.transactions
+  const filteredTransactions = allTransactions.filter(t => {
+    const transactionDate = new Date(t.date).toISOString().split('T')[0]
+    return transactionDate >= dateRange.value.start && transactionDate <= dateRange.value.end
+  })
+
+  console.log('Total transactions in range:', filteredTransactions.length)
+  console.log('Breakdown by type:', {
+    income: filteredTransactions.filter(t => t.type === 'income').length,
+    expense: filteredTransactions.filter(t => t.type === 'expense').length,
+    transfer: filteredTransactions.filter(t => t.type === 'transfer').length
+  })
+
+  // Show category breakdown for debugging
+  const expensesByCategory = {}
+  const incomeByCategory = {}
+
+  filteredTransactions.forEach(t => {
+    const category = transactionsStore.getCategoryById(t.categoryId)
+    const categoryName = category ? category.name : `Unknown (${t.categoryId})`
+
+    if (t.type === 'income') {
+      incomeByCategory[categoryName] = (incomeByCategory[categoryName] || 0) + t.amount
+    } else if (t.type === 'expense') {
+      expensesByCategory[categoryName] = (expensesByCategory[categoryName] || 0) + t.amount
+    }
+  })
+
+  console.log('Income by category:', incomeByCategory)
+  console.log('Expenses by category:', expensesByCategory)
+  console.log('================================')
 }
 
 onMounted(async () => {
+  console.log('Loading report data...')
   await Promise.all([
     accountsStore.fetchAccounts(),
     transactionsStore.fetchTransactions(),
     creditCardsStore.fetchCreditCards()
   ])
+  console.log('Transactions loaded:', transactionsStore.transactions.length)
   applyDateRange()
 })
 </script>
