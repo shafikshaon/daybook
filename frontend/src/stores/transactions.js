@@ -141,7 +141,13 @@ export const useTransactionsStore = defineStore('transactions', {
     groupBreakdown: (state) => (group = 'expense', startDate = null, endDate = null) => {
       let transactions = state.transactions.filter(t => {
         const category = state.categories.find(c => c.id === t.categoryId)
-        return category && category.group === group
+        if (!category) {
+          // Fallback: if category not found, use transaction type as group
+          // Log warning to help identify missing categories
+          console.warn(`Category not found for transaction ${t.id}: categoryId="${t.categoryId}", type="${t.type}"`)
+          return t.type === group
+        }
+        return category.group === group
       })
 
       if (startDate && endDate) {
@@ -171,7 +177,13 @@ export const useTransactionsStore = defineStore('transactions', {
     totalByGroup: (state) => (group, startDate = null, endDate = null) => {
       let transactions = state.transactions.filter(t => {
         const category = state.categories.find(c => c.id === t.categoryId)
-        return category && category.group === group
+        if (!category) {
+          // Fallback: if category not found, use transaction type as group
+          // For 'savings' group, we can't determine from type alone, so exclude it
+          console.warn(`Category not found for transaction ${t.id}: categoryId="${t.categoryId}", type="${t.type}"`)
+          return group === 'savings' ? false : t.type === group
+        }
+        return category.group === group
       })
 
       if (startDate && endDate) {
