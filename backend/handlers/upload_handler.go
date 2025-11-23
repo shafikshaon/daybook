@@ -249,7 +249,22 @@ func ServeUploadedFile(c *gin.Context) {
 		return
 	}
 
-	filePath := filepath.Join(UploadDir, requestedUserID, filename)
+	// Sanitize filename to prevent path traversal attacks
+	cleanFilename := filepath.Base(filename)
+	if cleanFilename == "." || cleanFilename == ".." {
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid filename")
+		return
+	}
+
+	filePath := filepath.Join(UploadDir, requestedUserID, cleanFilename)
+
+	// Verify the resolved path is still within the user's directory (additional security check)
+	userDir := filepath.Join(UploadDir, requestedUserID)
+	if !filepath.HasPrefix(filePath, userDir) {
+		logger.Warnf(ctx, "Path traversal attempt detected for user: %s, filename: %s", userID, filename)
+		utilities.ErrorResponse(c, http.StatusForbidden, "Access denied")
+		return
+	}
 
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {

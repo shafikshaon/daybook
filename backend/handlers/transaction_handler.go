@@ -321,9 +321,9 @@ func CreateTransaction(c *gin.Context) {
 		}
 
 		if transaction.Type == "income" {
-			creditCard.CurrentBalance += transaction.Amount
+			creditCard.CurrentBalance -= transaction.Amount // Income reduces credit card debt
 		} else if transaction.Type == "expense" {
-			creditCard.CurrentBalance += transaction.Amount
+			creditCard.CurrentBalance += transaction.Amount // Expense increases credit card debt
 		}
 
 		if err := tx.Save(&creditCard).Error; err != nil {
@@ -364,7 +364,11 @@ func CreateTransaction(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Committing database transaction")
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Failed to commit transaction: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
 
 	// Log transaction creation activity
 	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleTransaction,
@@ -533,9 +537,9 @@ func UpdateTransaction(c *gin.Context) {
 		}
 
 		if updateData.Type == "income" {
-			newCreditCard.CurrentBalance += updateData.Amount
+			newCreditCard.CurrentBalance -= updateData.Amount // Income reduces credit card debt
 		} else if updateData.Type == "expense" {
-			newCreditCard.CurrentBalance += updateData.Amount
+			newCreditCard.CurrentBalance += updateData.Amount // Expense increases credit card debt
 		}
 
 		if err := tx.Save(&newCreditCard).Error; err != nil {
@@ -573,7 +577,11 @@ func UpdateTransaction(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Committing database transaction for update")
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Failed to commit transaction: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
+		return
+	}
 
 	// Log transaction update activity
 	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleTransaction,
@@ -635,9 +643,9 @@ func DeleteTransaction(c *gin.Context) {
 		}
 
 		if transaction.Type == "income" {
-			creditCard.CurrentBalance -= transaction.Amount
+			creditCard.CurrentBalance += transaction.Amount // Reverse: income was reducing debt, now add it back
 		} else if transaction.Type == "expense" {
-			creditCard.CurrentBalance -= transaction.Amount
+			creditCard.CurrentBalance -= transaction.Amount // Reverse: expense was adding debt, now subtract it
 		}
 
 		if err := tx.Save(&creditCard).Error; err != nil {
@@ -684,7 +692,11 @@ func DeleteTransaction(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Committing database transaction for deletion")
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Failed to commit transaction deletion: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction deletion")
+		return
+	}
 
 	// Log transaction deletion activity
 	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleTransaction,
@@ -766,7 +778,11 @@ func BulkImportTransactions(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Committing bulk import transaction")
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "Failed to commit bulk import: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit bulk import")
+		return
+	}
 
 	result := map[string]interface{}{
 		"successCount": successCount,

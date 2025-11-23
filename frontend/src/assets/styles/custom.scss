@@ -1230,20 +1230,18 @@ nav.sidebar {
   // Main content adjustments for mobile
   .main-content {
     margin-left: 0 !important;
-    padding: 12px 12px 12px 12px;
+    // Add padding at bottom to prevent content from being hidden under fixed bottom nav
+    padding: 12px 12px calc(68px + env(safe-area-inset-bottom, 0) + 12px) 12px;
     background-color: $bg-primary;
 
-    // iOS Safari: Make content scrollable since body is fixed
-    position: fixed;
-    top: calc(48px + env(safe-area-inset-top, 0));
-    left: 0;
-    right: 0;
-    bottom: calc(68px + env(safe-area-inset-bottom, 0));
-    overflow-y: auto;
+    // Use relative positioning instead of fixed to allow proper scrolling
+    position: relative;
+    width: 100%;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
-    height: auto;
-    min-height: auto;
+
+    // Ensure minimum height for proper scrolling
+    min-height: calc(100vh - 48px - 68px - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
   }
 
   // Page titles - mobile optimized

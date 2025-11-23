@@ -210,7 +210,11 @@ func CreateReconciliation(c *gin.Context) {
 		}
 	}
 
-	tx.Commit()
+	if err := tx.Commit().Error; err != nil {
+		logger.Errorf(ctx, "CreateReconciliation - Failed to commit transaction: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit reconciliation")
+		return
+	}
 
 	logger.Infof(ctx, "CreateReconciliation - Successfully created reconciliation: %s", reconciliation.ID)
 

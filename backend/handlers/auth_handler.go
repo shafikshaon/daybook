@@ -76,7 +76,11 @@ func Signup(c *gin.Context) {
 			BudgetAlerts: true,
 		},
 	}
-	database.DB.WithContext(ctx).Create(&settings)
+	if err := database.DB.WithContext(ctx).Create(&settings).Error; err != nil {
+		logger.Errorf(ctx, "Failed to create default settings: %v", err)
+		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create default settings")
+		return
+	}
 	logger.Debugf(ctx, "Default settings created for user: %s", user.ID)
 
 	// Create default account types for the user

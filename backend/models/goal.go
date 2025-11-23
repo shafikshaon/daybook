@@ -150,23 +150,11 @@ func (g *Goal) CalculateProgress() float64 {
 func (g *Goal) UpdateCurrentAmount(db *gorm.DB) error {
 	var total float64
 
-	// DEBUG: Log query parameters
-	fmt.Printf("DEBUG UpdateCurrentAmount: GoalID=%s\n", g.ID)
-
-	// Count holdings first
-	var count int64
-	db.Model(&GoalHolding{}).
-		Where("goal_id = ? AND status IN ?", g.ID, []string{"active", "matured", "achieved"}).
-		Count(&count)
-	fmt.Printf("DEBUG UpdateCurrentAmount: Found %d holdings\n", count)
-
-	// Calculate sum
+	// Calculate sum of all active/matured/achieved holdings for this goal
 	db.Model(&GoalHolding{}).
 		Where("goal_id = ? AND status IN ?", g.ID, []string{"active", "matured", "achieved"}).
 		Select("COALESCE(SUM(current_value), 0)").
 		Scan(&total)
-
-	fmt.Printf("DEBUG UpdateCurrentAmount: Total sum=%.2f\n", total)
 
 	g.CurrentAmount = total
 	return db.Save(g).Error
