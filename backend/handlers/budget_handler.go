@@ -275,30 +275,30 @@ func GetBudgetProgress(c *gin.Context) {
 
 	// Calculate date range based on period
 	var startDate, endDate time.Time
-	now := time.Now()
+	now := time.Now().UTC()
 
 	switch budget.Period {
 	case "weekly":
-		// Start of current week (Sunday)
+		// Start of current week (Sunday) in UTC
 		startDate = now.AddDate(0, 0, -int(now.Weekday()))
-		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, startDate.Location())
+		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
 		endDate = startDate.AddDate(0, 0, 7)
 
 	case "monthly":
-		// Start of current month
-		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+		// Start of current month in UTC
+		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 		endDate = startDate.AddDate(0, 1, 0)
 
 	case "quarterly":
-		// Start of current quarter
+		// Start of current quarter in UTC
 		currentMonth := int(now.Month())
 		quarterStartMonth := ((currentMonth-1)/3)*3 + 1
-		startDate = time.Date(now.Year(), time.Month(quarterStartMonth), 1, 0, 0, 0, 0, now.Location())
+		startDate = time.Date(now.Year(), time.Month(quarterStartMonth), 1, 0, 0, 0, 0, time.UTC)
 		endDate = startDate.AddDate(0, 3, 0)
 
 	case "yearly":
-		// Start of current year
-		startDate = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location())
+		// Start of current year in UTC
+		startDate = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
 		endDate = startDate.AddDate(1, 0, 0)
 
 	case "custom":

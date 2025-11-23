@@ -1031,9 +1031,12 @@ const saveTransaction = async () => {
     // Check if selected account is a credit card
     const isCreditCard = creditCardsStore.allCreditCards.some(card => card.id === form.value.accountId)
 
+    // Ensure date is sent in consistent UTC format (midnight UTC) to avoid timezone issues
+    const dateObj = new Date(form.value.date + 'T00:00:00.000Z')
+
     const transactionData = {
       ...form.value,
-      date: new Date(form.value.date).toISOString(),
+      date: dateObj.toISOString(),
       attachments: transactionAttachments.value.map(f => f.fileUrl)
     }
 
