@@ -126,7 +126,23 @@ psql $DATABASE_URL -f 000_rollback_timestamptz.sql
 ```
 
 ---
+# Database Migrations
 
+## Convert Transaction Datetime to Date
+
+**Migration:** `000001_convert_transaction_datetime_to_date`
+
+### Purpose
+Converts the transaction datetime column from `TIMESTAMP` to `DATE` type, storing only the date portion without time information.
+
+### Changes
+- Converts `transaction_datetime` column from `TIMESTAMP` to `DATE`
+- Preserves all existing date data (time portion is truncated)
+- Adds index on the date column for query performance
+
+### Running Migrations
+
+#### Apply Migration (Up)
 ## Technical Details
 
 ### PostgreSQL TIMESTAMPTZ vs TIMESTAMP
