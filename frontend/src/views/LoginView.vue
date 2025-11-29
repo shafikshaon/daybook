@@ -31,14 +31,24 @@
 
                 <div class="mb-3">
                   <label class="form-label">Password</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    v-model="form.password"
-                    required
-                    placeholder="Enter password"
-                    autocomplete="current-password"
-                  />
+                  <div class="position-relative">
+                    <input
+                      :type="showPassword ? 'text' : 'password'"
+                      class="form-control pe-5"
+                      v-model="form.password"
+                      required
+                      placeholder="Enter password"
+                      autocomplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3"
+                      @click="togglePasswordVisibility"
+                      tabindex="-1"
+                    >
+                      <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                  </div>
                 </div>
 
                 <button
@@ -92,6 +102,11 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 const showDefaultCredentials = ref(true)
+const showPassword = ref(false)
+
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
 
 const handleLogin = async () => {
   try {
@@ -173,5 +188,21 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
   color: #e83e8c;
+}
+
+.btn-link {
+  color: #6c757d;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #495057;
+}
+
+.btn-link:focus {
+  box-shadow: none;
 }
 </style>

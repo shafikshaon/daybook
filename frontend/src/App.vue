@@ -199,15 +199,7 @@
 
     <!-- Sidebar Navigation (hidden for auth pages) -->
     <nav class="sidebar" :class="{ 'collapsed': !showSidebar }" v-if="!isAuthPage">
-      <div class="sidebar-header">
-        <div class="sidebar-user-info" v-if="showSidebar">
-          <span class="user-initials">{{ userInitials }}</span>
-          <span class="user-name">{{ userName }}</span>
-        </div>
-        <span v-else class="sidebar-user-collapsed">{{ userInitials }}</span>
-      </div>
-
-      <ul class="nav flex-column">
+      <ul class="nav flex-column mt-3">
         <!-- Dashboard -->
         <li class="nav-item">
           <router-link to="/" class="nav-link" exact-active-class="active" :title="!showSidebar ? 'Dashboard' : ''">

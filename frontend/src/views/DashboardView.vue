@@ -130,7 +130,7 @@
                 <div>
                   <span class="fw-semibold">{{ account.name }}</span>
                   <span class="badge bg-secondary ms-2 text-uppercase" style="font-size: 0.7rem;">
-                    {{ account.type }}
+                    {{ account.type.replace('_', ' ') }}
                   </span>
                 </div>
                 <div class="fw-bold">{{ formatCurrency(account.balance) }}</div>

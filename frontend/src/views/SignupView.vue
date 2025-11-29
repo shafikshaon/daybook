@@ -56,15 +56,25 @@
 
                 <div class="mb-3">
                   <label class="form-label">Password *</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    v-model="form.password"
-                    required
-                    placeholder="Choose a password"
-                    autocomplete="new-password"
-                    @input="checkPasswordStrength"
-                  />
+                  <div class="position-relative">
+                    <input
+                      :type="showPassword ? 'text' : 'password'"
+                      class="form-control pe-5"
+                      v-model="form.password"
+                      required
+                      placeholder="Choose a password"
+                      autocomplete="new-password"
+                      @input="checkPasswordStrength"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3"
+                      @click="togglePasswordVisibility"
+                      tabindex="-1"
+                    >
+                      <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                  </div>
                   <div v-if="form.password" class="mt-2">
                     <small :class="passwordStrengthClass">
                       Password strength: {{ passwordStrength }}
@@ -74,14 +84,24 @@
 
                 <div class="mb-3">
                   <label class="form-label">Confirm Password *</label>
-                  <input
-                    type="password"
-                    class="form-control"
-                    v-model="form.confirmPassword"
-                    required
-                    placeholder="Confirm your password"
-                    autocomplete="new-password"
-                  />
+                  <div class="position-relative">
+                    <input
+                      :type="showConfirmPassword ? 'text' : 'password'"
+                      class="form-control pe-5"
+                      v-model="form.confirmPassword"
+                      required
+                      placeholder="Confirm your password"
+                      autocomplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      class="btn btn-link position-absolute end-0 top-50 translate-middle-y pe-3"
+                      @click="toggleConfirmPasswordVisibility"
+                      tabindex="-1"
+                    >
+                      <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                  </div>
                   <small v-if="form.confirmPassword && form.password !== form.confirmPassword" class="text-danger">
                     Passwords do not match
                   </small>
@@ -142,6 +162,16 @@ const form = ref({
 const loading = ref(false)
 const error = ref('')
 const passwordStrength = ref('')
+const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+const togglePasswordVisibility = () => {
+  showPassword.value = !showPassword.value
+}
+
+const toggleConfirmPasswordVisibility = () => {
+  showConfirmPassword.value = !showConfirmPassword.value
+}
 
 const passwordStrengthClass = computed(() => {
   switch (passwordStrength.value) {
@@ -261,5 +291,21 @@ onMounted(() => {
 .btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn-link {
+  color: #6c757d;
+  text-decoration: none;
+  border: none;
+  background: none;
+  padding: 0;
+}
+
+.btn-link:hover {
+  color: #495057;
+}
+
+.btn-link:focus {
+  box-shadow: none;
 }
 </style>

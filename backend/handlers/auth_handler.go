@@ -67,7 +67,7 @@ func Signup(c *gin.Context) {
 		UserID:         user.ID,
 		Currency:       "BDT",
 		DarkMode:       false,
-		DateFormat:     "MM/DD/YYYY",
+		DateFormat:     "DD/MM/YYYY",
 		FirstDayOfWeek: 0,
 		Language:       "en",
 		Notifications: &models.Notifications{
