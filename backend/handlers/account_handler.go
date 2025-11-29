@@ -112,14 +112,42 @@ func CreateAccount(c *gin.Context) {
 
 	// If there's an initial balance, create an opening balance transaction
 	if account.InitialBalance > 0 {
+		logger.Debugf(ctx, "Finding or creating 'Opening Balance' category")
+
+		// Find or create "Opening Balance" category
+		var openingBalanceCategory models.Category
+		if err := tx.Where("user_id = ? AND name = ? AND type = ?", userID, "Opening Balance", "income").
+			First(&openingBalanceCategory).Error; err != nil {
+			// Category doesn't exist, create it
+			logger.Debugf(ctx, "Opening Balance category not found, creating new one")
+			openingBalanceCategory = models.Category{
+				UserID:      userID,
+				Name:        "Opening Balance",
+				Type:        "income",
+				Icon:        "🏦",
+				Color:       "#10B981",
+				Description: "Initial account balance",
+				IsDefault:   true,
+			}
+
+			if err := tx.Create(&openingBalanceCategory).Error; err != nil {
+				tx.Rollback()
+				logger.Errorf(ctx, "Failed to create Opening Balance category: %v", err)
+				utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create Opening Balance category")
+				return
+			}
+			logger.Infof(ctx, "Opening Balance category created with ID: %s", openingBalanceCategory.ID)
+		}
+
 		logger.Debugf(ctx, "Creating opening balance transaction: %.2f", account.InitialBalance)
+
 		transaction := models.Transaction{
 			UserID:      userID,
 			AccountID:   account.ID,
 			Type:        "income",
-			CategoryID:  "opening_balance",
+			CategoryID:  openingBalanceCategory.ID.String(),
 			Amount:      account.InitialBalance,
-			Date:        account.CreatedAt,
+			Date:        models.Date{Time: account.CreatedAt},
 			Description: "Opening balance for " + account.Name,
 		}
 

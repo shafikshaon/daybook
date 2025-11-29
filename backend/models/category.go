@@ -11,7 +11,7 @@ type Category struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
 	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
 	Name        string         `gorm:"not null" json:"name" binding:"required"`
-	Type        string         `gorm:"not null;index" json:"type" binding:"required"` // income, expense
+	Type        string         `gorm:"not null;index" json:"type" binding:"required"` // income, expense, transfer
 	Icon        string         `gorm:"not null" json:"icon" binding:"required"`       // Icon identifier
 	Color       string         `gorm:"default:#3B82F6" json:"color"`                  // Hex color code
 	Description string         `json:"description"`
@@ -32,15 +32,16 @@ func (c *Category) BeforeCreate(tx *gorm.DB) error {
 func GetDefaultCategories(userID uuid.UUID) []Category {
 	return []Category{
 		// Income categories - using varied green/blue tones
-		{UserID: userID, Name: "Salary", Type: "income", Icon: "💰", Color: "#10B981", IsDefault: true},                // Green
-		{UserID: userID, Name: "Freelance", Type: "income", Icon: "💼", Color: "#14B8A6", IsDefault: true},             // Teal
-		{UserID: userID, Name: "Business", Type: "income", Icon: "🏢", Color: "#06B6D4", IsDefault: true},              // Cyan
-		{UserID: userID, Name: "Gift", Type: "income", Icon: "🎁", Color: "#0EA5E9", IsDefault: true},                  // Light Blue
-		{UserID: userID, Name: "Bonus", Type: "income", Icon: "🎉", Color: "#22C55E", IsDefault: true},                 // Bright Green
-		{UserID: userID, Name: "Refund", Type: "income", Icon: "🔄", Color: "#3B82F6", IsDefault: true},                // Blue
-		{UserID: userID, Name: "Cashback", Type: "income", Icon: "💳", Color: "#8B5CF6", IsDefault: true},              // Purple
-		{UserID: userID, Name: "Insurance Settlement", Type: "income", Icon: "🛡️", Color: "#059669", IsDefault: true}, // Dark Green
-		{UserID: userID, Name: "Other Income", Type: "income", Icon: "💵", Color: "#10B981", IsDefault: true},          // Green
+		{UserID: userID, Name: "Opening Balance", Type: "income", Icon: "🏦", Color: "#10B981", IsDefault: true, Description: "Initial account balance"}, // Green - Special category for opening balances
+		{UserID: userID, Name: "Salary", Type: "income", Icon: "💰", Color: "#10B981", IsDefault: true},                                                  // Green
+		{UserID: userID, Name: "Freelance", Type: "income", Icon: "💼", Color: "#14B8A6", IsDefault: true},                                               // Teal
+		{UserID: userID, Name: "Business", Type: "income", Icon: "🏢", Color: "#06B6D4", IsDefault: true},                                                // Cyan
+		{UserID: userID, Name: "Gift", Type: "income", Icon: "🎁", Color: "#0EA5E9", IsDefault: true},                                                    // Light Blue
+		{UserID: userID, Name: "Bonus", Type: "income", Icon: "🎉", Color: "#22C55E", IsDefault: true},                                                   // Bright Green
+		{UserID: userID, Name: "Refund", Type: "income", Icon: "🔄", Color: "#3B82F6", IsDefault: true},                                                  // Blue
+		{UserID: userID, Name: "Cashback", Type: "income", Icon: "💳", Color: "#8B5CF6", IsDefault: true},                                                // Purple
+		{UserID: userID, Name: "Insurance Settlement", Type: "income", Icon: "🛡️", Color: "#059669", IsDefault: true},                                   // Dark Green
+		{UserID: userID, Name: "Other Income", Type: "income", Icon: "💵", Color: "#10B981", IsDefault: true},                                            // Green
 
 		// Expense categories - using varied warm tones (red, orange, amber, pink)
 		{UserID: userID, Name: "Food & Dining", Type: "expense", Icon: "🍔", Color: "#F59E0B", IsDefault: true},     // Amber
@@ -59,6 +60,9 @@ func GetDefaultCategories(userID uuid.UUID) []Category {
 		{UserID: userID, Name: "Subscriptions", Type: "expense", Icon: "📱", Color: "#6366F1", IsDefault: true},     // Indigo
 		{UserID: userID, Name: "Gifts & Donations", Type: "expense", Icon: "🎀", Color: "#A855F7", IsDefault: true}, // Purple
 		{UserID: userID, Name: "Other Expense", Type: "expense", Icon: "💸", Color: "#6B7280", IsDefault: true},     // Gray
+
+		// Transfer category
+		{UserID: userID, Name: "Transfer", Type: "transfer", Icon: "🔄", Color: "#8B5CF6", IsDefault: true, Description: "Transfer between accounts"}, // Purple
 	}
 }
 
@@ -66,17 +70,72 @@ func GetDefaultCategories(userID uuid.UUID) []Category {
 func GetAvailableIcons() map[string][]string {
 	return map[string][]string{
 		"income": {
+			// Money & Currency
 			"💰", "💵", "💴", "💶", "💷", "💸", "💳", "💎",
-			"📈", "📊", "💼", "🏢", "🏦", "🎁", "🎉", "⭐",
-			"✨", "💫", "🌟", "🔥", "↩️", "✅", "💯", "🎯",
+			"🪙", "💲", "🤑", "💹",
+			// Business & Work
+			"💼", "🏢", "🏦", "🏛️", "🏪", "🏬", "🏭", "⚖️",
+			"📊", "📈", "📉", "💹", "🎯", "💯",
+			// Gifts & Bonuses
+			"🎁", "🎉", "🎊", "🎈", "🎀", "⭐", "✨", "💫",
+			"🌟", "🔥", "✅", "🏆", "🥇", "🎖️",
+			// Returns & Refunds
+			"↩️", "🔄", "🔁", "♻️", "🔃",
+			// Investment & Growth
+			"📈", "💹", "🌱", "🌳", "🚀", "📊", "💎",
+			// Other
+			"🎯", "💯", "✅", "⚡", "🔋", "🌈", "☀️",
 		},
 		"expense": {
-			"🍔", "🍕", "🍜", "🍱", "🛒", "🛍️", "🎬", "🎮",
-			"🚗", "🚕", "🚌", "✈️", "🏠", "🏡", "💡", "💧",
-			"📱", "💻", "🏥", "💊", "💪", "📚", "🎓", "🎵",
-			"🎸", "🎨", "👕", "👗", "👠", "💅", "💇", "🛡️",
-			"📺", "🎧", "⚽", "🏀", "🎾", "🎭", "🍿", "☕",
-			"🍺", "🍷", "🎂", "🌮", "🍣", "🍦", "💸", "💳",
+			// Food & Dining
+			"🍔", "🍕", "🍜", "🍱", "🍝", "🍛", "🍲", "🥘",
+			"🍽️", "🥗", "🍳", "🍞", "🥖", "🧀", "🍖", "🍗",
+			"🌮", "🌯", "🥙", "🍣", "🍤", "🍦", "🍰", "🎂",
+			"☕", "🍺", "🍷", "🍸", "🥤", "🧃", "🍿",
+			// Shopping
+			"🛒", "🛍️", "👕", "👗", "👠", "👟", "🎽", "👔",
+			"👜", "💄", "💅", "💇", "🛁", "🧴", "🎀",
+			// Transportation
+			"🚗", "🚕", "🚙", "🚌", "🚎", "🚐", "🚛", "🚚",
+			"🚲", "🛵", "🏍️", "✈️", "🚂", "🚆", "🚇", "⛽",
+			"🅿️", "🚦", "🛣️",
+			// Housing & Utilities
+			"🏠", "🏡", "🏢", "🏘️", "🏗️", "🏚️", "💡", "💧",
+			"🔥", "❄️", "🌡️", "🔌", "🔋", "📡", "📶",
+			// Entertainment
+			"🎬", "🎮", "🎯", "🎲", "🎰", "🎪", "🎭", "🎨",
+			"🎸", "🎹", "🎺", "🎵", "🎶", "🎤", "🎧", "📺",
+			"📻", "📀", "🎟️", "🎫", "🎉",
+			// Healthcare
+			"🏥", "💊", "💉", "🩺", "🩹", "🩼", "🦷", "👓",
+			"🔬", "🧬", "🧪", "🧯", "⚕️",
+			// Education & Work
+			"📚", "📖", "📝", "✏️", "📏", "📐", "🎓", "🎒",
+			"📱", "💻", "⌨️", "🖥️", "🖨️", "📠", "☎️",
+			// Sports & Fitness
+			"💪", "🏋️", "🤸", "🧘", "🏃", "🚴", "⚽", "🏀",
+			"🏈", "⚾", "🎾", "🏐", "🏓", "🥊", "🥋", "⛳",
+			// Travel & Leisure
+			"✈️", "🏖️", "🏝️", "🗺️", "🧳", "🎒", "🏕️", "⛺",
+			"🗼", "🗽", "🗿", "🏰", "🌍", "🌎", "🌏",
+			// Insurance & Protection
+			"🛡️", "🔒", "🔐", "🗝️", "⚡", "🔥", "☂️",
+			// Other Common
+			"💸", "💳", "🧾", "📋", "📌", "🎯", "⚠️", "🚫",
+		},
+		"transfer": {
+			// Transfer & Exchange
+			"🔄", "🔁", "↔️", "⇄", "⇆", "↩️", "↪️", "⤴️", "⤵️",
+			"🔃", "🔂", "♻️", "🔀", "🔁",
+			// Movement
+			"➡️", "⬅️", "⬆️", "⬇️", "↗️", "↘️", "↙️", "↖️",
+			"🔝", "🔜", "🔙", "🔛", "🔚",
+			// Money Transfer
+			"💸", "💰", "💵", "💳", "🏦", "🏧", "💹",
+			// Shuffle & Swap
+			"🔄", "🔃", "🔁", "🔂", "🔀",
+			// Other
+			"⚡", "🚀", "✈️", "📡", "🔗", "⛓️",
 		},
 	}
 }

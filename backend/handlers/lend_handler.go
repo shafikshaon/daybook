@@ -184,7 +184,7 @@ func CreateLend(c *gin.Context) {
 				Type:        "expense",
 				Amount:      lend.OriginalAmount,
 				CategoryID:  "lend",
-				Date:        lend.LentDate.Time,
+				Date:        lend.LentDate,
 				Description: "Lent to " + lend.DebtorName,
 			}
 
@@ -446,7 +446,7 @@ func RecordLendPayment(c *gin.Context) {
 		Type:        "income",
 		Amount:      payment.Amount,
 		CategoryID:  "lend_payment",
-		Date:        payment.PaymentDate.Time,
+		Date:        payment.PaymentDate,
 		Description: description,
 	}
 

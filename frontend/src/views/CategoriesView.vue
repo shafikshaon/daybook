@@ -29,6 +29,11 @@
           Expense
         </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" :class="{ active: filter === 'transfer' }" @click="filter = 'transfer'" style="cursor: pointer;">
+          Transfer
+        </a>
+      </li>
     </ul>
 
     <!-- Loading State -->
@@ -137,6 +142,7 @@
                   <option value="">Select type...</option>
                   <option value="income">Income</option>
                   <option value="expense">Expense</option>
+                  <option value="transfer">Transfer</option>
                 </select>
               </div>
 
@@ -234,6 +240,9 @@ const iconOptions = {
     "🎸", "🎨", "👕", "👗", "👠", "💅", "💇", "🛡️",
     "📺", "🎧", "⚽", "🏀", "🎾", "🎭", "🍿", "☕",
     "🍺", "🍷", "🎂", "🌮", "🍣", "🍦", "💸", "💳"
+  ],
+  transfer: [
+      '→'
   ]
 }
 

@@ -295,12 +295,12 @@ func BackfillActivityLogs(c *gin.Context) {
 
 	// Parse request body for backfill options
 	var requestBody struct {
-		Module    string  `json:"module"`     // Optional: specific module to backfill
-		DryRun    bool    `json:"dryRun"`     // Optional: if true, only count without creating logs
-		StartDate *string `json:"startDate"`  // Optional: only backfill records after this date (YYYY-MM-DD)
-		EndDate   *string `json:"endDate"`    // Optional: only backfill records before this date (YYYY-MM-DD)
-		BatchSize int     `json:"batchSize"`  // Optional: number of records to process in each batch
-		AllUsers  bool    `json:"allUsers"`   // Optional: admin only - backfill for all users
+		Module    string  `json:"module"`    // Optional: specific module to backfill
+		DryRun    bool    `json:"dryRun"`    // Optional: if true, only count without creating logs
+		StartDate *string `json:"startDate"` // Optional: only backfill records after this date (YYYY-MM-DD)
+		EndDate   *string `json:"endDate"`   // Optional: only backfill records before this date (YYYY-MM-DD)
+		BatchSize int     `json:"batchSize"` // Optional: number of records to process in each batch
+		AllUsers  bool    `json:"allUsers"`  // Optional: admin only - backfill for all users
 	}
 
 	if err := c.ShouldBindJSON(&requestBody); err != nil {
@@ -364,11 +364,11 @@ func BackfillActivityLogs(c *gin.Context) {
 	logger.Infof(ctx, "Activity logs backfill completed for user: %s (created: %d, skipped: %d, errors: %d)", userID, totalCreated, totalSkipped, totalErrors)
 	utilities.SuccessResponse(c, map[string]interface{}{
 		"summary": map[string]interface{}{
-			"totalRecords":   totalRecords,
-			"logsCreated":    totalCreated,
-			"logsSkipped":    totalSkipped,
-			"errors":         totalErrors,
-			"dryRun":         requestBody.DryRun,
+			"totalRecords": totalRecords,
+			"logsCreated":  totalCreated,
+			"logsSkipped":  totalSkipped,
+			"errors":       totalErrors,
+			"dryRun":       requestBody.DryRun,
 		},
 		"details": results,
 	}, message)

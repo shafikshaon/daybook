@@ -557,7 +557,7 @@ func RecordPayment(c *gin.Context) {
 		CategoryID:   "credit_card_payment",
 		Amount:       paymentData.Amount,
 		Type:         "expense",
-		Date:         paymentDate,
+		Date:         models.Date{Time: paymentDate},
 		Description:  paymentData.Description,
 		CreditCardID: &cardID,
 		Tags:         tags,
@@ -604,7 +604,7 @@ func RecordPayment(c *gin.Context) {
 		CardID:        cardID,
 		AccountID:     accountID,
 		Amount:        paymentData.Amount,
-		PaymentDate:   paymentDate,
+		PaymentDate:   models.Date{Time: paymentDate},
 		Description:   paymentData.Description,
 		TransactionID: transaction.ID,
 	}
@@ -622,7 +622,7 @@ func RecordPayment(c *gin.Context) {
 		CardID:      cardID,
 		Amount:      paymentData.Amount,
 		Description: paymentData.Description,
-		Date:        paymentDate,
+		Date:        models.Date{Time: paymentDate},
 		Type:        "payment",
 	}
 

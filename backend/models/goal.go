@@ -34,8 +34,8 @@ type Goal struct {
 	AchievedDate *time.Time `gorm:"type:timestamptz" json:"achievedDate"`
 
 	// Tracking
-	LastContribution     float64    `json:"lastContribution"`
-	LastContributionDate *time.Time `gorm:"type:timestamptz" json:"lastContributionDate"`
+	LastContribution     float64 `json:"lastContribution"`
+	LastContributionDate *Date   `gorm:"type:timestamptz" json:"lastContributionDate"`
 
 	// Relationships
 	Holdings      []GoalHolding      `gorm:"foreignKey:GoalID" json:"holdings,omitempty"`
@@ -54,12 +54,12 @@ type GoalHolding struct {
 	GoalID uuid.UUID `gorm:"type:uuid;not null;index" json:"goalId"`
 
 	// Core Fields
-	Name         string    `gorm:"not null" json:"name"`
-	Type         string    `gorm:"not null;index" json:"type"`   // savings, fixed_deposit, dps, recurring_deposit, stocks, mutual_fund, etf, bonds, crypto, real_estate, gold, pension_fund, ulip, ppf, nsc, custom
-	Status       string    `gorm:"default:active" json:"status"` // active, matured, sold, closed, withdrawn
-	PurchaseDate time.Time `gorm:"type:timestamptz;not null" json:"purchaseDate"`
-	Amount       float64   `gorm:"not null" json:"amount"` // Initial investment amount
-	CurrentValue float64   `json:"currentValue"`           // Current market value
+	Name         string  `gorm:"not null" json:"name"`
+	Type         string  `gorm:"not null;index" json:"type"`   // savings, fixed_deposit, dps, recurring_deposit, stocks, mutual_fund, etf, bonds, crypto, real_estate, gold, pension_fund, ulip, ppf, nsc, custom
+	Status       string  `gorm:"default:active" json:"status"` // active, matured, sold, closed, withdrawn
+	PurchaseDate Date    `gorm:"not null" json:"purchaseDate"`
+	Amount       float64 `gorm:"not null" json:"amount"` // Initial investment amount
+	CurrentValue float64 `json:"currentValue"`           // Current market value
 
 	// Common Fields (for bank products)
 	Institution    *string    `json:"institution"`                          // Bank/Fund house name
@@ -96,10 +96,10 @@ type GoalContribution struct {
 	GoalID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"goalId"`
 	HoldingID *uuid.UUID `gorm:"type:uuid" json:"holdingId"` // Link to specific holding
 
-	Type   string    `gorm:"not null" json:"type"` // contribution, withdrawal, dividend, interest, appreciation, depreciation, maturity
-	Amount float64   `gorm:"not null" json:"amount"`
-	Date   time.Time `gorm:"type:timestamptz;not null;index" json:"date"`
-	Notes  string    `json:"notes"`
+	Type   string  `gorm:"not null" json:"type"` // contribution, withdrawal, dividend, interest, appreciation, depreciation, maturity
+	Amount float64 `gorm:"not null" json:"amount"`
+	Date   Date    `gorm:"not null;index" json:"date"`
+	Notes  string  `json:"notes"`
 
 	// Transaction link (creates a transaction for account balance)
 	TransactionID uuid.UUID `gorm:"type:uuid;not null" json:"transactionId"`

@@ -94,7 +94,7 @@ type CreditCardTransaction struct {
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Description   string         `json:"description"`
 	Merchant      string         `json:"merchant"`
-	Date          time.Time      `gorm:"type:timestamptz;not null" json:"date"`
+	Date          Date           `gorm:"not null" json:"date"`
 	Type          string         `gorm:"not null" json:"type"` // purchase, payment, refund, fee, interest
 	Tags          []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
 	Attachments   []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
@@ -117,7 +117,7 @@ type CreditCardPayment struct {
 	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
 	AccountID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"` // Account used to pay
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	PaymentDate   time.Time      `gorm:"type:timestamptz;not null" json:"paymentDate"`
+	PaymentDate   Date           `gorm:"not null" json:"paymentDate"`
 	Description   string         `json:"description"`
 	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to Transaction record
 	CreatedAt     time.Time      `json:"createdAt"`

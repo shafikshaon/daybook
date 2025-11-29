@@ -606,10 +606,10 @@ func RemoveHolding(c *gin.Context) {
 	logger.Debugf(ctx, "RemoveHolding - Removing holding: %s", holdingID)
 
 	var removeData struct {
-		AccountID    uuid.UUID `json:"accountId" binding:"required"`
-		CurrentValue float64   `json:"currentValue" binding:"required,gt=0"`
-		Date         time.Time `json:"date"`
-		Notes        string    `json:"notes"`
+		AccountID    uuid.UUID   `json:"accountId" binding:"required"`
+		CurrentValue float64     `json:"currentValue" binding:"required,gt=0"`
+		Date         models.Date `json:"date"`
+		Notes        string      `json:"notes"`
 	}
 
 	if err := c.ShouldBindJSON(&removeData); err != nil {
@@ -634,7 +634,7 @@ func RemoveHolding(c *gin.Context) {
 	}
 
 	if removeData.Date.IsZero() {
-		removeData.Date = time.Now()
+		removeData.Date = models.Date{Time: time.Now()}
 	}
 
 	logger.Debugf(ctx, "RemoveHolding - Starting transaction to remove holding")

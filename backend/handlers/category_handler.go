@@ -30,7 +30,7 @@ func ListCategories(c *gin.Context) {
 
 	// Filter by type if specified
 	if categoryType := c.Query("type"); categoryType != "" {
-		if categoryType == "income" || categoryType == "expense" {
+		if categoryType == "income" || categoryType == "expense" || categoryType == "transfer" {
 			query = query.Where("type = ?", categoryType)
 		}
 	}
@@ -98,9 +98,9 @@ func CreateCategory(c *gin.Context) {
 	}
 
 	// Validate category type
-	if category.Type != "income" && category.Type != "expense" {
+	if category.Type != "income" && category.Type != "expense" && category.Type != "transfer" {
 		logger.Warnf(ctx, "Invalid category type: %s", category.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income' or 'expense'")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income', 'expense', or 'transfer'")
 		return
 	}
 
@@ -170,9 +170,9 @@ func UpdateCategory(c *gin.Context) {
 	}
 
 	// Validate category type
-	if updateData.Type != "income" && updateData.Type != "expense" {
+	if updateData.Type != "income" && updateData.Type != "expense" && updateData.Type != "transfer" {
 		logger.Warnf(ctx, "Invalid category type: %s", updateData.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income' or 'expense'")
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income', 'expense', or 'transfer'")
 		return
 	}
 

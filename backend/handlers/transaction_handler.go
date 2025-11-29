@@ -50,17 +50,13 @@ func ListTransactions(c *gin.Context) {
 
 	if startDate := c.Query("startDate"); startDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", startDate); err == nil {
-			// Set to beginning of day
-			startOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 0, 0, 0, 0, parsedDate.Location())
-			query = query.Where("date >= ?", startOfDay)
+			query = query.Where("date >= ?", parsedDate)
 		}
 	}
 
 	if endDate := c.Query("endDate"); endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			// Set to end of day
-			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
-			query = query.Where("date <= ?", endOfDay)
+			query = query.Where("date <= ?", parsedDate)
 		}
 	}
 
@@ -854,8 +850,7 @@ func GetTransactionStats(c *gin.Context) {
 	}
 	if endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
-			incomeQuery = incomeQuery.Where("date <= ?", endOfDay)
+			incomeQuery = incomeQuery.Where("date <= ?", parsedDate)
 		}
 	}
 	incomeQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalIncome)
@@ -871,8 +866,7 @@ func GetTransactionStats(c *gin.Context) {
 	}
 	if endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
-			expenseQuery = expenseQuery.Where("date <= ?", endOfDay)
+			expenseQuery = expenseQuery.Where("date <= ?", parsedDate)
 		}
 	}
 	expenseQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalExpense)
@@ -888,8 +882,7 @@ func GetTransactionStats(c *gin.Context) {
 	}
 	if endDate != "" {
 		if parsedDate, err := time.Parse("2006-01-02", endDate); err == nil {
-			endOfDay := time.Date(parsedDate.Year(), parsedDate.Month(), parsedDate.Day(), 23, 59, 59, 999999999, parsedDate.Location())
-			transferQuery = transferQuery.Where("date <= ?", endOfDay)
+			transferQuery = transferQuery.Where("date <= ?", parsedDate)
 		}
 	}
 	transferQuery.Select("COALESCE(SUM(amount), 0)").Row().Scan(&stats.TotalTransfer)

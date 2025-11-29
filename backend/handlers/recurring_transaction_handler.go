@@ -344,18 +344,18 @@ func ProcessRecurringTransactions(c *gin.Context) {
 
 			// Create the transaction from template
 			transaction := models.Transaction{
-				UserID:        userID,
-				AccountID:     recurring.TransactionTemplate.AccountID,
-				ToAccountID:   recurring.TransactionTemplate.ToAccountID,
-				Type:          recurring.TransactionTemplate.Type,
-				Amount:        recurring.TransactionTemplate.Amount,
-				CategoryID:    recurring.TransactionTemplate.CategoryID,
-				Date:          txnDate,
-				Description:   recurring.TransactionTemplate.Description,
-				Tags:          recurring.TransactionTemplate.Tags,
-				CreditCardID:  recurring.TransactionTemplate.CreditCardID,
-				Attachments:   recurring.TransactionTemplate.Attachments,
-				RecurringID:   &recurring.ID,
+				UserID:       userID,
+				AccountID:    recurring.TransactionTemplate.AccountID,
+				ToAccountID:  recurring.TransactionTemplate.ToAccountID,
+				Type:         recurring.TransactionTemplate.Type,
+				Amount:       recurring.TransactionTemplate.Amount,
+				CategoryID:   recurring.TransactionTemplate.CategoryID,
+				Date:         models.Date{Time: txnDate},
+				Description:  recurring.TransactionTemplate.Description,
+				Tags:         recurring.TransactionTemplate.Tags,
+				CreditCardID: recurring.TransactionTemplate.CreditCardID,
+				Attachments:  recurring.TransactionTemplate.Attachments,
+				RecurringID:  &recurring.ID,
 			}
 
 			// Create the transaction

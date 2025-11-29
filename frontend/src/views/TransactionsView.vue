@@ -258,7 +258,7 @@
             </thead>
             <tbody>
               <tr v-for="transaction in paginatedTransactions" :key="transaction.id">
-                <td>{{ formatDate(transaction.date) }}</td>
+                <td>{{ transaction.date }}</td>
                 <td>
                   <div>{{ transaction.description || '-' }}</div>
                   <small v-if="transaction.creditCardId" class="text-muted">
@@ -372,6 +372,7 @@
                 <select class="form-select" v-model="form.type" required>
                   <option value="income">Income</option>
                   <option value="expense">Expense</option>
+                  <option value="transfer">Transfer</option>
                 </select>
               </div>
 
@@ -389,7 +390,12 @@
 
               <div class="mb-3">
                 <label class="form-label">Category *</label>
-                <select class="form-select" v-model="form.categoryId" required>
+                <select 
+                  class="form-select" 
+                  v-model="form.categoryId" 
+                  required
+                  :key="`category-${form.type}-${editingTransaction?.id || 'new'}`"
+                >
                   <option value="">Select category...</option>
                   <option
                     v-for="cat in filteredCategories"
@@ -399,6 +405,12 @@
                     {{ cat.icon }} {{ cat.name }}
                   </option>
                 </select>
+                <small v-if="showEditModal && form.categoryId" class="text-muted d-block mt-1">
+                  Selected: {{ getCategoryName(form.categoryId) }}
+                </small>
+                <small v-if="showEditModal && !form.categoryId && editingTransaction?.categoryId" class="text-warning d-block mt-1">
+                  Warning: Original category "{{ getCategoryName(editingTransaction.categoryId) }}" not found in {{ form.type }} categories
+                </small>
               </div>
 
               <div class="mb-3">
@@ -661,7 +673,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useTransactionsStore } from '@/stores/transactions'
 import { useAccountsStore } from '@/stores/accounts'
 import { useCreditCardsStore } from '@/stores/creditCards'
@@ -748,6 +760,13 @@ const accountsAndCreditCards = computed(() => {
 
 const filteredCategories = computed(() => {
   return transactionsStore.categories.filter(c => c.type === form.value.type)
+})
+
+// Computed property to check if current category is valid for the selected type
+const isCategoryValidForType = computed(() => {
+  if (!form.value.categoryId) return true
+  const category = transactionsStore.getCategoryById(form.value.categoryId)
+  return category && category.type === form.value.type
 })
 
 const totalIncome = computed(() => transactionsStore.totalIncome())
@@ -989,21 +1008,41 @@ const getCreditCardName = (cardId) => {
   return card ? card.name : 'Credit Card'
 }
 
-const editTransaction = (transaction) => {
+const editTransaction = async (transaction) => {
   editingTransaction.value = transaction
+
+  // Ensure categories are loaded before setting the form
+  if (transactionsStore.categories.length === 0) {
+    await transactionsStore.fetchCategories()
+  }
+
+  // Set form values
   form.value = {
     ...transaction,
     date: new Date(transaction.date).toISOString().split('T')[0],
     // If transaction has creditCardId, use it as accountId for the dropdown
-    accountId: transaction.creditCardId || transaction.accountId
+    accountId: transaction.creditCardId || transaction.accountId,
+    // Ensure categoryId is properly set
+    categoryId: transaction.categoryId || '',
+    type: transaction.type || 'expense'
   }
+
   // Load existing attachments
   transactionAttachments.value = (transaction.attachments || []).map(url => ({
     fileUrl: url,
     originalName: url.split('/').pop(),
     fileName: url.split('/').pop()
   }))
+
   showEditModal.value = true
+
+  // Use nextTick to ensure the DOM is updated before trying to set the selected value
+  await nextTick(() => {
+    // Double-check that the category is properly selected
+    if (transaction.categoryId && form.value.categoryId !== transaction.categoryId) {
+      form.value.categoryId = transaction.categoryId
+    }
+  })
 }
 
 const confirmDelete = async (transaction) => {
@@ -1185,10 +1224,22 @@ const openAttachment = (url) => {
 }
 
 // Watch for transaction type changes to reset category selection
-watch(() => form.value.type, (newType, oldType) => {
+watch(() => form.value.type, async (newType, oldType) => {
   if (newType !== oldType) {
-    // Reset category when type changes to avoid having a category from the wrong type
-    form.value.categoryId = ''
+    // When editing, check if the original category exists for the new type
+    if (showEditModal.value && editingTransaction.value) {
+      const originalCategory = transactionsStore.getCategoryById(editingTransaction.value.categoryId)
+      if (originalCategory && originalCategory.type === newType) {
+        // Original category is valid for new type, keep it selected
+        form.value.categoryId = editingTransaction.value.categoryId
+      } else {
+        // Reset category when type changes and original category is not valid for new type
+        form.value.categoryId = ''
+      }
+    } else {
+      // For new transactions, always reset category when type changes
+      form.value.categoryId = ''
+    }
   }
 })
 
