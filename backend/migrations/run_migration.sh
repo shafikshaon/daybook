@@ -55,7 +55,6 @@ MIGRATION_MODE="${1:-all}"
 
 # List of migrations in order
 MIGRATIONS=(
-    "001_convert_to_timestamptz.sql"
     "000001_convert_transaction_datetime_to_date.up.sql"
 )
 
