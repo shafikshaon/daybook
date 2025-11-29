@@ -394,6 +394,7 @@ onMounted(async () => {
   console.log('Loading report data...')
   await Promise.all([
     accountsStore.fetchAccounts(),
+    transactionsStore.fetchCategories(),
     transactionsStore.fetchTransactions(),
     creditCardsStore.fetchCreditCards()
   ])

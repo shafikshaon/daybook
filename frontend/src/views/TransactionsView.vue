@@ -1184,6 +1184,14 @@ const openAttachment = (url) => {
   window.open(url, '_blank')
 }
 
+// Watch for transaction type changes to reset category selection
+watch(() => form.value.type, (newType, oldType) => {
+  if (newType !== oldType) {
+    // Reset category when type changes to avoid having a category from the wrong type
+    form.value.categoryId = ''
+  }
+})
+
 // Watch for manual date changes to reset quick filter
 watch([() => filters.value.startDate, () => filters.value.endDate], () => {
   // Reset quick filter to custom when dates are manually changed
@@ -1195,6 +1203,7 @@ watch([() => filters.value.startDate, () => filters.value.endDate], () => {
 
 onMounted(async () => {
   await Promise.all([
+    transactionsStore.fetchCategories(),
     transactionsStore.fetchTransactions(currentPage.value, itemsPerPage.value),
     accountsStore.fetchAccounts(),
     creditCardsStore.fetchCreditCards()

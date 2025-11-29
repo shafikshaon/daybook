@@ -425,8 +425,11 @@ const closeModal = () => {
 }
 
 onMounted(async () => {
-  await transactionsStore.fetchRecurringTransactions()
-  await accountsStore.fetchAccounts()
+  await Promise.all([
+    transactionsStore.fetchCategories(),
+    transactionsStore.fetchRecurringTransactions(),
+    accountsStore.fetchAccounts()
+  ])
 })
 </script>
 

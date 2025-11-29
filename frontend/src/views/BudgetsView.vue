@@ -199,6 +199,7 @@ const closeModal = () => {
 onMounted(async () => {
   await Promise.all([
     budgetsStore.fetchBudgets(),
+    transactionsStore.fetchCategories(),
     transactionsStore.fetchTransactions()
   ])
 })

@@ -15,52 +15,7 @@ export const useTransactionsStore = defineStore('transactions', {
       hasNext: false,
       hasPrev: false
     },
-    categories: [
-      // Income categories
-      { id: 'opening_balance', name: 'Opening Balance', type: 'income', group: 'income', icon: '🏁', color: '#10b981' },
-      { id: 'salary', name: 'Salary', type: 'income', group: 'income', icon: '💼', color: '#10b981' },
-      { id: 'freelance', name: 'Freelance', type: 'income', group: 'income', icon: '💻', color: '#10b981' },
-      { id: 'investment_income', name: 'Investment Income', type: 'income', group: 'income', icon: '📈', color: '#10b981' },
-      { id: 'dividend_income', name: 'Dividend', type: 'income', group: 'income', icon: '💰', color: '#10b981' },
-      { id: 'investment_sale', name: 'Investment Sale', type: 'income', group: 'income', icon: '📊', color: '#10b981' },
-      { id: 'fixed_deposit_maturity', name: 'FD Maturity', type: 'income', group: 'income', icon: '🏦', color: '#10b981' },
-      { id: 'savings_withdrawal', name: 'Savings Withdrawal', type: 'income', group: 'income', icon: '🎯', color: '#10b981' },
-      { id: 'goal_withdrawal', name: 'Goal Withdrawal', type: 'income', group: 'income', icon: '🎯', color: '#10b981' },
-      { id: 'goal_holding_removed', name: 'Goal Holding Sold', type: 'income', group: 'income', icon: '💹', color: '#10b981' },
-      { id: 'other_income', name: 'Other Income', type: 'income', group: 'income', icon: '💵', color: '#10b981' },
-
-      // Regular Expense categories (consumption)
-      { id: 'food', name: 'Food & Dining', type: 'expense', group: 'expense', icon: '🍔', color: '#ef4444' },
-      { id: 'transport', name: 'Transportation', type: 'expense', group: 'expense', icon: '🚗', color: '#ef4444' },
-      { id: 'shopping', name: 'Shopping', type: 'expense', group: 'expense', icon: '🛍️', color: '#ef4444' },
-      { id: 'entertainment', name: 'Entertainment', type: 'expense', group: 'expense', icon: '🎬', color: '#ef4444' },
-      { id: 'utilities', name: 'Utilities', type: 'expense', group: 'expense', icon: '💡', color: '#ef4444' },
-      { id: 'healthcare', name: 'Healthcare', type: 'expense', group: 'expense', icon: '🏥', color: '#ef4444' },
-      { id: 'education', name: 'Education', type: 'expense', group: 'expense', icon: '📚', color: '#ef4444' },
-      { id: 'housing', name: 'Housing', type: 'expense', group: 'expense', icon: '🏠', color: '#ef4444' },
-      { id: 'insurance', name: 'Insurance', type: 'expense', group: 'expense', icon: '🛡️', color: '#ef4444' },
-      { id: 'subscriptions', name: 'Subscriptions', type: 'expense', group: 'expense', icon: '📱', color: '#ef4444' },
-      { id: 'donation', name: 'Donation', type: 'expense', group: 'expense', icon: '🤲', color: '#ef4444' },
-      { id: 'credit_card_payment', name: 'Credit Card Payment', type: 'expense', group: 'expense', icon: '💳', color: '#ef4444' },
-      { id: 'other_expense', name: 'Other Expense', type: 'expense', group: 'expense', icon: '💸', color: '#ef4444' },
-
-      // Savings & Investment categories (wealth building)
-      { id: 'savings_contribution', name: 'Savings Contribution', type: 'expense', group: 'savings', icon: '🎯', color: '#8b5cf6' },
-      { id: 'fixed_deposit_investment', name: 'Fixed Deposit', type: 'expense', group: 'savings', icon: '🏦', color: '#3b82f6' },
-      { id: 'investment_purchase', name: 'Investment Purchase', type: 'expense', group: 'savings', icon: '📈', color: '#6366f1' },
-      { id: 'goal_contribution', name: 'Goal Contribution', type: 'expense', group: 'savings', icon: '🎯', color: '#8b5cf6' },
-      { id: 'goal_holding_added', name: 'Goal Holding Added', type: 'expense', group: 'savings', icon: '💹', color: '#6366f1' },
-      { id: 'dps', name: 'DPS (Deposit Pension Scheme)', type: 'expense', group: 'savings', icon: '🏦', color: '#3b82f6' },
-
-      // Lending & Borrowing categories
-      { id: 'lend', name: 'Money Lent', type: 'expense', group: 'expense', icon: '🤝', color: '#ef4444' },
-      { id: 'lend_received', name: 'Lend Repayment Received', type: 'income', group: 'income', icon: '🤝', color: '#10b981' },
-      { id: 'debt', name: 'Debt Payment', type: 'expense', group: 'expense', icon: '💳', color: '#ef4444' },
-      { id: 'debt_taken', name: 'Debt Borrowed', type: 'income', group: 'income', icon: '💳', color: '#10b981' },
-
-      // Transfer category
-      { id: 'transfer', name: 'Transfer', type: 'transfer', group: 'transfer', icon: '🔄', color: '#3b82f6' }
-    ],
+    categories: [],
     tags: [],
     recurringTransactions: []
   }),
@@ -214,6 +169,16 @@ export const useTransactionsStore = defineStore('transactions', {
   },
 
   actions: {
+    async fetchCategories() {
+      try {
+        const response = await apiService.get('categories')
+        this.categories = response.data || []
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+        throw error
+      }
+    },
+
     async fetchTransactions(page = 1, limit = 20, filters = {}) {
       try {
         const params = { page, limit, ...filters }

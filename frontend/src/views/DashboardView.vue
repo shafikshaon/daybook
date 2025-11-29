@@ -207,6 +207,7 @@ const getProgressBarClass = (percentage) => {
 const loadData = async () => {
   await Promise.all([
     accountsStore.fetchAccounts(),
+    transactionsStore.fetchCategories(),
     transactionsStore.fetchTransactions(),
     budgetsStore.fetchBudgets(),
     goalsStore.fetchGoals()

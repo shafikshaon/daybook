@@ -92,6 +92,18 @@ func Signup(c *gin.Context) {
 	}
 	logger.Debugf(ctx, "Default account types created for user: %s", user.ID)
 
+	// Create default categories for the user
+	logger.Debugf(ctx, "Creating default categories for user: %s", user.ID)
+	defaultCategories := models.GetDefaultCategories(user.ID)
+	if len(defaultCategories) > 0 {
+		if err := database.DB.WithContext(ctx).Create(&defaultCategories).Error; err != nil {
+			logger.Errorf(ctx, "Failed to create default categories: %v", err)
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create default categories")
+			return
+		}
+		logger.Debugf(ctx, "Default categories created for user: %s, count: %d", user.ID, len(defaultCategories))
+	}
+
 	// Generate JWT token
 	logger.Debugf(ctx, "Generating JWT token for user: %s", user.ID)
 	token, err := utilities.GenerateToken(&user)

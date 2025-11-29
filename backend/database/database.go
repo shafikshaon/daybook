@@ -52,6 +52,7 @@ func InitDatabase(cfg *config.Config) error {
 		&models.User{},
 		&models.Account{},
 		&models.AccountType{},
+		&models.Category{},
 		&models.Transaction{},
 		&models.RecurringTransaction{},
 		&models.Tag{},

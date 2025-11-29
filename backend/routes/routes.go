@@ -74,7 +74,6 @@ func SetupRoutes(router *gin.Engine) {
 				transactionRoutes.DELETE("/:id", handlers.DeleteTransaction)
 			}
 
-
 			// Recurring transaction routes
 			recurringTransactionRoutes := protected.Group("/recurring-transactions")
 			{
@@ -132,6 +131,17 @@ func SetupRoutes(router *gin.Engine) {
 				budgetRoutes.DELETE("/:id", handlers.DeleteBudget)
 			}
 
+			// Category routes
+			categoryRoutes := protected.Group("/categories")
+			{
+				categoryRoutes.GET("", handlers.ListCategories)
+				categoryRoutes.GET("/icons", handlers.GetAvailableIcons)
+				categoryRoutes.GET("/:id", handlers.GetCategory)
+				categoryRoutes.POST("", handlers.CreateCategory)
+				categoryRoutes.PUT("/:id", handlers.UpdateCategory)
+				categoryRoutes.DELETE("/:id", handlers.DeleteCategory)
+			}
+
 			// Goal routes (Unified savings, investments, and fixed deposits)
 			goalRoutes := protected.Group("/goals")
 			{
@@ -155,6 +165,14 @@ func SetupRoutes(router *gin.Engine) {
 			{
 				settingsRoutes.GET("", handlers.GetSettings)
 				settingsRoutes.PUT("", handlers.UpdateSettings)
+
+				// Category management under settings
+				settingsRoutes.GET("/categories", handlers.ListCategories)
+				settingsRoutes.GET("/categories/icons", handlers.GetAvailableIcons)
+				settingsRoutes.GET("/categories/:id", handlers.GetCategory)
+				settingsRoutes.POST("/categories", handlers.CreateCategory)
+				settingsRoutes.PUT("/categories/:id", handlers.UpdateCategory)
+				settingsRoutes.DELETE("/categories/:id", handlers.DeleteCategory)
 			}
 
 			// Reconciliation routes
