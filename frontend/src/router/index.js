@@ -133,35 +133,37 @@ router.onError((error) => {
 // Track if auth has been initialized
 let authInitialized = false
 
-// Navigation guard
-router.beforeEach(async (to, from, next) => {
-  try {
-    // Pass pinia instance explicitly for use outside components
-    const authStore = useAuthStore(pinia)
+// Setup navigation guard - this function should be called after Pinia is installed
+export function setupRouterGuard() {
+  router.beforeEach(async (to, from, next) => {
+    try {
+      // Pass pinia instance explicitly for use outside components
+      const authStore = useAuthStore(pinia)
 
-    // Initialize auth once on first navigation
-    if (!authInitialized) {
-      await authStore.initializeAuth()
-      authInitialized = true
-    }
+      // Initialize auth once on first navigation
+      if (!authInitialized) {
+        await authStore.initializeAuth()
+        authInitialized = true
+      }
 
-    const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
-    const isAuthPage = to.path === '/login' || to.path === '/signup'
+      const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
+      const isAuthPage = to.path === '/login' || to.path === '/signup'
 
-    if (requiresAuth && !authStore.isAuthenticated) {
-      // Redirect to login if trying to access protected route
-      next({ name: 'Login', query: { redirect: to.fullPath } })
-    } else if (isAuthPage && authStore.isAuthenticated) {
-      // Redirect to dashboard if already logged in and trying to access auth pages
-      next({ name: 'Dashboard' })
-    } else {
+      if (requiresAuth && !authStore.isAuthenticated) {
+        // Redirect to login if trying to access protected route
+        next({ name: 'Login', query: { redirect: to.fullPath } })
+      } else if (isAuthPage && authStore.isAuthenticated) {
+        // Redirect to dashboard if already logged in and trying to access auth pages
+        next({ name: 'Dashboard' })
+      } else {
+        next()
+      }
+    } catch (error) {
+      console.error('Navigation guard error:', error)
+      // Allow navigation to continue even if auth check fails
       next()
     }
-  } catch (error) {
-    console.error('Navigation guard error:', error)
-    // Allow navigation to continue even if auth check fails
-    next()
-  }
-})
+  })
+}
 
 export default router

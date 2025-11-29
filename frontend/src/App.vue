@@ -425,10 +425,9 @@ import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
 import { useNotification } from '@/composables/useNotification'
 import { AlertToast, ConfirmModal } from '@/components'
-import { pinia } from '@/stores'
 
-const settingsStore = useSettingsStore(pinia)
-const authStore = useAuthStore(pinia)
+const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
