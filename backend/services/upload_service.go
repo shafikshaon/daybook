@@ -61,8 +61,7 @@ type UploadService interface {
 	GetFilePath(userID uuid.UUID, filename string) (string, error)
 }
 
-type uploadService struct {
-}
+type uploadService struct{}
 
 // NewUploadService creates a new upload service
 func NewUploadService() UploadService {
@@ -84,7 +83,7 @@ func (s *uploadService) UploadFile(userID uuid.UUID, fileHeader *multipart.FileH
 
 	// Create uploads directory
 	userUploadDir := filepath.Join(UploadDir, userID.String())
-	if err := os.MkdirAll(userUploadDir, 0755); err != nil {
+	if err := os.MkdirAll(userUploadDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create upload directory: %w", err)
 	}
 

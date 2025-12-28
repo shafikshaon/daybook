@@ -2,9 +2,10 @@ package services
 
 import (
 	"context"
+	"encoding/json"
+
 	"daybook-backend/models"
 	"daybook-backend/repository"
-	"encoding/json"
 
 	"github.com/google/uuid"
 )

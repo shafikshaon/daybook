@@ -86,7 +86,6 @@ func (s *accountService) CreateAccount(ctx context.Context, account *models.Acco
 			err := tx.WithContext(ctx).
 				Where("user_id = ? AND name = ? AND type = ?", account.UserID, "Opening Balance", "income").
 				First(&openingBalanceCategory).Error
-
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
 					// Category doesn't exist, create it
@@ -126,7 +125,6 @@ func (s *accountService) CreateAccount(ctx context.Context, account *models.Acco
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

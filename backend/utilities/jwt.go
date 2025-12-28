@@ -52,7 +52,6 @@ func ValidateToken(tokenString string) (*Claims, error) {
 		}
 		return []byte(config.AppConfig.JWT.Secret), nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

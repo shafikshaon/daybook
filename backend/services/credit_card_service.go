@@ -265,7 +265,6 @@ func (s *creditCardService) RecordTransaction(ctx context.Context, cardID, userI
 		createdTransaction = &req.CreditCardTransaction
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +345,6 @@ func (s *creditCardService) DeleteTransaction(ctx context.Context, cardID, trans
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
@@ -474,7 +472,6 @@ func (s *creditCardService) RecordPayment(ctx context.Context, cardID, userID uu
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

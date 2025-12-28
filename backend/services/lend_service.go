@@ -165,7 +165,6 @@ func (s *lendService) CreateLend(ctx context.Context, lend *models.LendRecord) (
 
 			return nil
 		})
-
 		if err != nil {
 			return nil, err
 		}
@@ -340,7 +339,6 @@ func (s *lendService) RecordPayment(ctx context.Context, lendID, userID uuid.UUI
 		updatedLend = lend
 		return nil
 	})
-
 	if err != nil {
 		return nil, nil, err
 	}

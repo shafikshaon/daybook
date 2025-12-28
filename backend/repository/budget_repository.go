@@ -2,8 +2,9 @@ package repository
 
 import (
 	"context"
-	"daybook-backend/models"
 	"time"
+
+	"daybook-backend/models"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"

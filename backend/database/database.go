@@ -1,10 +1,11 @@
 package database
 
 import (
+	"fmt"
+
 	"daybook-backend/config"
 	customLogger "daybook-backend/logger"
 	"daybook-backend/models"
-	"fmt"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"

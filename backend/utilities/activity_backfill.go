@@ -13,21 +13,21 @@ import (
 
 // BackfillOptions contains configuration for backfilling activity logs
 type BackfillOptions struct {
-	UserID     *uuid.UUID // If nil, backfill for all users
-	Module     string     // If empty, backfill for all modules
-	DryRun     bool       // If true, only count records without creating logs
-	StartDate  *time.Time // Only backfill records created after this date
-	EndDate    *time.Time // Only backfill records created before this date
-	BatchSize  int        // Number of records to process in each batch
+	UserID    *uuid.UUID // If nil, backfill for all users
+	Module    string     // If empty, backfill for all modules
+	DryRun    bool       // If true, only count records without creating logs
+	StartDate *time.Time // Only backfill records created after this date
+	EndDate   *time.Time // Only backfill records created before this date
+	BatchSize int        // Number of records to process in each batch
 }
 
 // BackfillResult contains statistics about the backfill operation
 type BackfillResult struct {
-	Module         string `json:"module"`
-	TotalRecords   int64  `json:"total_records"`
-	LogsCreated    int64  `json:"logs_created"`
-	LogsSkipped    int64  `json:"logs_skipped"`
-	Errors         int64  `json:"errors"`
+	Module       string `json:"module"`
+	TotalRecords int64  `json:"total_records"`
+	LogsCreated  int64  `json:"logs_created"`
+	LogsSkipped  int64  `json:"logs_skipped"`
+	Errors       int64  `json:"errors"`
 }
 
 // BackfillAllActivities backfills activity logs for all or specified modules

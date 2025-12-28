@@ -126,7 +126,6 @@ func (s *authService) Signup(ctx context.Context, req *models.SignupRequest) (*m
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

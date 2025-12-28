@@ -165,7 +165,6 @@ func (s *debtService) CreateDebt(ctx context.Context, debt *models.DebtRecord) (
 
 			return nil
 		})
-
 		if err != nil {
 			return nil, err
 		}
@@ -345,7 +344,6 @@ func (s *debtService) RecordPayment(ctx context.Context, debtID, userID uuid.UUI
 		updatedDebt = debt
 		return nil
 	})
-
 	if err != nil {
 		return nil, nil, err
 	}

@@ -348,7 +348,6 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -542,7 +541,6 @@ func (s *goalService) RemoveHolding(ctx context.Context, holdingID, userID uuid.
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

@@ -250,7 +250,6 @@ func (s *transactionService) CreateTransaction(ctx context.Context, transaction 
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -395,7 +394,6 @@ func (s *transactionService) UpdateTransaction(ctx context.Context, id, userID u
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -475,7 +473,6 @@ func (s *transactionService) DeleteTransaction(ctx context.Context, id, userID u
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}

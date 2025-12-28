@@ -338,7 +338,6 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

@@ -138,7 +138,6 @@ func (s *reconciliationService) CreateReconciliation(ctx context.Context, userID
 
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +234,6 @@ func (s *reconciliationService) DeleteReconciliation(ctx context.Context, reconc
 
 		return nil
 	})
-
 	if err != nil {
 		return err
 	}
