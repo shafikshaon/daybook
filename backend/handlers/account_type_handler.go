@@ -3,18 +3,28 @@ package handlers
 import (
 	"net/http"
 
-	"daybook-backend/database"
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
+	"daybook-backend/services"
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// AccountTypeHandler handles account type-related HTTP requests
+type AccountTypeHandler struct {
+	service services.AccountTypeService
+}
+
+// NewAccountTypeHandler creates a new account type handler
+func NewAccountTypeHandler(service services.AccountTypeService) *AccountTypeHandler {
+	return &AccountTypeHandler{service: service}
+}
+
 // ListAccountTypes returns all account types for the authenticated user
-func ListAccountTypes(c *gin.Context) {
+func (h *AccountTypeHandler) ListAccountTypes(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "ListAccountTypes - Entry")
 
@@ -26,12 +36,8 @@ func ListAccountTypes(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching account types for user: %s", userID)
-	var accountTypes []models.AccountType
-	// Get user's account types
-	if err := database.DB.WithContext(ctx).
-		Where("user_id = ?", userID).
-		Order("sort_order ASC, name ASC").
-		Find(&accountTypes).Error; err != nil {
+	accountTypes, err := h.service.ListAccountTypes(ctx, userID)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to fetch account types: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch account types")
 		return
@@ -42,7 +48,7 @@ func ListAccountTypes(c *gin.Context) {
 }
 
 // GetAccountType returns a specific account type by ID
-func GetAccountType(c *gin.Context) {
+func (h *AccountTypeHandler) GetAccountType(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetAccountType - Entry")
 
@@ -61,10 +67,8 @@ func GetAccountType(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching account type %s for user: %s", accountTypeID, userID)
-	var accountType models.AccountType
-	if err := database.DB.WithContext(ctx).
-		Where("id = ? AND user_id = ?", accountTypeID, userID).
-		First(&accountType).Error; err != nil {
+	accountType, err := h.service.GetAccountType(ctx, accountTypeID, userID)
+	if err != nil {
 		logger.Warnf(ctx, "Account type not found: %s, error: %v", accountTypeID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Account type not found")
 		return
@@ -75,7 +79,7 @@ func GetAccountType(c *gin.Context) {
 }
 
 // CreateAccountType creates a new account type for the user
-func CreateAccountType(c *gin.Context) {
+func (h *AccountTypeHandler) CreateAccountType(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "CreateAccountType - Entry")
 
@@ -98,18 +102,19 @@ func CreateAccountType(c *gin.Context) {
 	accountType.UserID = userID
 
 	logger.Debugf(ctx, "Creating account type '%s' for user: %s", accountType.Name, userID)
-	if err := database.DB.WithContext(ctx).Create(&accountType).Error; err != nil {
+	created, err := h.service.CreateAccountType(ctx, &accountType)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to create account type: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create account type")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	logger.Infof(ctx, "Account type created successfully: %s for user: %s", accountType.ID, userID)
-	utilities.CreatedResponse(c, accountType, "Account type created successfully")
+	logger.Infof(ctx, "Account type created successfully: %s for user: %s", created.ID, userID)
+	utilities.CreatedResponse(c, created, "Account type created successfully")
 }
 
 // UpdateAccountType updates an existing account type
-func UpdateAccountType(c *gin.Context) {
+func (h *AccountTypeHandler) UpdateAccountType(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UpdateAccountType - Entry")
 
@@ -127,14 +132,6 @@ func UpdateAccountType(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching existing account type %s for user: %s", accountTypeID, userID)
-	var existingAccountType models.AccountType
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountTypeID, userID).First(&existingAccountType).Error; err != nil {
-		logger.Warnf(ctx, "Account type not found: %s, error: %v", accountTypeID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Account type not found")
-		return
-	}
-
 	logger.Debugf(ctx, "Parsing update data for account type: %s", accountTypeID)
 	var updateData models.AccountType
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -143,26 +140,20 @@ func UpdateAccountType(c *gin.Context) {
 		return
 	}
 
-	// Update only allowed fields
-	logger.Debugf(ctx, "Updating account type fields for: %s", accountTypeID)
-	existingAccountType.Name = updateData.Name
-	existingAccountType.Icon = updateData.Icon
-	existingAccountType.Description = updateData.Description
-	existingAccountType.Active = updateData.Active
-	existingAccountType.SortOrder = updateData.SortOrder
-
-	if err := database.DB.WithContext(ctx).Save(&existingAccountType).Error; err != nil {
+	logger.Debugf(ctx, "Updating account type %s for user: %s", accountTypeID, userID)
+	updated, err := h.service.UpdateAccountType(ctx, accountTypeID, userID, &updateData)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to update account type: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account type")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	logger.Infof(ctx, "Account type updated successfully: %s for user: %s", accountTypeID, userID)
-	utilities.SuccessResponse(c, existingAccountType, "Account type updated successfully")
+	utilities.SuccessResponse(c, updated, "Account type updated successfully")
 }
 
 // DeleteAccountType deletes an account type (soft delete)
-func DeleteAccountType(c *gin.Context) {
+func (h *AccountTypeHandler) DeleteAccountType(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "DeleteAccountType - Entry")
 
@@ -180,33 +171,10 @@ func DeleteAccountType(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching account type %s for deletion", accountTypeID)
-	var accountType models.AccountType
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountTypeID, userID).First(&accountType).Error; err != nil {
-		logger.Warnf(ctx, "Account type not found: %s, error: %v", accountTypeID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Account type not found")
-		return
-	}
-
-	// Check if any accounts are using this type
-	// The account type is stored in lowercase with underscores (e.g., "digital_wallet")
-	// Convert the account type name to match the format
-	typeValue := utilities.ToSnakeCase(accountType.Name)
-
-	logger.Debugf(ctx, "Checking if account type is in use: %s", typeValue)
-	var accountCount int64
-	database.DB.WithContext(ctx).Model(&models.Account{}).Where("user_id = ? AND type = ?", userID, typeValue).Count(&accountCount)
-	if accountCount > 0 {
-		logger.Warnf(ctx, "Cannot delete account type %s: in use by %d accounts", accountTypeID, accountCount)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Cannot delete account type that is in use by existing accounts")
-		return
-	}
-
-	// Soft delete
-	logger.Debugf(ctx, "Deleting account type: %s", accountTypeID)
-	if err := database.DB.WithContext(ctx).Delete(&accountType).Error; err != nil {
+	logger.Debugf(ctx, "Deleting account type %s for user: %s", accountTypeID, userID)
+	if err := h.service.DeleteAccountType(ctx, accountTypeID, userID); err != nil {
 		logger.Errorf(ctx, "Failed to delete account type: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete account type")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 

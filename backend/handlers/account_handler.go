@@ -3,18 +3,28 @@ package handlers
 import (
 	"net/http"
 
-	"daybook-backend/database"
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
+	"daybook-backend/services"
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// AccountHandler handles account-related HTTP requests
+type AccountHandler struct {
+	service services.AccountService
+}
+
+// NewAccountHandler creates a new account handler
+func NewAccountHandler(service services.AccountService) *AccountHandler {
+	return &AccountHandler{service: service}
+}
+
 // ListAccounts returns all accounts for the authenticated user
-func ListAccounts(c *gin.Context) {
+func (h *AccountHandler) ListAccounts(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "ListAccounts handler - Entry")
 
@@ -26,9 +36,8 @@ func ListAccounts(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching accounts for user: %s", userID)
-
-	var accounts []models.Account
-	if err := database.DB.WithContext(ctx).Where("user_id = ?", userID).Order("created_at DESC").Find(&accounts).Error; err != nil {
+	accounts, err := h.service.ListAccounts(ctx, userID)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to fetch accounts from database: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch accounts")
 		return
@@ -39,7 +48,7 @@ func ListAccounts(c *gin.Context) {
 }
 
 // GetAccount returns a specific account by ID
-func GetAccount(c *gin.Context) {
+func (h *AccountHandler) GetAccount(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetAccount - Entry")
 
@@ -58,8 +67,8 @@ func GetAccount(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching account %s for user: %s", accountID, userID)
-	var account models.Account
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
+	account, err := h.service.GetAccount(ctx, accountID, userID)
+	if err != nil {
 		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
 		return
@@ -70,7 +79,7 @@ func GetAccount(c *gin.Context) {
 }
 
 // CreateAccount creates a new account
-func CreateAccount(c *gin.Context) {
+func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "CreateAccount handler - Entry")
 
@@ -91,89 +100,19 @@ func CreateAccount(c *gin.Context) {
 	account.UserID = userID
 	logger.Infof(ctx, "Creating new account '%s' for user: %s", account.Name, userID)
 
-	// Start transaction to ensure atomicity
-	logger.Debugf(ctx, "Starting database transaction for account creation")
-	tx := database.DB.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		logger.Errorf(ctx, "Failed to start transaction: %v", tx.Error)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to start transaction")
-		return
-	}
-
-	// Create the account
-	logger.Debugf(ctx, "Creating account record in database")
-	if err := tx.Create(&account).Error; err != nil {
-		tx.Rollback()
+	created, err := h.service.CreateAccount(ctx, &account)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to create account: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create account")
-		return
-	}
-	logger.Infof(ctx, "Account created successfully with ID: %s", account.ID)
-
-	// If there's an initial balance, create an opening balance transaction
-	if account.InitialBalance > 0 {
-		logger.Debugf(ctx, "Finding or creating 'Opening Balance' category")
-
-		// Find or create "Opening Balance" category
-		var openingBalanceCategory models.Category
-		if err := tx.Where("user_id = ? AND name = ? AND type = ?", userID, "Opening Balance", "income").
-			First(&openingBalanceCategory).Error; err != nil {
-			// Category doesn't exist, create it
-			logger.Debugf(ctx, "Opening Balance category not found, creating new one")
-			openingBalanceCategory = models.Category{
-				UserID:      userID,
-				Name:        "Opening Balance",
-				Type:        "income",
-				Icon:        "🏦",
-				Color:       "#10B981",
-				Description: "Initial account balance",
-				IsDefault:   true,
-			}
-
-			if err := tx.Create(&openingBalanceCategory).Error; err != nil {
-				tx.Rollback()
-				logger.Errorf(ctx, "Failed to create Opening Balance category: %v", err)
-				utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create Opening Balance category")
-				return
-			}
-			logger.Infof(ctx, "Opening Balance category created with ID: %s", openingBalanceCategory.ID)
-		}
-
-		logger.Debugf(ctx, "Creating opening balance transaction: %.2f", account.InitialBalance)
-
-		transaction := models.Transaction{
-			UserID:      userID,
-			AccountID:   account.ID,
-			Type:        "income",
-			CategoryID:  openingBalanceCategory.ID.String(),
-			Amount:      account.InitialBalance,
-			Date:        models.Date{Time: account.CreatedAt},
-			Description: "Opening balance for " + account.Name,
-		}
-
-		if err := tx.Create(&transaction).Error; err != nil {
-			tx.Rollback()
-			logger.Errorf(ctx, "Failed to create opening balance transaction: %v", err)
-			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create opening balance transaction")
-			return
-		}
-	}
-
-	// Commit the transaction
-	if err := tx.Commit().Error; err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to commit transaction")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Log account creation activity
-	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleAccount,
-		"Account", account.ID, "Created account: "+account.Name, nil)
-
-	utilities.CreatedResponse(c, account, "Account created successfully")
+	logger.Infof(ctx, "Account created successfully: %s for user: %s", created.ID, userID)
+	utilities.CreatedResponse(c, created, "Account created successfully")
 }
 
 // UpdateAccount updates an existing account
-func UpdateAccount(c *gin.Context) {
+func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UpdateAccount - Entry")
 
@@ -191,14 +130,6 @@ func UpdateAccount(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching existing account %s for user: %s", accountID, userID)
-	var existingAccount models.Account
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&existingAccount).Error; err != nil {
-		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
-		return
-	}
-
 	logger.Debugf(ctx, "Parsing update data for account: %s", accountID)
 	var updateData models.Account
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -207,32 +138,20 @@ func UpdateAccount(c *gin.Context) {
 		return
 	}
 
-	// Update only allowed fields
-	logger.Debugf(ctx, "Updating account fields for: %s", accountID)
-	existingAccount.Name = updateData.Name
-	existingAccount.Type = updateData.Type
-	existingAccount.Currency = updateData.Currency
-	existingAccount.Description = updateData.Description
-	existingAccount.Institution = updateData.Institution
-	existingAccount.AccountNumber = updateData.AccountNumber
-	existingAccount.Active = updateData.Active
-
-	if err := database.DB.WithContext(ctx).Save(&existingAccount).Error; err != nil {
+	logger.Debugf(ctx, "Updating account %s for user: %s", accountID, userID)
+	updated, err := h.service.UpdateAccount(ctx, accountID, userID, &updateData)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to update account: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update account")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Log account update activity
-	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleAccount,
-		"Account", existingAccount.ID, "Updated account: "+existingAccount.Name, nil)
-
 	logger.Infof(ctx, "Account updated successfully: %s for user: %s", accountID, userID)
-	utilities.SuccessResponse(c, existingAccount, "Account updated successfully")
+	utilities.SuccessResponse(c, updated, "Account updated successfully")
 }
 
 // DeleteAccount deletes an account
-func DeleteAccount(c *gin.Context) {
+func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "DeleteAccount - Entry")
 
@@ -250,25 +169,12 @@ func DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching account %s for deletion", accountID)
-	var account models.Account
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", accountID, userID).First(&account).Error; err != nil {
-		logger.Warnf(ctx, "Account not found: %s, error: %v", accountID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Account not found")
-		return
-	}
-
-	// Soft delete
-	logger.Debugf(ctx, "Deleting account: %s", accountID)
-	if err := database.DB.WithContext(ctx).Delete(&account).Error; err != nil {
+	logger.Debugf(ctx, "Deleting account %s for user: %s", accountID, userID)
+	if err := h.service.DeleteAccount(ctx, accountID, userID); err != nil {
 		logger.Errorf(ctx, "Failed to delete account: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete account")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Log account deletion activity
-	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleAccount,
-		"Account", account.ID, "Deleted account: "+account.Name, nil)
 
 	logger.Infof(ctx, "Account deleted successfully: %s for user: %s", accountID, userID)
 	utilities.SuccessResponse(c, nil, "Account deleted successfully")

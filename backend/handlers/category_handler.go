@@ -3,18 +3,29 @@ package handlers
 import (
 	"net/http"
 
-	"daybook-backend/database"
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
+	"daybook-backend/repository"
+	"daybook-backend/services"
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// CategoryHandler handles category-related HTTP requests
+type CategoryHandler struct {
+	service services.CategoryService
+}
+
+// NewCategoryHandler creates a new category handler
+func NewCategoryHandler(service services.CategoryService) *CategoryHandler {
+	return &CategoryHandler{service: service}
+}
+
 // ListCategories returns all categories for the authenticated user
-func ListCategories(c *gin.Context) {
+func (h *CategoryHandler) ListCategories(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "ListCategories - Entry")
 
@@ -25,18 +36,12 @@ func ListCategories(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching categories for user: %s", userID)
-	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
+	// Get type filter from query parameter
+	categoryType := c.Query("type")
 
-	// Filter by type if specified
-	if categoryType := c.Query("type"); categoryType != "" {
-		if categoryType == "income" || categoryType == "expense" || categoryType == "transfer" {
-			query = query.Where("type = ?", categoryType)
-		}
-	}
-
-	var categories []models.Category
-	if err := query.Order("type ASC, name ASC").Find(&categories).Error; err != nil {
+	logger.Debugf(ctx, "Fetching categories for user: %s, type: %s", userID, categoryType)
+	categories, err := h.service.ListCategories(ctx, userID, categoryType)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to fetch categories: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch categories")
 		return
@@ -47,7 +52,7 @@ func ListCategories(c *gin.Context) {
 }
 
 // GetCategory returns a specific category by ID
-func GetCategory(c *gin.Context) {
+func (h *CategoryHandler) GetCategory(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetCategory - Entry")
 
@@ -66,8 +71,8 @@ func GetCategory(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching category %s for user: %s", categoryID, userID)
-	var category models.Category
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", categoryID, userID).First(&category).Error; err != nil {
+	category, err := h.service.GetCategory(ctx, categoryID, userID)
+	if err != nil {
 		logger.Warnf(ctx, "Category not found: %s, error: %v", categoryID, err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Category not found")
 		return
@@ -78,7 +83,7 @@ func GetCategory(c *gin.Context) {
 }
 
 // CreateCategory creates a new category
-func CreateCategory(c *gin.Context) {
+func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "CreateCategory - Entry")
 
@@ -97,45 +102,22 @@ func CreateCategory(c *gin.Context) {
 		return
 	}
 
-	// Validate category type
-	if category.Type != "income" && category.Type != "expense" && category.Type != "transfer" {
-		logger.Warnf(ctx, "Invalid category type: %s", category.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income', 'expense', or 'transfer'")
-		return
-	}
-
 	category.UserID = userID
-	category.IsDefault = false // User-created categories are never default
 
-	// Check for duplicate category name for this user and type
-	var existingCount int64
-	database.DB.WithContext(ctx).Model(&models.Category{}).
-		Where("user_id = ? AND name = ? AND type = ?", userID, category.Name, category.Type).
-		Count(&existingCount)
-
-	if existingCount > 0 {
-		logger.Warnf(ctx, "Category with name '%s' already exists for type '%s'", category.Name, category.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category with this name already exists for this type")
-		return
-	}
-
-	logger.Debugf(ctx, "Creating category in database")
-	if err := database.DB.WithContext(ctx).Create(&category).Error; err != nil {
+	logger.Debugf(ctx, "Creating category for user: %s", userID)
+	created, err := h.service.CreateCategory(ctx, &category)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to create category: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create category")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Log category creation activity
-	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleCategory,
-		"Category", category.ID, "Created category: "+category.Name, nil)
-
-	logger.Infof(ctx, "Category created successfully: %s for user: %s", category.ID, userID)
-	utilities.CreatedResponse(c, category, "Category created successfully")
+	logger.Infof(ctx, "Category created successfully: %s for user: %s", created.ID, userID)
+	utilities.CreatedResponse(c, created, "Category created successfully")
 }
 
 // UpdateCategory updates an existing category
-func UpdateCategory(c *gin.Context) {
+func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UpdateCategory - Entry")
 
@@ -153,15 +135,7 @@ func UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching existing category %s for user: %s", categoryID, userID)
-	var existingCategory models.Category
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", categoryID, userID).First(&existingCategory).Error; err != nil {
-		logger.Warnf(ctx, "Category not found: %s, error: %v", categoryID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Category not found")
-		return
-	}
-
-	logger.Debugf(ctx, "Parsing update data for category: %s", categoryID)
+	logger.Debugf(ctx, "Parsing update request for category %s", categoryID)
 	var updateData models.Category
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		logger.Warnf(ctx, "Invalid request body: %v", err)
@@ -169,49 +143,20 @@ func UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	// Validate category type
-	if updateData.Type != "income" && updateData.Type != "expense" && updateData.Type != "transfer" {
-		logger.Warnf(ctx, "Invalid category type: %s", updateData.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category type must be 'income', 'expense', or 'transfer'")
-		return
-	}
-
-	// Check for duplicate category name (excluding current category)
-	var existingCount int64
-	database.DB.WithContext(ctx).Model(&models.Category{}).
-		Where("user_id = ? AND name = ? AND type = ? AND id != ?", userID, updateData.Name, updateData.Type, categoryID).
-		Count(&existingCount)
-
-	if existingCount > 0 {
-		logger.Warnf(ctx, "Category with name '%s' already exists for type '%s'", updateData.Name, updateData.Type)
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Category with this name already exists for this type")
-		return
-	}
-
-	// Update category fields
-	existingCategory.Name = updateData.Name
-	existingCategory.Type = updateData.Type
-	existingCategory.Icon = updateData.Icon
-	existingCategory.Color = updateData.Color
-	existingCategory.Description = updateData.Description
-
-	logger.Debugf(ctx, "Updating category: %s", categoryID)
-	if err := database.DB.WithContext(ctx).Save(&existingCategory).Error; err != nil {
+	logger.Debugf(ctx, "Updating category %s for user: %s", categoryID, userID)
+	updated, err := h.service.UpdateCategory(ctx, categoryID, userID, &updateData)
+	if err != nil {
 		logger.Errorf(ctx, "Failed to update category: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update category")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Log category update activity
-	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleCategory,
-		"Category", existingCategory.ID, "Updated category: "+existingCategory.Name, nil)
 
 	logger.Infof(ctx, "Category updated successfully: %s for user: %s", categoryID, userID)
-	utilities.SuccessResponse(c, existingCategory, "Category updated successfully")
+	utilities.SuccessResponse(c, updated, "Category updated successfully")
 }
 
 // DeleteCategory deletes a category
-func DeleteCategory(c *gin.Context) {
+func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "DeleteCategory - Entry")
 
@@ -229,70 +174,67 @@ func DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching category %s for deletion", categoryID)
-	var category models.Category
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", categoryID, userID).First(&category).Error; err != nil {
-		logger.Warnf(ctx, "Category not found: %s, error: %v", categoryID, err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Category not found")
-		return
-	}
-
-	// Check if category is being used in transactions
-	var transactionCount int64
-	database.DB.WithContext(ctx).Model(&models.Transaction{}).
-		Where("user_id = ? AND category_id = ?", userID, categoryID.String()).
-		Count(&transactionCount)
-
-	if transactionCount > 0 {
-		logger.Warnf(ctx, "Cannot delete category: %s - used in %d transactions", categoryID, transactionCount)
-		utilities.ErrorResponse(c, http.StatusBadRequest,
-			"Cannot delete category as it is being used in transactions. Please reassign transactions first.")
-		return
-	}
-
-	// Check if category is being used in recurring transactions
-	var recurringCount int64
-	database.DB.WithContext(ctx).Model(&models.RecurringTransaction{}).
-		Where("user_id = ? AND template_category_id = ?", userID, categoryID.String()).
-		Count(&recurringCount)
-
-	if recurringCount > 0 {
-		logger.Warnf(ctx, "Cannot delete category: %s - used in %d recurring transactions", categoryID, recurringCount)
-		utilities.ErrorResponse(c, http.StatusBadRequest,
-			"Cannot delete category as it is being used in recurring transactions. Please reassign or delete recurring transactions first.")
-		return
-	}
-
-	// Check if category is being used in budgets
-	var budgetCount int64
-	database.DB.WithContext(ctx).Model(&models.Budget{}).
-		Where("user_id = ? AND category_id = ?", userID, categoryID.String()).
-		Count(&budgetCount)
-
-	if budgetCount > 0 {
-		logger.Warnf(ctx, "Cannot delete category: %s - used in %d budgets", categoryID, budgetCount)
-		utilities.ErrorResponse(c, http.StatusBadRequest,
-			"Cannot delete category as it is being used in budgets. Please delete or update budgets first.")
-		return
-	}
-
-	logger.Debugf(ctx, "Deleting category: %s", categoryID)
-	if err := database.DB.WithContext(ctx).Delete(&category).Error; err != nil {
+	logger.Debugf(ctx, "Deleting category %s for user: %s", categoryID, userID)
+	if err := h.service.DeleteCategory(ctx, categoryID, userID); err != nil {
 		logger.Errorf(ctx, "Failed to delete category: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete category")
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Log category deletion activity
-	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleCategory,
-		"Category", category.ID, "Deleted category: "+category.Name, nil)
 
 	logger.Infof(ctx, "Category deleted successfully: %s for user: %s", categoryID, userID)
 	utilities.SuccessResponse(c, nil, "Category deleted successfully")
 }
 
+// ReorderCategories updates the order of multiple categories in bulk
+func (h *CategoryHandler) ReorderCategories(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "ReorderCategories - Entry")
+
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		logger.Warnf(ctx, "Unauthorized access: %v", err)
+		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Request payload structure
+	type ReorderRequest struct {
+		Categories []struct {
+			ID    uuid.UUID `json:"id" binding:"required"`
+			Order int       `json:"order" binding:"required"`
+		} `json:"categories" binding:"required,min=1"`
+	}
+
+	var request ReorderRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		logger.Warnf(ctx, "Invalid request body: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	logger.Debugf(ctx, "Reordering %d categories for user: %s", len(request.Categories), userID)
+
+	// Convert to repository format
+	categoryOrders := make([]repository.CategoryOrder, len(request.Categories))
+	for i, cat := range request.Categories {
+		categoryOrders[i] = repository.CategoryOrder{
+			ID:    cat.ID,
+			Order: cat.Order,
+		}
+	}
+
+	if err := h.service.ReorderCategories(ctx, userID, categoryOrders); err != nil {
+		logger.Errorf(ctx, "Failed to reorder categories: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	logger.Infof(ctx, "Categories reordered successfully for user: %s", userID)
+	utilities.SuccessResponse(c, nil, "Categories reordered successfully")
+}
+
 // GetAvailableIcons returns the list of available icons
-func GetAvailableIcons(c *gin.Context) {
+func (h *CategoryHandler) GetAvailableIcons(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetAvailableIcons - Entry")
 
@@ -303,7 +245,7 @@ func GetAvailableIcons(c *gin.Context) {
 		return
 	}
 
-	icons := models.GetAvailableIcons()
+	icons := h.service.GetAvailableIcons()
 	logger.Infof(ctx, "Available icons retrieved successfully")
 	utilities.SuccessResponse(c, icons, "Available icons retrieved successfully")
 }

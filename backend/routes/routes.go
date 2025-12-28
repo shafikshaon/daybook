@@ -1,13 +1,18 @@
 package routes
 
 import (
+	"daybook-backend/container"
 	"daybook-backend/handlers"
+	"daybook-backend/logger"
 	"daybook-backend/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(router *gin.Engine) {
+func SetupRoutes(router *gin.Engine, c *container.Container) {
+	// Add logger middleware globally to populate trace IDs
+	router.Use(logger.ModifyContext)
+
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "message": "Daybook API is running"})
@@ -19,8 +24,8 @@ func SetupRoutes(router *gin.Engine) {
 		// Public routes (no authentication required)
 		auth := api.Group("/auth")
 		{
-			auth.POST("/signup", handlers.Signup)
-			auth.POST("/login", handlers.Login)
+			auth.POST("/signup", c.AuthHandler.Signup)
+			auth.POST("/login", c.AuthHandler.Login)
 		}
 
 		// Protected routes (authentication required)
@@ -30,90 +35,90 @@ func SetupRoutes(router *gin.Engine) {
 			// Auth routes
 			authRoutes := protected.Group("/auth")
 			{
-				authRoutes.GET("/me", handlers.GetProfile)
-				authRoutes.PUT("/profile", handlers.UpdateProfile)
-				authRoutes.PUT("/change-password", handlers.ChangePassword)
+				authRoutes.GET("/me", c.AuthHandler.GetProfile)
+				authRoutes.PUT("/profile", c.AuthHandler.UpdateProfile)
+				authRoutes.PUT("/change-password", c.AuthHandler.ChangePassword)
 			}
 
 			// Account routes
 			accountRoutes := protected.Group("/accounts")
 			{
-				accountRoutes.GET("", handlers.ListAccounts)
-				accountRoutes.POST("", handlers.CreateAccount)
-				accountRoutes.GET("/:id", handlers.GetAccount)
-				accountRoutes.PUT("/:id", handlers.UpdateAccount)
-				accountRoutes.DELETE("/:id", handlers.DeleteAccount)
+				accountRoutes.GET("", c.AccountHandler.ListAccounts)
+				accountRoutes.POST("", c.AccountHandler.CreateAccount)
+				accountRoutes.GET("/:id", c.AccountHandler.GetAccount)
+				accountRoutes.PUT("/:id", c.AccountHandler.UpdateAccount)
+				accountRoutes.DELETE("/:id", c.AccountHandler.DeleteAccount)
 				// NOTE: Direct balance updates removed - balances are updated automatically by transactions
 				// See BALANCE_SYSTEM.md for dual-balance accounting system documentation
 
 				// Reconciliation routes for accounts (must use same wildcard name)
-				accountRoutes.GET("/:id/reconciliations", handlers.ListReconciliations)
-				accountRoutes.GET("/:id/reconciliations/stats", handlers.GetReconciliationStats)
-				accountRoutes.GET("/:id/unreconciled-transactions", handlers.GetUnreconciledTransactions)
+				accountRoutes.GET("/:id/reconciliations", c.ReconciliationHandler.ListReconciliations)
+				accountRoutes.GET("/:id/reconciliations/stats", c.ReconciliationHandler.GetReconciliationStats)
+				accountRoutes.GET("/:id/unreconciled-transactions", c.ReconciliationHandler.GetUnreconciledTransactions)
 			}
 
 			// Account Type routes
 			accountTypeRoutes := protected.Group("/account-types")
 			{
-				accountTypeRoutes.GET("", handlers.ListAccountTypes)
-				accountTypeRoutes.GET("/:id", handlers.GetAccountType)
-				accountTypeRoutes.POST("", handlers.CreateAccountType)
-				accountTypeRoutes.PUT("/:id", handlers.UpdateAccountType)
-				accountTypeRoutes.DELETE("/:id", handlers.DeleteAccountType)
+				accountTypeRoutes.GET("", c.AccountTypeHandler.ListAccountTypes)
+				accountTypeRoutes.GET("/:id", c.AccountTypeHandler.GetAccountType)
+				accountTypeRoutes.POST("", c.AccountTypeHandler.CreateAccountType)
+				accountTypeRoutes.PUT("/:id", c.AccountTypeHandler.UpdateAccountType)
+				accountTypeRoutes.DELETE("/:id", c.AccountTypeHandler.DeleteAccountType)
 			}
 
 			// Transaction routes
 			transactionRoutes := protected.Group("/transactions")
 			{
-				transactionRoutes.GET("", handlers.ListTransactions)
-				transactionRoutes.GET("/stats", handlers.GetTransactionStats)
-				transactionRoutes.GET("/:id", handlers.GetTransaction)
-				transactionRoutes.POST("", handlers.CreateTransaction)
-				transactionRoutes.POST("/bulk", handlers.BulkImportTransactions)
-				transactionRoutes.PUT("/:id", handlers.UpdateTransaction)
-				transactionRoutes.DELETE("/:id", handlers.DeleteTransaction)
+				transactionRoutes.GET("", c.TransactionHandler.ListTransactions)
+				transactionRoutes.GET("/stats", c.TransactionHandler.GetTransactionStats)
+				transactionRoutes.GET("/:id", c.TransactionHandler.GetTransaction)
+				transactionRoutes.POST("", c.TransactionHandler.CreateTransaction)
+				transactionRoutes.POST("/bulk", c.TransactionHandler.BulkImportTransactions)
+				transactionRoutes.PUT("/:id", c.TransactionHandler.UpdateTransaction)
+				transactionRoutes.DELETE("/:id", c.TransactionHandler.DeleteTransaction)
 			}
 
 			// Recurring transaction routes
 			recurringTransactionRoutes := protected.Group("/recurring-transactions")
 			{
-				recurringTransactionRoutes.GET("", handlers.ListRecurringTransactions)
-				recurringTransactionRoutes.GET("/:id", handlers.GetRecurringTransaction)
-				recurringTransactionRoutes.POST("", handlers.CreateRecurringTransaction)
-				recurringTransactionRoutes.PUT("/:id", handlers.UpdateRecurringTransaction)
-				recurringTransactionRoutes.DELETE("/:id", handlers.DeleteRecurringTransaction)
-				recurringTransactionRoutes.POST("/process", handlers.ProcessRecurringTransactions)
+				recurringTransactionRoutes.GET("", c.RecurringTransactionHandler.ListRecurringTransactions)
+				recurringTransactionRoutes.GET("/:id", c.RecurringTransactionHandler.GetRecurringTransaction)
+				recurringTransactionRoutes.POST("", c.RecurringTransactionHandler.CreateRecurringTransaction)
+				recurringTransactionRoutes.PUT("/:id", c.RecurringTransactionHandler.UpdateRecurringTransaction)
+				recurringTransactionRoutes.DELETE("/:id", c.RecurringTransactionHandler.DeleteRecurringTransaction)
+				recurringTransactionRoutes.POST("/process", c.RecurringTransactionHandler.ProcessRecurringTransactions)
 			}
 			// Credit card routes
 			creditCardRoutes := protected.Group("/credit-cards")
 			{
-				creditCardRoutes.GET("", handlers.ListCreditCards)
-				creditCardRoutes.GET("/:id", handlers.GetCreditCard)
-				creditCardRoutes.POST("", handlers.CreateCreditCard)
-				creditCardRoutes.PUT("/:id", handlers.UpdateCreditCard)
-				creditCardRoutes.DELETE("/:id", handlers.DeleteCreditCard)
+				creditCardRoutes.GET("", c.CreditCardHandler.ListCreditCards)
+				creditCardRoutes.GET("/:id", c.CreditCardHandler.GetCreditCard)
+				creditCardRoutes.POST("", c.CreditCardHandler.CreateCreditCard)
+				creditCardRoutes.PUT("/:id", c.CreditCardHandler.UpdateCreditCard)
+				creditCardRoutes.DELETE("/:id", c.CreditCardHandler.DeleteCreditCard)
 
 				// Transaction routes
-				creditCardRoutes.POST("/:id/transactions", handlers.RecordCreditCardTransaction)
-				creditCardRoutes.GET("/:id/transactions", handlers.GetCreditCardTransactions)
-				creditCardRoutes.DELETE("/:id/transactions/:transactionId", handlers.DeleteCreditCardTransaction)
+				creditCardRoutes.POST("/:id/transactions", c.CreditCardHandler.RecordCreditCardTransaction)
+				creditCardRoutes.GET("/:id/transactions", c.CreditCardHandler.GetCreditCardTransactions)
+				creditCardRoutes.DELETE("/:id/transactions/:transactionId", c.CreditCardHandler.DeleteCreditCardTransaction)
 
 				// Payment routes
-				creditCardRoutes.POST("/:id/payment", handlers.RecordPayment)
-				creditCardRoutes.GET("/:id/payments", handlers.GetPayments)
+				creditCardRoutes.POST("/:id/payment", c.CreditCardHandler.RecordPayment)
+				creditCardRoutes.GET("/:id/payments", c.CreditCardHandler.GetPayments)
 
 				// Statement routes
-				creditCardRoutes.GET("/:id/statements", handlers.GetStatements)
+				creditCardRoutes.GET("/:id/statements", c.CreditCardHandler.GetStatements)
 			}
 
 			// Statement routes
-			protected.POST("/statements", handlers.CreateStatement)
+			protected.POST("/statements", c.CreditCardHandler.CreateStatement)
 
 			// Reward routes
 			rewardRoutes := protected.Group("/rewards")
 			{
-				rewardRoutes.GET("", handlers.ListRewards)
-				rewardRoutes.POST("", handlers.RecordReward)
+				rewardRoutes.GET("", c.CreditCardHandler.ListRewards)
+				rewardRoutes.POST("", c.CreditCardHandler.RecordReward)
 			}
 
 			// OLD Investment routes - REMOVED
@@ -123,121 +128,122 @@ func SetupRoutes(router *gin.Engine) {
 			// Budget routes
 			budgetRoutes := protected.Group("/budgets")
 			{
-				budgetRoutes.GET("", handlers.ListBudgets)
-				budgetRoutes.GET("/:id", handlers.GetBudget)
-				budgetRoutes.GET("/:id/progress", handlers.GetBudgetProgress)
-				budgetRoutes.POST("", handlers.CreateBudget)
-				budgetRoutes.PUT("/:id", handlers.UpdateBudget)
-				budgetRoutes.DELETE("/:id", handlers.DeleteBudget)
+				budgetRoutes.GET("", c.BudgetHandler.ListBudgets)
+				budgetRoutes.GET("/:id", c.BudgetHandler.GetBudget)
+				budgetRoutes.GET("/:id/progress", c.BudgetHandler.GetBudgetProgress)
+				budgetRoutes.POST("", c.BudgetHandler.CreateBudget)
+				budgetRoutes.PUT("/:id", c.BudgetHandler.UpdateBudget)
+				budgetRoutes.DELETE("/:id", c.BudgetHandler.DeleteBudget)
 			}
 
 			// Category routes
 			categoryRoutes := protected.Group("/categories")
 			{
-				categoryRoutes.GET("", handlers.ListCategories)
-				categoryRoutes.GET("/icons", handlers.GetAvailableIcons)
-				categoryRoutes.GET("/:id", handlers.GetCategory)
-				categoryRoutes.POST("", handlers.CreateCategory)
-				categoryRoutes.PUT("/:id", handlers.UpdateCategory)
-				categoryRoutes.DELETE("/:id", handlers.DeleteCategory)
+				categoryRoutes.GET("", c.CategoryHandler.ListCategories)
+				categoryRoutes.GET("/icons", c.CategoryHandler.GetAvailableIcons)
+				categoryRoutes.PUT("/reorder", c.CategoryHandler.ReorderCategories)
+				categoryRoutes.GET("/:id", c.CategoryHandler.GetCategory)
+				categoryRoutes.POST("", c.CategoryHandler.CreateCategory)
+				categoryRoutes.PUT("/:id", c.CategoryHandler.UpdateCategory)
+				categoryRoutes.DELETE("/:id", c.CategoryHandler.DeleteCategory)
 			}
 
 			// Goal routes (Unified savings, investments, and fixed deposits)
 			goalRoutes := protected.Group("/goals")
 			{
-				goalRoutes.GET("", handlers.ListGoals)
-				goalRoutes.GET("/:id", handlers.GetGoal)
-				goalRoutes.POST("", handlers.CreateGoal)
-				goalRoutes.PUT("/:id", handlers.UpdateGoal)
-				goalRoutes.DELETE("/:id", handlers.DeleteGoal)
+				goalRoutes.GET("", c.GoalHandler.ListGoals)
+				goalRoutes.GET("/:id", c.GoalHandler.GetGoal)
+				goalRoutes.POST("", c.GoalHandler.CreateGoal)
+				goalRoutes.PUT("/:id", c.GoalHandler.UpdateGoal)
+				goalRoutes.DELETE("/:id", c.GoalHandler.DeleteGoal)
 
 				// Holdings management
-				goalRoutes.POST("/:id/holdings", handlers.AddHolding)
-				goalRoutes.PUT("/holdings/:holdingId", handlers.UpdateHolding)
-				goalRoutes.DELETE("/holdings/:holdingId", handlers.RemoveHolding)
+				goalRoutes.POST("/:id/holdings", c.GoalHandler.AddHolding)
+				goalRoutes.PUT("/holdings/:holdingId", c.GoalHandler.UpdateHolding)
+				goalRoutes.DELETE("/holdings/:holdingId", c.GoalHandler.RemoveHolding)
 
 				// Utility endpoints
-				goalRoutes.GET("/holding-types", handlers.GetHoldingTypes)
+				goalRoutes.GET("/holding-types", c.GoalHandler.GetHoldingTypes)
 			}
 
 			// Settings routes
 			settingsRoutes := protected.Group("/settings")
 			{
-				settingsRoutes.GET("", handlers.GetSettings)
-				settingsRoutes.PUT("", handlers.UpdateSettings)
+				settingsRoutes.GET("", c.SettingsHandler.GetSettings)
+				settingsRoutes.PUT("", c.SettingsHandler.UpdateSettings)
 
 				// Category management under settings
-				settingsRoutes.GET("/categories", handlers.ListCategories)
-				settingsRoutes.GET("/categories/icons", handlers.GetAvailableIcons)
-				settingsRoutes.GET("/categories/:id", handlers.GetCategory)
-				settingsRoutes.POST("/categories", handlers.CreateCategory)
-				settingsRoutes.PUT("/categories/:id", handlers.UpdateCategory)
-				settingsRoutes.DELETE("/categories/:id", handlers.DeleteCategory)
+				settingsRoutes.GET("/categories", c.CategoryHandler.ListCategories)
+				settingsRoutes.GET("/categories/icons", c.CategoryHandler.GetAvailableIcons)
+				settingsRoutes.GET("/categories/:id", c.CategoryHandler.GetCategory)
+				settingsRoutes.POST("/categories", c.CategoryHandler.CreateCategory)
+				settingsRoutes.PUT("/categories/:id", c.CategoryHandler.UpdateCategory)
+				settingsRoutes.DELETE("/categories/:id", c.CategoryHandler.DeleteCategory)
 			}
 
 			// Reconciliation routes
 			reconciliationRoutes := protected.Group("/reconciliations")
 			{
-				reconciliationRoutes.GET("", handlers.ListReconciliations)
-				reconciliationRoutes.GET("/:id", handlers.GetReconciliation)
-				reconciliationRoutes.POST("", handlers.CreateReconciliation)
-				reconciliationRoutes.PUT("/:id", handlers.UpdateReconciliation)
-				reconciliationRoutes.DELETE("/:id", handlers.DeleteReconciliation)
+				reconciliationRoutes.GET("", c.ReconciliationHandler.ListReconciliations)
+				reconciliationRoutes.GET("/:id", c.ReconciliationHandler.GetReconciliation)
+				reconciliationRoutes.POST("", c.ReconciliationHandler.CreateReconciliation)
+				reconciliationRoutes.PUT("/:id", c.ReconciliationHandler.UpdateReconciliation)
+				reconciliationRoutes.DELETE("/:id", c.ReconciliationHandler.DeleteReconciliation)
 			}
 
 			// Debt routes
 			debtRoutes := protected.Group("/debts")
 			{
-				debtRoutes.GET("", handlers.ListDebts)
-				debtRoutes.GET("/:id", handlers.GetDebt)
-				debtRoutes.POST("", handlers.CreateDebt)
-				debtRoutes.PUT("/:id", handlers.UpdateDebt)
-				debtRoutes.DELETE("/:id", handlers.DeleteDebt)
-				debtRoutes.POST("/:id/payments", handlers.RecordDebtPayment)
-				debtRoutes.GET("/:id/payments", handlers.ListDebtPayments)
+				debtRoutes.GET("", c.DebtHandler.ListDebts)
+				debtRoutes.GET("/:id", c.DebtHandler.GetDebt)
+				debtRoutes.POST("", c.DebtHandler.CreateDebt)
+				debtRoutes.PUT("/:id", c.DebtHandler.UpdateDebt)
+				debtRoutes.DELETE("/:id", c.DebtHandler.DeleteDebt)
+				debtRoutes.POST("/:id/payments", c.DebtHandler.RecordDebtPayment)
+				debtRoutes.GET("/:id/payments", c.DebtHandler.ListDebtPayments)
 			}
 
 			// Lend routes
 			lendRoutes := protected.Group("/lends")
 			{
-				lendRoutes.GET("", handlers.ListLends)
-				lendRoutes.GET("/:id", handlers.GetLend)
-				lendRoutes.POST("", handlers.CreateLend)
-				lendRoutes.PUT("/:id", handlers.UpdateLend)
-				lendRoutes.DELETE("/:id", handlers.DeleteLend)
-				lendRoutes.POST("/:id/payments", handlers.RecordLendPayment)
-				lendRoutes.GET("/:id/payments", handlers.ListLendPayments)
+				lendRoutes.GET("", c.LendHandler.ListLends)
+				lendRoutes.GET("/:id", c.LendHandler.GetLend)
+				lendRoutes.POST("", c.LendHandler.CreateLend)
+				lendRoutes.PUT("/:id", c.LendHandler.UpdateLend)
+				lendRoutes.DELETE("/:id", c.LendHandler.DeleteLend)
+				lendRoutes.POST("/:id/payments", c.LendHandler.RecordLendPayment)
+				lendRoutes.GET("/:id/payments", c.LendHandler.ListLendPayments)
 			}
 
 			// Assets tracking routes
 			assetRoutes := protected.Group("/assets")
 			{
-				assetRoutes.GET("", handlers.ListAssets)
-				assetRoutes.GET("/stats", handlers.GetAssetsStats)
-				assetRoutes.GET("/:id", handlers.GetAsset)
-				assetRoutes.POST("", handlers.CreateAsset)
-				assetRoutes.PUT("/:id", handlers.UpdateAsset)
-				assetRoutes.DELETE("/:id", handlers.DeleteAsset)
+				assetRoutes.GET("", c.AssetHandler.ListAssets)
+				assetRoutes.GET("/stats", c.AssetHandler.GetAssetsStats)
+				assetRoutes.GET("/:id", c.AssetHandler.GetAsset)
+				assetRoutes.POST("", c.AssetHandler.CreateAsset)
+				assetRoutes.PUT("/:id", c.AssetHandler.UpdateAsset)
+				assetRoutes.DELETE("/:id", c.AssetHandler.DeleteAsset)
 
 				// Service records
-				assetRoutes.POST("/:id/services", handlers.CreateServiceRecord)
-				assetRoutes.GET("/:id/services", handlers.ListServiceRecords)
-				assetRoutes.DELETE("/:id/services/:serviceId", handlers.DeleteServiceRecord)
+				assetRoutes.POST("/:id/services", c.AssetHandler.CreateServiceRecord)
+				assetRoutes.GET("/:id/services", c.AssetHandler.ListServiceRecords)
+				assetRoutes.DELETE("/:id/services/:serviceId", c.AssetHandler.DeleteServiceRecord)
 
 				// Attachments
-				assetRoutes.POST("/:id/attachments", handlers.AddAttachment)
-				assetRoutes.GET("/:id/attachments", handlers.ListAttachments)
-				assetRoutes.DELETE("/:id/attachments/:attachmentId", handlers.DeleteAttachment)
+				assetRoutes.POST("/:id/attachments", c.AssetHandler.AddAttachment)
+				assetRoutes.GET("/:id/attachments", c.AssetHandler.ListAttachments)
+				assetRoutes.DELETE("/:id/attachments/:attachmentId", c.AssetHandler.DeleteAttachment)
 			}
 
 			// File upload routes
 			uploadRoutes := protected.Group("/uploads")
 			{
-				uploadRoutes.POST("", handlers.UploadFiles)             // Multiple files
-				uploadRoutes.POST("/single", handlers.UploadSingleFile) // Single file
-				uploadRoutes.GET("/:userId/:filename", handlers.ServeUploadedFile)
-				uploadRoutes.DELETE("/:filename", handlers.DeleteFile)
-				uploadRoutes.GET("/info/:filename", handlers.GetFileInfo)
+				uploadRoutes.POST("", c.UploadHandler.UploadFiles)             // Multiple files
+				uploadRoutes.POST("/single", c.UploadHandler.UploadSingleFile) // Single file
+				uploadRoutes.GET("/:userId/:filename", c.UploadHandler.ServeUploadedFile)
+				uploadRoutes.DELETE("/:filename", c.UploadHandler.DeleteFile)
+				uploadRoutes.GET("/info/:filename", c.UploadHandler.GetFileInfo)
 			}
 
 			// Activity log routes

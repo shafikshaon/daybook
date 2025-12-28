@@ -2,20 +2,30 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
-	"daybook-backend/database"
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
 	"daybook-backend/models"
+	"daybook-backend/repository"
+	"daybook-backend/services"
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
+// BudgetHandler handles budget-related HTTP requests
+type BudgetHandler struct {
+	service services.BudgetService
+}
+
+// NewBudgetHandler creates a new budget handler
+func NewBudgetHandler(service services.BudgetService) *BudgetHandler {
+	return &BudgetHandler{service: service}
+}
+
 // ListBudgets returns all budgets for the authenticated user
-func ListBudgets(c *gin.Context) {
+func (h *BudgetHandler) ListBudgets(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "ListBudgets - Entry")
 
@@ -28,26 +38,25 @@ func ListBudgets(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	query := database.DB.WithContext(ctx).Where("user_id = ?", userID)
+	// Build filters from query parameters
+	filters := repository.BudgetFilters{}
 
-	// Optional filter by enabled status
 	if enabled := c.Query("enabled"); enabled != "" {
-		query = query.Where("enabled = ?", enabled == "true")
+		enabledBool := enabled == "true"
+		filters.Enabled = &enabledBool
 	}
 
-	// Optional filter by period
 	if period := c.Query("period"); period != "" {
-		query = query.Where("period = ?", period)
+		filters.Period = period
 	}
 
-	// Optional filter by category
 	if categoryID := c.Query("categoryId"); categoryID != "" {
-		query = query.Where("category_id = ?", categoryID)
+		filters.CategoryID = categoryID
 	}
 
-	var budgets []models.Budget
 	logger.Debugf(ctx, "Fetching budgets from database...")
-	if err := query.Order("created_at DESC").Find(&budgets).Error; err != nil {
+	budgets, err := h.service.ListBudgets(ctx, userID, filters)
+	if err != nil {
 		logger.Errorf(ctx, "Database error fetching budgets: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch budgets")
 		return
@@ -58,7 +67,7 @@ func ListBudgets(c *gin.Context) {
 }
 
 // GetBudget returns a specific budget by ID
-func GetBudget(c *gin.Context) {
+func (h *BudgetHandler) GetBudget(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetBudget - Entry")
 
@@ -79,8 +88,8 @@ func GetBudget(c *gin.Context) {
 	}
 
 	logger.Debugf(ctx, "Fetching budget: %s", budgetID)
-	var budget models.Budget
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", budgetID, userID).First(&budget).Error; err != nil {
+	budget, err := h.service.GetBudget(ctx, budgetID, userID)
+	if err != nil {
 		logger.Errorf(ctx, "Database error fetching budget: %v", err)
 		utilities.ErrorResponse(c, http.StatusNotFound, "Budget not found")
 		return
@@ -91,7 +100,7 @@ func GetBudget(c *gin.Context) {
 }
 
 // CreateBudget creates a new budget
-func CreateBudget(c *gin.Context) {
+func (h *BudgetHandler) CreateBudget(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "CreateBudget - Entry")
 
@@ -113,32 +122,20 @@ func CreateBudget(c *gin.Context) {
 
 	budget.UserID = userID
 
-	// Validate custom period dates
-	if budget.Period == "custom" {
-		if budget.CustomStartDate == nil || budget.CustomEndDate == nil {
-			logger.Warnf(ctx, "Validation failed: custom period requires start and end dates")
-			utilities.ErrorResponse(c, http.StatusBadRequest, "Custom period requires start and end dates")
-			return
-		}
-	}
-
-	logger.Debugf(ctx, "Creating budget in database...")
-	if err := database.DB.WithContext(ctx).Create(&budget).Error; err != nil {
-		logger.Errorf(ctx, "Database error creating budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create budget")
+	logger.Debugf(ctx, "Creating budget...")
+	created, err := h.service.CreateBudget(ctx, &budget)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to create budget: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Log budget creation activity
-	utilities.LogEntityActivity(c, userID, models.ActionCreate, models.ModuleBudget,
-		"Budget", budget.ID, "Created budget for category "+budget.CategoryID, nil)
-
 	logger.Infof(ctx, "Successfully created budget for user: %s", userID)
-	utilities.CreatedResponse(c, budget, "Budget created successfully")
+	utilities.CreatedResponse(c, created, "Budget created successfully")
 }
 
 // UpdateBudget updates an existing budget
-func UpdateBudget(c *gin.Context) {
+func (h *BudgetHandler) UpdateBudget(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UpdateBudget - Entry")
 
@@ -158,14 +155,6 @@ func UpdateBudget(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching existing budget: %s", budgetID)
-	var existingBudget models.Budget
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", budgetID, userID).First(&existingBudget).Error; err != nil {
-		logger.Errorf(ctx, "Database error fetching budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Budget not found")
-		return
-	}
-
 	var updateData models.Budget
 	if err := c.ShouldBindJSON(&updateData); err != nil {
 		logger.Warnf(ctx, "Validation failed: %v", err)
@@ -173,34 +162,20 @@ func UpdateBudget(c *gin.Context) {
 		return
 	}
 
-	// Update allowed fields
-	existingBudget.CategoryID = updateData.CategoryID
-	existingBudget.Amount = updateData.Amount
-	existingBudget.Period = updateData.Period
-	existingBudget.CustomStartDate = updateData.CustomStartDate
-	existingBudget.CustomEndDate = updateData.CustomEndDate
-	existingBudget.Rollover = updateData.Rollover
-	existingBudget.AlertThreshold = updateData.AlertThreshold
-	existingBudget.Enabled = updateData.Enabled
-	existingBudget.Notes = updateData.Notes
-
-	logger.Debugf(ctx, "Updating budget in database...")
-	if err := database.DB.WithContext(ctx).Save(&existingBudget).Error; err != nil {
-		logger.Errorf(ctx, "Database error updating budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update budget")
+	logger.Debugf(ctx, "Updating budget...")
+	updated, err := h.service.UpdateBudget(ctx, budgetID, userID, &updateData)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to update budget: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Log budget update activity
-	utilities.LogEntityActivity(c, userID, models.ActionUpdate, models.ModuleBudget,
-		"Budget", existingBudget.ID, "Updated budget for category "+existingBudget.CategoryID, nil)
-
 	logger.Infof(ctx, "Successfully updated budget for user: %s", userID)
-	utilities.SuccessResponse(c, existingBudget, "Budget updated successfully")
+	utilities.SuccessResponse(c, updated, "Budget updated successfully")
 }
 
 // DeleteBudget deletes a budget
-func DeleteBudget(c *gin.Context) {
+func (h *BudgetHandler) DeleteBudget(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "DeleteBudget - Entry")
 
@@ -220,32 +195,19 @@ func DeleteBudget(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching budget to delete: %s", budgetID)
-	var budget models.Budget
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", budgetID, userID).First(&budget).Error; err != nil {
-		logger.Errorf(ctx, "Database error fetching budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Budget not found")
+	logger.Debugf(ctx, "Deleting budget: %s", budgetID)
+	if err := h.service.DeleteBudget(ctx, budgetID, userID); err != nil {
+		logger.Errorf(ctx, "Failed to delete budget: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-
-	// Soft delete
-	logger.Debugf(ctx, "Deleting budget from database...")
-	if err := database.DB.WithContext(ctx).Delete(&budget).Error; err != nil {
-		logger.Errorf(ctx, "Database error deleting budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete budget")
-		return
-	}
-
-	// Log budget deletion activity
-	utilities.LogEntityActivity(c, userID, models.ActionDelete, models.ModuleBudget,
-		"Budget", budget.ID, "Deleted budget for category "+budget.CategoryID, nil)
 
 	logger.Infof(ctx, "Successfully deleted budget for user: %s", userID)
 	utilities.SuccessResponse(c, nil, "Budget deleted successfully")
 }
 
 // GetBudgetProgress returns spending progress for a budget
-func GetBudgetProgress(c *gin.Context) {
+func (h *BudgetHandler) GetBudgetProgress(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetBudgetProgress - Entry")
 
@@ -265,75 +227,12 @@ func GetBudgetProgress(c *gin.Context) {
 		return
 	}
 
-	logger.Debugf(ctx, "Fetching budget: %s", budgetID)
-	var budget models.Budget
-	if err := database.DB.WithContext(ctx).Where("id = ? AND user_id = ?", budgetID, userID).First(&budget).Error; err != nil {
-		logger.Errorf(ctx, "Database error fetching budget: %v", err)
-		utilities.ErrorResponse(c, http.StatusNotFound, "Budget not found")
+	logger.Debugf(ctx, "Calculating budget progress for: %s", budgetID)
+	progress, err := h.service.GetBudgetProgress(ctx, budgetID, userID)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to get budget progress: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
-	}
-
-	// Calculate date range based on period
-	var startDate, endDate time.Time
-	now := time.Now().UTC()
-
-	switch budget.Period {
-	case "weekly":
-		// Start of current week (Sunday) in UTC
-		startDate = now.AddDate(0, 0, -int(now.Weekday()))
-		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
-		endDate = startDate.AddDate(0, 0, 7)
-
-	case "monthly":
-		// Start of current month in UTC
-		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		endDate = startDate.AddDate(0, 1, 0)
-
-	case "quarterly":
-		// Start of current quarter in UTC
-		currentMonth := int(now.Month())
-		quarterStartMonth := ((currentMonth-1)/3)*3 + 1
-		startDate = time.Date(now.Year(), time.Month(quarterStartMonth), 1, 0, 0, 0, 0, time.UTC)
-		endDate = startDate.AddDate(0, 3, 0)
-
-	case "yearly":
-		// Start of current year in UTC
-		startDate = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
-		endDate = startDate.AddDate(1, 0, 0)
-
-	case "custom":
-		if budget.CustomStartDate != nil && budget.CustomEndDate != nil {
-			startDate = *budget.CustomStartDate
-			endDate = *budget.CustomEndDate
-		} else {
-			utilities.ErrorResponse(c, http.StatusBadRequest, "Custom budget dates not set")
-			return
-		}
-
-	default:
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid budget period")
-		return
-	}
-
-	// Calculate total spending for the category in the period
-	logger.Debugf(ctx, "Calculating budget progress...")
-	var totalSpent float64
-	database.DB.WithContext(ctx).Model(&models.Transaction{}).
-		Where("user_id = ? AND category_id = ? AND type = ? AND date >= ? AND date < ?",
-			userID, budget.CategoryID, "expense", startDate, endDate).
-		Select("COALESCE(SUM(amount), 0)").
-		Row().Scan(&totalSpent)
-
-	// Calculate progress
-	progress := map[string]interface{}{
-		"budget":         budget,
-		"totalSpent":     totalSpent,
-		"remaining":      budget.Amount - totalSpent,
-		"percentageUsed": (totalSpent / budget.Amount) * 100,
-		"startDate":      startDate,
-		"endDate":        endDate,
-		"isOverBudget":   totalSpent > budget.Amount,
-		"alertTriggered": (totalSpent / budget.Amount * 100) >= budget.AlertThreshold,
 	}
 
 	logger.Infof(ctx, "Successfully retrieved budget progress for user: %s", userID)

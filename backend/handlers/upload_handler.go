@@ -1,54 +1,28 @@
 package handlers
 
 import (
-	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
+	"daybook-backend/services"
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
-const (
-	MaxFileSize       = 10 << 20 // 10 MB
-	MaxFilesPerUpload = 10
-	UploadDir         = "./uploads"
-)
-
-var AllowedFileTypes = map[string]bool{
-	".jpg":  true,
-	".jpeg": true,
-	".png":  true,
-	".gif":  true,
-	".pdf":  true,
-	".doc":  true,
-	".docx": true,
-	".xls":  true,
-	".xlsx": true,
-	".txt":  true,
-	".csv":  true,
+// UploadHandler handles file upload-related HTTP requests
+type UploadHandler struct {
+	service services.UploadService
 }
 
-// FileUploadResponse represents the response for uploaded files
-type FileUploadResponse struct {
-	FileName     string `json:"fileName"`
-	OriginalName string `json:"originalName"`
-	FilePath     string `json:"filePath"`
-	FileURL      string `json:"fileUrl"`
-	FileSize     int64  `json:"fileSize"`
-	MimeType     string `json:"mimeType"`
+// NewUploadHandler creates a new upload handler
+func NewUploadHandler(service services.UploadService) *UploadHandler {
+	return &UploadHandler{service: service}
 }
 
 // UploadFiles handles multiple file uploads
-func UploadFiles(c *gin.Context) {
+func (h *UploadHandler) UploadFiles(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UploadFiles - Entry")
 
@@ -59,8 +33,11 @@ func UploadFiles(c *gin.Context) {
 		return
 	}
 
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
 	// Parse multipart form with max memory of 32 MB
 	if err := c.Request.ParseMultipartForm(32 << 20); err != nil {
+		logger.Warnf(ctx, "Failed to parse multipart form: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "File too large or invalid form data")
 		return
 	}
@@ -69,78 +46,19 @@ func UploadFiles(c *gin.Context) {
 	files := form.File["files"]
 
 	if len(files) == 0 {
+		logger.Warnf(ctx, "No files provided in request")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "No files provided")
 		return
 	}
 
-	if len(files) > MaxFilesPerUpload {
-		utilities.ErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("Maximum %d files allowed per upload", MaxFilesPerUpload))
+	logger.Debugf(ctx, "Processing %d files...", len(files))
+
+	// Upload files using service
+	uploadedFiles, errors, err := h.service.UploadFiles(userID, files)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to upload files: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
-	}
-
-	// Create uploads directory if it doesn't exist
-	userUploadDir := filepath.Join(UploadDir, userID.String())
-	if err := os.MkdirAll(userUploadDir, 0755); err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create upload directory")
-		return
-	}
-
-	var uploadedFiles []FileUploadResponse
-	var errors []string
-
-	for _, fileHeader := range files {
-		// Validate file size
-		if fileHeader.Size > MaxFileSize {
-			errors = append(errors, fmt.Sprintf("File %s exceeds maximum size of 10MB", fileHeader.Filename))
-			continue
-		}
-
-		// Validate file type
-		ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-		if !AllowedFileTypes[ext] {
-			errors = append(errors, fmt.Sprintf("File type %s not allowed for %s", ext, fileHeader.Filename))
-			continue
-		}
-
-		// Open the uploaded file
-		file, err := fileHeader.Open()
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("Failed to open file %s", fileHeader.Filename))
-			continue
-		}
-		defer file.Close()
-
-		// Generate unique filename
-		uniqueFilename := generateUniqueFilename(fileHeader.Filename)
-		filePath := filepath.Join(userUploadDir, uniqueFilename)
-
-		// Create destination file
-		dst, err := os.Create(filePath)
-		if err != nil {
-			errors = append(errors, fmt.Sprintf("Failed to save file %s", fileHeader.Filename))
-			continue
-		}
-		defer dst.Close()
-
-		// Copy file content
-		if _, err := io.Copy(dst, file); err != nil {
-			os.Remove(filePath) // Clean up on error
-			errors = append(errors, fmt.Sprintf("Failed to write file %s", fileHeader.Filename))
-			continue
-		}
-
-		// Build file URL
-		fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", userID.String(), uniqueFilename)
-
-		// Add to successful uploads
-		uploadedFiles = append(uploadedFiles, FileUploadResponse{
-			FileName:     uniqueFilename,
-			OriginalName: fileHeader.Filename,
-			FilePath:     filePath,
-			FileURL:      fileURL,
-			FileSize:     fileHeader.Size,
-			MimeType:     fileHeader.Header.Get("Content-Type"),
-		})
 	}
 
 	// Prepare response
@@ -155,16 +73,17 @@ func UploadFiles(c *gin.Context) {
 	}
 
 	if len(uploadedFiles) == 0 {
+		logger.Warnf(ctx, "No files were uploaded successfully")
 		utilities.ErrorResponse(c, http.StatusBadRequest, "No files were uploaded successfully")
 		return
 	}
 
-	logger.Infof(ctx, "Files uploaded successfully for user: %s (uploaded: %d)", userID, len(uploadedFiles))
+	logger.Infof(ctx, "Successfully uploaded %d files for user: %s", len(uploadedFiles), userID)
 	utilities.SuccessResponse(c, response, "Files uploaded successfully")
 }
 
 // UploadSingleFile handles single file upload
-func UploadSingleFile(c *gin.Context) {
+func (h *UploadHandler) UploadSingleFile(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "UploadSingleFile - Entry")
 
@@ -175,61 +94,31 @@ func UploadSingleFile(c *gin.Context) {
 		return
 	}
 
-	file, fileHeader, err := c.Request.FormFile("file")
+	logger.Debugf(ctx, "Processing request for user: %s", userID)
+
+	_, fileHeader, err := c.Request.FormFile("file")
 	if err != nil {
+		logger.Warnf(ctx, "No file provided: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "No file provided")
 		return
 	}
-	defer file.Close()
 
-	// Validate file size
-	if fileHeader.Size > MaxFileSize {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "File exceeds maximum size of 10MB")
+	logger.Debugf(ctx, "Uploading file: %s", fileHeader.Filename)
+
+	// Upload file using service
+	response, err := h.service.UploadFile(userID, fileHeader)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to upload file: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Validate file type
-	ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
-	if !AllowedFileTypes[ext] {
-		utilities.ErrorResponse(c, http.StatusBadRequest, fmt.Sprintf("File type %s not allowed", ext))
-		return
-	}
-
-	// Create uploads directory if it doesn't exist
-	userUploadDir := filepath.Join(UploadDir, userID.String())
-	if err := os.MkdirAll(userUploadDir, 0755); err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to create upload directory")
-		return
-	}
-
-	// Generate unique filename
-	uniqueFilename := generateUniqueFilename(fileHeader.Filename)
-	filePath := filepath.Join(userUploadDir, uniqueFilename)
-
-	// Save file
-	if err := c.SaveUploadedFile(fileHeader, filePath); err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to save file")
-		return
-	}
-
-	// Build file URL
-	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", userID.String(), uniqueFilename)
-
-	response := FileUploadResponse{
-		FileName:     uniqueFilename,
-		OriginalName: fileHeader.Filename,
-		FilePath:     filePath,
-		FileURL:      fileURL,
-		FileSize:     fileHeader.Size,
-		MimeType:     fileHeader.Header.Get("Content-Type"),
-	}
-
-	logger.Infof(ctx, "File uploaded successfully for user: %s", userID)
+	logger.Infof(ctx, "Successfully uploaded file for user: %s", userID)
 	utilities.CreatedResponse(c, response, "File uploaded successfully")
 }
 
 // ServeUploadedFile serves the uploaded files
-func ServeUploadedFile(c *gin.Context) {
+func (h *UploadHandler) ServeUploadedFile(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "ServeUploadedFile - Entry")
 
@@ -243,32 +132,24 @@ func ServeUploadedFile(c *gin.Context) {
 	requestedUserID := c.Param("userId")
 	filename := c.Param("filename")
 
+	logger.Debugf(ctx, "Processing request for user: %s, requested user: %s, file: %s", userID, requestedUserID, filename)
+
 	// Verify user can only access their own files
 	if userID.String() != requestedUserID {
+		logger.Warnf(ctx, "Access denied: user %s tried to access files of user %s", userID, requestedUserID)
 		utilities.ErrorResponse(c, http.StatusForbidden, "Access denied")
 		return
 	}
 
-	// Sanitize filename to prevent path traversal attacks
-	cleanFilename := filepath.Base(filename)
-	if cleanFilename == "." || cleanFilename == ".." {
-		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid filename")
-		return
-	}
-
-	filePath := filepath.Join(UploadDir, requestedUserID, cleanFilename)
-
-	// Verify the resolved path is still within the user's directory (additional security check)
-	userDir := filepath.Join(UploadDir, requestedUserID)
-	if !filepath.HasPrefix(filePath, userDir) {
-		logger.Warnf(ctx, "Path traversal attempt detected for user: %s, filename: %s", userID, filename)
-		utilities.ErrorResponse(c, http.StatusForbidden, "Access denied")
-		return
-	}
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
+	// Get file path from service (includes security validation)
+	filePath, err := h.service.GetFilePath(userID, filename)
+	if err != nil {
+		logger.Errorf(ctx, "Failed to get file path: %v", err)
+		if err.Error() == "file not found" {
+			utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
+		} else {
+			utilities.ErrorResponse(c, http.StatusForbidden, err.Error())
+		}
 		return
 	}
 
@@ -277,7 +158,7 @@ func ServeUploadedFile(c *gin.Context) {
 }
 
 // DeleteFile deletes an uploaded file
-func DeleteFile(c *gin.Context) {
+func (h *UploadHandler) DeleteFile(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "DeleteFile - Entry")
 
@@ -290,66 +171,27 @@ func DeleteFile(c *gin.Context) {
 
 	filename := c.Param("filename")
 
-	filePath := filepath.Join(UploadDir, userID.String(), filename)
+	logger.Debugf(ctx, "Processing request for user: %s, file: %s", userID, filename)
 
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
+	// Delete file using service
+	if err := h.service.DeleteFile(userID, filename); err != nil {
+		logger.Errorf(ctx, "Failed to delete file: %v", err)
+		if err.Error() == "file not found" {
+			utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
+		} else {
+			utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		}
 		return
 	}
 
-	// Delete the file
-	logger.Debugf(ctx, "Deleting file: %s", filename)
-	if err := os.Remove(filePath); err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to delete file")
-		return
-	}
-
-	logger.Infof(ctx, "File deleted successfully for user: %s", userID)
+	logger.Infof(ctx, "Successfully deleted file for user: %s", userID)
 	utilities.SuccessResponse(c, gin.H{
 		"filename": filename,
 	}, "File deleted successfully")
 }
 
-// generateUniqueFilename generates a unique filename with timestamp and UUID
-func generateUniqueFilename(originalFilename string) string {
-	ext := filepath.Ext(originalFilename)
-	nameWithoutExt := strings.TrimSuffix(originalFilename, ext)
-
-	// Sanitize filename
-	nameWithoutExt = strings.ReplaceAll(nameWithoutExt, " ", "_")
-	nameWithoutExt = strings.Map(func(r rune) rune {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
-			return r
-		}
-		return '_'
-	}, nameWithoutExt)
-
-	timestamp := time.Now().Unix()
-	uniqueID := uuid.New().String()[:8]
-
-	return fmt.Sprintf("%s_%d_%s%s", nameWithoutExt, timestamp, uniqueID, ext)
-}
-
-// ValidateAndSanitizeFilename validates and sanitizes a filename
-func ValidateAndSanitizeFilename(filename string) (string, error) {
-	if filename == "" {
-		return "", fmt.Errorf("filename cannot be empty")
-	}
-
-	ext := strings.ToLower(filepath.Ext(filename))
-	if !AllowedFileTypes[ext] {
-		return "", fmt.Errorf("file type %s not allowed", ext)
-	}
-
-	// Remove any path traversal attempts
-	filename = filepath.Base(filename)
-
-	return filename, nil
-}
-
 // GetFileInfo returns information about an uploaded file
-func GetFileInfo(c *gin.Context) {
+func (h *UploadHandler) GetFileInfo(c *gin.Context) {
 	ctx := middleware.GetContextWithUserID(c)
 	logger.Infof(ctx, "GetFileInfo - Entry")
 
@@ -362,43 +204,20 @@ func GetFileInfo(c *gin.Context) {
 
 	filename := c.Param("filename")
 
-	filePath := filepath.Join(UploadDir, userID.String(), filename)
+	logger.Debugf(ctx, "Processing request for user: %s, file: %s", userID, filename)
 
-	// Check if file exists
-	fileInfo, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
-		return
-	}
-
-	// Open file to detect mime type
-	file, err := os.Open(filePath)
+	// Get file info from service
+	response, err := h.service.GetFileInfo(userID, filename)
 	if err != nil {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to read file")
-		return
-	}
-	defer file.Close()
-
-	// Read first 512 bytes to detect content type
-	buffer := make([]byte, 512)
-	_, err = file.Read(buffer)
-	if err != nil && err != io.EOF {
-		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to read file")
+		logger.Errorf(ctx, "Failed to get file info: %v", err)
+		if err.Error() == "file not found" {
+			utilities.ErrorResponse(c, http.StatusNotFound, "File not found")
+		} else {
+			utilities.ErrorResponse(c, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 
-	mimeType := http.DetectContentType(buffer)
-	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", userID.String(), filename)
-
-	response := FileUploadResponse{
-		FileName:     filename,
-		OriginalName: filename,
-		FilePath:     filePath,
-		FileURL:      fileURL,
-		FileSize:     fileInfo.Size(),
-		MimeType:     mimeType,
-	}
-
-	logger.Infof(ctx, "File info retrieved successfully for user: %s", userID)
+	logger.Infof(ctx, "Successfully retrieved file info for user: %s", userID)
 	utilities.SuccessResponse(c, response, "File info retrieved successfully")
 }

@@ -15,7 +15,8 @@ type Category struct {
 	Icon        string         `gorm:"not null" json:"icon" binding:"required"`       // Icon identifier
 	Color       string         `gorm:"default:#3B82F6" json:"color"`                  // Hex color code
 	Description string         `json:"description"`
-	IsDefault   bool           `gorm:"default:false" json:"isDefault"` // System default categories
+	IsDefault   bool           `gorm:"default:false" json:"isDefault"`  // System default categories
+	Order       int            `gorm:"not null;default:0" json:"order"` // Display order within type
 	CreatedAt   time.Time      `json:"createdAt"`
 	UpdatedAt   time.Time      `json:"updatedAt"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`

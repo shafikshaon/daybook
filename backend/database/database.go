@@ -1,13 +1,10 @@
 package database
 
 import (
-	"context"
-	"fmt"
-	"time"
-
 	"daybook-backend/config"
 	customLogger "daybook-backend/logger"
 	"daybook-backend/models"
+	"fmt"
 
 	"github.com/go-redis/redis/v8"
 	"gorm.io/driver/postgres"
@@ -17,7 +14,6 @@ import (
 var (
 	DB          *gorm.DB
 	RedisClient *redis.Client
-	ctx         = context.Background()
 )
 
 func InitDatabase(cfg *config.Config) error {
@@ -27,13 +23,12 @@ func InitDatabase(cfg *config.Config) error {
 	dsn := cfg.Database.GetDSN()
 
 	// Create custom GORM logger with 200ms slow query threshold
-	gormLogger := customLogger.NewGormLogger(customLogger.DefaultLogger, 200*time.Millisecond)
-
-	ctx := context.Background()
+	// Use logger context to ensure trace IDs are populated
+	ctx := customLogger.CreateContext("")
 	customLogger.Infof(ctx, "Connecting to database: %s", dsn)
 
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: gormLogger,
+		Logger: customLogger.NewDefaultCustomLogger(),
 	})
 	if err != nil {
 		customLogger.Errorf(ctx, "Failed to connect to database: %v", err)
@@ -43,12 +38,12 @@ func InitDatabase(cfg *config.Config) error {
 	customLogger.Infof(ctx, "Database connection established successfully")
 
 	// Enable UUID extension
-	DB.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
+	DB.WithContext(ctx).Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
 	customLogger.Infof(ctx, "UUID extension enabled")
 
 	// Auto-migrate all models
 	customLogger.Infof(ctx, "Starting database migration...")
-	err = DB.AutoMigrate(
+	err = DB.WithContext(ctx).AutoMigrate(
 		&models.User{},
 		&models.Account{},
 		&models.AccountType{},
@@ -88,7 +83,7 @@ func InitDatabase(cfg *config.Config) error {
 }
 
 func InitRedis(cfg *config.Config) error {
-	ctx := context.Background()
+	ctx := customLogger.CreateContext("")
 
 	RedisClient = redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.GetAddr(),
@@ -109,7 +104,7 @@ func InitRedis(cfg *config.Config) error {
 }
 
 func CloseDatabase() error {
-	ctx := context.Background()
+	ctx := customLogger.CreateContext("")
 
 	if DB != nil {
 		customLogger.Infof(ctx, "Closing database connection...")
@@ -129,7 +124,7 @@ func CloseDatabase() error {
 }
 
 func CloseRedis() error {
-	ctx := context.Background()
+	ctx := customLogger.CreateContext("")
 
 	if RedisClient != nil {
 		customLogger.Infof(ctx, "Closing Redis connection...")

@@ -84,6 +84,34 @@ export const useCategoriesStore = defineStore('categories', {
       } finally {
         this.loading = false
       }
+    },
+
+    async reorderCategories(categoryOrders) {
+      this.loading = true
+      this.error = null
+      try {
+        await apiService.put('categories/reorder', null, { categories: categoryOrders })
+
+        // Update local state with new orders
+        categoryOrders.forEach(({ id, order }) => {
+          const category = this.categories.find(c => c.id === id)
+          if (category) {
+            category.order = order
+          }
+        })
+
+        // Re-sort categories by type and order
+        this.categories.sort((a, b) => {
+          if (a.type !== b.type) return a.type.localeCompare(b.type)
+          return (a.order || 0) - (b.order || 0)
+        })
+      } catch (error) {
+        this.error = error.message
+        console.error('Error reordering categories:', error)
+        throw error
+      } finally {
+        this.loading = false
+      }
     }
   }
 })
