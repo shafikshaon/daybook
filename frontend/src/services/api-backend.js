@@ -299,6 +299,113 @@ const apiService = {
     }
   },
 
+  // Reports
+  reports: {
+    // Dashboard summary
+    async getDashboardSummary() {
+      const response = await api.get('/reports/dashboard')
+      return response
+    },
+
+    // Income vs Expense report
+    async getIncomeExpense(startDate, endDate, groupBy = 'month') {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        groupBy
+      })
+      const response = await api.get(`/reports/income-expense?${params.toString()}`)
+      return response
+    },
+
+    // Category analysis
+    async getCategoryAnalysis(startDate, endDate, type = 'expense', limit = 10) {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        type,
+        limit: limit.toString()
+      })
+      const response = await api.get(`/reports/category-analysis?${params.toString()}`)
+      return response
+    },
+
+    // Account balances
+    async getAccountBalances() {
+      const response = await api.get('/reports/accounts')
+      return response
+    },
+
+    // Account balance history
+    async getAccountBalanceHistory(accountId, startDate, endDate, groupBy = 'month') {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        groupBy
+      })
+      const response = await api.get(`/reports/accounts/${accountId}/history?${params.toString()}`)
+      return response
+    },
+
+    // Net worth report
+    async getNetWorth(startDate = null, endDate = null, groupBy = 'month') {
+      if (startDate && endDate) {
+        const params = new URLSearchParams({
+          startDate,
+          endDate,
+          groupBy
+        })
+        const response = await api.get(`/reports/net-worth?${params.toString()}`)
+        return response
+      }
+      const response = await api.get('/reports/net-worth')
+      return response
+    },
+
+    // Budget performance
+    async getBudgetPerformance(month = null) {
+      const url = month ? `/reports/budget?month=${month}` : '/reports/budget'
+      const response = await api.get(url)
+      return response
+    },
+
+    // Cash flow report
+    async getCashFlow(startDate, endDate, groupBy = 'month') {
+      const params = new URLSearchParams({
+        startDate,
+        endDate,
+        groupBy
+      })
+      const response = await api.get(`/reports/cash-flow?${params.toString()}`)
+      return response
+    },
+
+    // Monthly summary
+    async getMonthlySummary(month = null) {
+      const url = month ? `/reports/monthly-summary?month=${month}` : '/reports/monthly-summary'
+      const response = await api.get(url)
+      return response
+    },
+
+    // Yearly summary
+    async getYearlySummary(year = null) {
+      const url = year ? `/reports/yearly-summary?year=${year}` : '/reports/yearly-summary'
+      const response = await api.get(url)
+      return response
+    },
+
+    // Period comparison
+    async comparePeriods(period1Start, period1End, period2Start, period2End) {
+      const response = await api.post('/reports/comparison', {
+        period1Start,
+        period1End,
+        period2Start,
+        period2End
+      })
+      return response
+    }
+  },
+
   // Utility methods
   generateId() {
     // Note: Backend generates UUIDs, so this is not used with real backend

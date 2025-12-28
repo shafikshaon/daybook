@@ -236,6 +236,22 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 				assetRoutes.DELETE("/:id/attachments/:attachmentId", c.AssetHandler.DeleteAttachment)
 			}
 
+			// Report routes
+			reportRoutes := protected.Group("/reports")
+			{
+				reportRoutes.GET("/dashboard", c.ReportHandler.GetDashboardSummary)
+				reportRoutes.GET("/income-expense", c.ReportHandler.GetIncomeExpenseReport)
+				reportRoutes.GET("/category-analysis", c.ReportHandler.GetCategoryAnalysis)
+				reportRoutes.GET("/accounts", c.ReportHandler.GetAccountReport)
+				reportRoutes.GET("/accounts/:id/history", c.ReportHandler.GetAccountBalanceHistory)
+				reportRoutes.GET("/net-worth", c.ReportHandler.GetNetWorthReport)
+				reportRoutes.GET("/budget", c.ReportHandler.GetBudgetReport)
+				reportRoutes.GET("/cash-flow", c.ReportHandler.GetCashFlowReport)
+				reportRoutes.GET("/monthly-summary", c.ReportHandler.GetMonthlySummary)
+				reportRoutes.GET("/yearly-summary", c.ReportHandler.GetYearlySummary)
+				reportRoutes.POST("/comparison", c.ReportHandler.GetPeriodComparison)
+			}
+
 			// File upload routes
 			uploadRoutes := protected.Group("/uploads")
 			{
