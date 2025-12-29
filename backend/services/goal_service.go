@@ -260,7 +260,7 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uint, req *
 
 	// Perform all operations within a transaction
 	err = s.txManager.WithTransaction(ctx, func(ctx context.Context, tx *gorm.DB) error {
-		// Look up "Savings & Investment" category
+		// Look up or create "Savings & Investment" category
 		categoryRepoTx := s.categoryRepo.WithTx(tx)
 		categories, err := categoryRepoTx.FindAll(ctx, userID)
 		if err != nil {
@@ -276,14 +276,22 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uint, req *
 			}
 		}
 
-		// If category doesn't exist, use first expense category as fallback
+		// If category doesn't exist, create it
 		if savingsCategoryID == 0 {
-			for _, cat := range categories {
-				if cat.Type == "expense" {
-					savingsCategoryID = cat.ID
-					break
-				}
+			newCategory := &models.Category{
+				UserID:      userID,
+				Name:        "Savings & Investment",
+				Type:        "expense",
+				Icon:        "💎",
+				Color:       "#10B981",
+				Description: "Savings and investment contributions",
+				IsDefault:   false,
+				Order:       0,
 			}
+			if err := categoryRepoTx.Create(ctx, newCategory); err != nil {
+				return err
+			}
+			savingsCategoryID = newCategory.ID
 		}
 
 		// Create holding
