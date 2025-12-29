@@ -1,7 +1,9 @@
 package container
 
 import (
+	"daybook-backend/config"
 	"daybook-backend/handlers"
+	"daybook-backend/monitoring"
 	"daybook-backend/repository"
 	"daybook-backend/services"
 
@@ -13,6 +15,7 @@ import (
 type Container struct {
 	// Infrastructure
 	TxManager repository.TransactionManager
+	Monitor   *monitoring.Tracker
 
 	// Repositories
 	ActivityLogRepo          repository.ActivityLogRepository
@@ -74,11 +77,12 @@ type Container struct {
 }
 
 // NewContainer creates and wires all dependencies
-func NewContainer(db *gorm.DB) *Container {
+func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c := &Container{}
 
 	// Initialize infrastructure
 	c.TxManager = repository.NewTransactionManager(db)
+	c.Monitor = monitoring.NewTracker(cfg.Datadog.Enabled, cfg.Datadog.ServiceName)
 
 	// Initialize repositories
 	c.ActivityLogRepo = repository.NewActivityLogRepository(db)

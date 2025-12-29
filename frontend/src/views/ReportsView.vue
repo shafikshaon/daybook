@@ -770,7 +770,10 @@ export default {
     }
 
     const getChangeText = (current, previous, inverse = false) => {
-      if (!previous) return 'N/A'
+      if (previous === null || previous === undefined || previous === 0) {
+        if (current > 0) return '✓ New'
+        return '—'
+      }
       const change = ((current - previous) / Math.abs(previous)) * 100
       const absChange = Math.abs(change)
       const direction = inverse ? (change > 0 ? '↓' : '↑') : (change > 0 ? '↑' : '↓')

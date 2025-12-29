@@ -8,6 +8,8 @@ import (
 	"daybook-backend/models"
 
 	"github.com/go-redis/redis/v8"
+	redistrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
+	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -37,6 +39,15 @@ func InitDatabase(cfg *config.Config) error {
 	}
 
 	customLogger.Infof(ctx, "Database connection established successfully")
+
+	// Add Datadog tracing plugin if enabled
+	if cfg.Datadog.Enabled {
+		if err := DB.Use(gormtrace.New(gormtrace.WithServiceName(cfg.Datadog.ServiceName))); err != nil {
+			customLogger.Warnf(ctx, "Failed to enable Datadog GORM tracing: %v", err)
+		} else {
+			customLogger.Infof(ctx, "Datadog GORM tracing enabled")
+		}
+	}
 
 	// Enable UUID extension
 	DB.WithContext(ctx).Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
@@ -91,6 +102,12 @@ func InitRedis(cfg *config.Config) error {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
+
+	// Add Datadog tracing to Redis client if enabled
+	if cfg.Datadog.Enabled {
+		RedisClient.AddHook(redistrace.NewHook(redistrace.WithServiceName(cfg.Datadog.ServiceName + "-redis")))
+		customLogger.Infof(ctx, "Datadog Redis tracing enabled")
+	}
 
 	_, err := RedisClient.Ping(ctx).Result()
 	if err != nil {

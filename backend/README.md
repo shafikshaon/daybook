@@ -26,6 +26,7 @@ A comprehensive personal finance management backend built with Go, Gin, GORM, Po
 - **JWT** - Authentication tokens
 - **Docker** - Containerization
 - **Viper** - Configuration management
+- **Datadog APM** - Application performance monitoring (optional)
 
 ## Project Structure
 
@@ -253,16 +254,30 @@ This will start:
 Override configuration with environment variables:
 
 ```bash
+# Server Configuration
 SERVER_PORT=8080
 SERVER_MODE=debug
+
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_NAME=daybook
+
+# Redis Configuration
 REDIS_HOST=localhost
 REDIS_PORT=6379
+
+# JWT Configuration
 JWT_SECRET=your-secret-key
+
+# Datadog APM (Optional)
+DD_ENABLED=false
+DD_SERVICE=daybook-backend
+DD_ENV=development
+DD_AGENT_HOST=localhost
+DD_TRACE_AGENT_PORT=8126
 ```
 
 ## Database Migrations
@@ -283,6 +298,74 @@ Database schema is automatically created/updated on application startup using GO
 - Database indexes on foreign keys and frequently queried fields
 - Connection pooling for database connections
 - Soft deletes for data recovery
+
+## Monitoring with Datadog APM
+
+The application supports Datadog APM (Application Performance Monitoring) for distributed tracing, performance monitoring, and observability.
+
+### Prerequisites
+
+- Datadog account (sign up at https://www.datadoghq.com/)
+- Datadog Agent installed and running on your system or infrastructure
+
+### Installation
+
+The Datadog SDK is already included in the project dependencies. No additional installation is required.
+
+### Configuration
+
+Enable Datadog monitoring by setting the following environment variables in your `.env` file:
+
+```bash
+# Enable Datadog APM
+DD_ENABLED=true
+
+# Service name (appears in Datadog UI)
+DD_SERVICE=daybook-backend
+
+# Environment name (e.g., development, staging, production)
+DD_ENV=production
+
+# Datadog Agent host
+DD_AGENT_HOST=localhost
+
+# Datadog Agent trace port
+DD_TRACE_AGENT_PORT=8126
+```
+
+### What Gets Monitored
+
+When Datadog is enabled, the following metrics are automatically collected:
+
+- **HTTP Requests**: All API endpoints with request/response times, status codes, and errors
+- **Database Queries**: GORM database operations with query performance
+- **Service Performance**: Request latency, throughput, and error rates
+- **Distributed Traces**: End-to-end request flow across services
+- **Custom Tags**: User ID, request ID, and other contextual information
+
+### Viewing Traces
+
+1. Start the Datadog Agent on your system
+2. Enable Datadog in your `.env` file (set `DD_ENABLED=true`)
+3. Start the application
+4. Make some API requests
+5. View traces in your Datadog dashboard at https://app.datadoghq.com/apm/traces
+
+### Production Deployment
+
+For production environments:
+
+```bash
+DD_ENABLED=true
+DD_SERVICE=daybook-backend
+DD_ENV=production
+DD_AGENT_HOST=datadog-agent-service  # Your Datadog Agent hostname
+DD_TRACE_AGENT_PORT=8126
+```
+
+### Disabling Datadog
+
+To disable Datadog monitoring, set `DD_ENABLED=false` in your `.env` file or remove the environment variable. The application will run normally without any tracing overhead.
 
 ## Error Handling
 

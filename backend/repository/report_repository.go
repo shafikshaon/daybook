@@ -121,6 +121,7 @@ type PeriodSummary struct {
 	TotalIncome      float64 `json:"totalIncome"`
 	TotalExpense     float64 `json:"totalExpense"`
 	NetAmount        float64 `json:"netAmount"`
+	NetSavings       float64 `json:"netSavings"` // Same as NetAmount (Income - Expense)
 	TransactionCount int     `json:"transactionCount"`
 	AvgDailySpending float64 `json:"avgDailySpending"`
 }
@@ -557,6 +558,7 @@ func (r *reportRepository) getPeriodSummary(ctx context.Context, userID uint, st
 	r.db.WithContext(ctx).Raw(query, userID, startDate, endDate).Scan(&summary)
 
 	summary.NetAmount = summary.TotalIncome - summary.TotalExpense
+	summary.NetSavings = summary.NetAmount // NetSavings is same as NetAmount (Income - Expense)
 
 	// Calculate average daily spending
 	days := int(endDate.Sub(startDate).Hours()/24) + 1
