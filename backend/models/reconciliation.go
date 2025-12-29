@@ -3,7 +3,6 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -18,9 +17,9 @@ const (
 
 // Reconciliation represents an account reconciliation record
 type Reconciliation struct {
-	ID                 uuid.UUID            `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID             uuid.UUID            `gorm:"type:uuid;not null;index" json:"userId"`
-	AccountID          uuid.UUID            `gorm:"type:uuid;not null;index" json:"accountId"`
+	ID                 uint                 `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID             uint                 `gorm:"not null;index" json:"userId"`
+	AccountID          uint                 `gorm:"not null;index" json:"accountId"`
 	ReconciliationDate time.Time            `gorm:"type:timestamptz;not null" json:"reconciliationDate" binding:"required"`
 	StatementBalance   float64              `gorm:"type:decimal(15,2);not null" json:"statementBalance" binding:"required"`
 	BookBalance        float64              `gorm:"type:decimal(15,2);not null" json:"bookBalance"`
@@ -38,9 +37,9 @@ type Reconciliation struct {
 
 // ReconciliationTransaction links transactions to reconciliation records
 type ReconciliationTransaction struct {
-	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	ReconciliationID uuid.UUID `gorm:"type:uuid;not null;index" json:"reconciliationId"`
-	TransactionID    uuid.UUID `gorm:"type:uuid;not null;index" json:"transactionId"`
+	ID               uint      `gorm:"primaryKey;autoIncrement" json:"id"`
+	ReconciliationID uint      `gorm:"not null;index" json:"reconciliationId"`
+	TransactionID    uint      `gorm:"not null;index" json:"transactionId"`
 	CreatedAt        time.Time `json:"createdAt"`
 
 	// Relationships
@@ -50,10 +49,6 @@ type ReconciliationTransaction struct {
 
 // BeforeCreate sets the UUID and calculates difference
 func (r *Reconciliation) BeforeCreate(tx *gorm.DB) error {
-	if r.ID == uuid.Nil {
-		r.ID = uuid.New()
-	}
-
 	// Calculate difference between statement and book balance
 	r.Difference = r.StatementBalance - r.BookBalance
 
@@ -84,8 +79,5 @@ func (r *Reconciliation) BeforeUpdate(tx *gorm.DB) error {
 
 // BeforeCreate sets the UUID for ReconciliationTransaction
 func (rt *ReconciliationTransaction) BeforeCreate(tx *gorm.DB) error {
-	if rt.ID == uuid.Nil {
-		rt.ID = uuid.New()
-	}
 	return nil
 }

@@ -7,7 +7,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 func AuthMiddleware() gin.HandlerFunc {
@@ -45,15 +44,15 @@ func AuthMiddleware() gin.HandlerFunc {
 	}
 }
 
-func GetUserID(c *gin.Context) (uuid.UUID, error) {
+func GetUserID(c *gin.Context) (uint, error) {
 	userID, exists := c.Get("userID")
 	if !exists {
-		return uuid.Nil, http.ErrNoCookie
+		return 0, http.ErrNoCookie
 	}
 
-	uid, ok := userID.(uuid.UUID)
+	uid, ok := userID.(uint)
 	if !ok {
-		return uuid.Nil, http.ErrNoCookie
+		return 0, http.ErrNoCookie
 	}
 
 	return uid, nil

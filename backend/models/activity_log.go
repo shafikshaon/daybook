@@ -3,17 +3,16 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type ActivityLog struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"`
 	Action      string         `gorm:"not null" json:"action"`
 	Module      string         `gorm:"not null;index" json:"module"` // e.g., "transaction", "account", "budget", etc.
 	EntityType  string         `json:"entityType"`                   // e.g., "Transaction", "Account", "Budget"
-	EntityID    *uuid.UUID     `gorm:"type:uuid" json:"entityId"`    // ID of the affected entity
+	EntityID    *uint          `json:"entityId"`                     // ID of the affected entity
 	Description string         `json:"description"`                  // Human-readable description
 	IPAddress   string         `json:"ipAddress"`
 	UserAgent   string         `json:"userAgent"`
@@ -27,9 +26,6 @@ type ActivityLog struct {
 }
 
 func (a *ActivityLog) BeforeCreate(tx *gorm.DB) error {
-	if a.ID == uuid.Nil {
-		a.ID = uuid.New()
-	}
 	return nil
 }
 

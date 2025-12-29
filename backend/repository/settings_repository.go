@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -15,7 +14,7 @@ type SettingsRepository interface {
 
 	// FindByUserID retrieves settings for a specific user
 	// Settings are unique per user (one settings record per user)
-	FindByUserID(ctx context.Context, userID uuid.UUID) (*models.Settings, error)
+	FindByUserID(ctx context.Context, userID uint) (*models.Settings, error)
 
 	// CreateOrUpdate creates new settings or updates existing ones
 	// This is useful for settings which should have exactly one record per user
@@ -34,7 +33,7 @@ func NewSettingsRepository(db *gorm.DB) SettingsRepository {
 }
 
 // FindByUserID retrieves settings for a user
-func (r *settingsRepository) FindByUserID(ctx context.Context, userID uuid.UUID) (*models.Settings, error) {
+func (r *settingsRepository) FindByUserID(ctx context.Context, userID uint) (*models.Settings, error) {
 	var settings models.Settings
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

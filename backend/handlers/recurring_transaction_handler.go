@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -10,7 +11,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // RecurringTransactionHandler handles recurring transaction HTTP requests
@@ -58,11 +58,13 @@ func (h *RecurringTransactionHandler) GetRecurringTransaction(c *gin.Context) {
 		return
 	}
 
-	recurringID, err := uuid.Parse(c.Param("id"))
+	recurringIDStr := c.Param("id")
+	recurringIDUint, err := strconv.ParseUint(recurringIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid recurring transaction ID")
 		return
 	}
+	recurringID := uint(recurringIDUint)
 
 	recurringTransaction, err := h.service.GetRecurringTransaction(ctx, recurringID, userID)
 	if err != nil {
@@ -118,11 +120,13 @@ func (h *RecurringTransactionHandler) UpdateRecurringTransaction(c *gin.Context)
 		return
 	}
 
-	recurringID, err := uuid.Parse(c.Param("id"))
+	recurringIDStr := c.Param("id")
+	recurringIDUint, err := strconv.ParseUint(recurringIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid recurring transaction ID")
 		return
 	}
+	recurringID := uint(recurringIDUint)
 
 	var updateData models.RecurringTransaction
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -153,11 +157,13 @@ func (h *RecurringTransactionHandler) DeleteRecurringTransaction(c *gin.Context)
 		return
 	}
 
-	recurringID, err := uuid.Parse(c.Param("id"))
+	recurringIDStr := c.Param("id")
+	recurringIDUint, err := strconv.ParseUint(recurringIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid recurring transaction ID")
 		return
 	}
+	recurringID := uint(recurringIDUint)
 
 	if err := h.service.DeleteRecurringTransaction(ctx, recurringID, userID); err != nil {
 		logger.Errorf(ctx, "Service operation failed: %v", err)

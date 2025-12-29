@@ -3,12 +3,11 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"daybook-backend/models"
 	"daybook-backend/repository"
-
-	"github.com/google/uuid"
 )
 
 // BudgetProgress represents budget spending progress
@@ -26,22 +25,22 @@ type BudgetProgress struct {
 // BudgetService handles budget business logic
 type BudgetService interface {
 	// ListBudgets retrieves all budgets for a user with optional filters
-	ListBudgets(ctx context.Context, userID uuid.UUID, filters repository.BudgetFilters) ([]models.Budget, error)
+	ListBudgets(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]models.Budget, error)
 
 	// GetBudget retrieves a specific budget by ID
-	GetBudget(ctx context.Context, budgetID, userID uuid.UUID) (*models.Budget, error)
+	GetBudget(ctx context.Context, budgetID, userID uint) (*models.Budget, error)
 
 	// CreateBudget creates a new budget
 	CreateBudget(ctx context.Context, budget *models.Budget) (*models.Budget, error)
 
 	// UpdateBudget updates an existing budget
-	UpdateBudget(ctx context.Context, budgetID, userID uuid.UUID, updateData *models.Budget) (*models.Budget, error)
+	UpdateBudget(ctx context.Context, budgetID, userID uint, updateData *models.Budget) (*models.Budget, error)
 
 	// DeleteBudget deletes a budget
-	DeleteBudget(ctx context.Context, budgetID, userID uuid.UUID) error
+	DeleteBudget(ctx context.Context, budgetID, userID uint) error
 
 	// GetBudgetProgress calculates spending progress for a budget
-	GetBudgetProgress(ctx context.Context, budgetID, userID uuid.UUID) (*BudgetProgress, error)
+	GetBudgetProgress(ctx context.Context, budgetID, userID uint) (*BudgetProgress, error)
 }
 
 type budgetService struct {
@@ -61,19 +60,19 @@ func NewBudgetService(
 }
 
 // ListBudgets retrieves budgets with optional filters
-func (s *budgetService) ListBudgets(ctx context.Context, userID uuid.UUID, filters repository.BudgetFilters) ([]models.Budget, error) {
+func (s *budgetService) ListBudgets(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]models.Budget, error) {
 	return s.repo.FindWithFilters(ctx, userID, filters)
 }
 
 // GetBudget retrieves a specific budget
-func (s *budgetService) GetBudget(ctx context.Context, budgetID, userID uuid.UUID) (*models.Budget, error) {
+func (s *budgetService) GetBudget(ctx context.Context, budgetID, userID uint) (*models.Budget, error) {
 	return s.repo.FindByID(ctx, budgetID, userID)
 }
 
 // CreateBudget creates a new budget
 func (s *budgetService) CreateBudget(ctx context.Context, budget *models.Budget) (*models.Budget, error) {
 	// Validate required fields
-	if budget.CategoryID == "" {
+	if budget.CategoryID == 0 {
 		return nil, errors.New("category ID is required")
 	}
 	if budget.Amount <= 0 {
@@ -103,7 +102,7 @@ func (s *budgetService) CreateBudget(ctx context.Context, budget *models.Budget)
 		models.ModuleBudget,
 		"Budget",
 		budget.ID,
-		"Created budget for category "+budget.CategoryID,
+		fmt.Sprintf("Created budget for category %d", budget.CategoryID),
 		nil,
 	)
 
@@ -111,7 +110,7 @@ func (s *budgetService) CreateBudget(ctx context.Context, budget *models.Budget)
 }
 
 // UpdateBudget updates an existing budget
-func (s *budgetService) UpdateBudget(ctx context.Context, budgetID, userID uuid.UUID, updateData *models.Budget) (*models.Budget, error) {
+func (s *budgetService) UpdateBudget(ctx context.Context, budgetID, userID uint, updateData *models.Budget) (*models.Budget, error) {
 	// Fetch existing budget
 	existing, err := s.repo.FindByID(ctx, budgetID, userID)
 	if err != nil {
@@ -142,7 +141,7 @@ func (s *budgetService) UpdateBudget(ctx context.Context, budgetID, userID uuid.
 		models.ModuleBudget,
 		"Budget",
 		existing.ID,
-		"Updated budget for category "+existing.CategoryID,
+		fmt.Sprintf("Updated budget for category %d", existing.CategoryID),
 		nil,
 	)
 
@@ -150,7 +149,7 @@ func (s *budgetService) UpdateBudget(ctx context.Context, budgetID, userID uuid.
 }
 
 // DeleteBudget deletes a budget
-func (s *budgetService) DeleteBudget(ctx context.Context, budgetID, userID uuid.UUID) error {
+func (s *budgetService) DeleteBudget(ctx context.Context, budgetID, userID uint) error {
 	// Fetch the budget to get its details
 	budget, err := s.repo.FindByID(ctx, budgetID, userID)
 	if err != nil {
@@ -170,7 +169,7 @@ func (s *budgetService) DeleteBudget(ctx context.Context, budgetID, userID uuid.
 		models.ModuleBudget,
 		"Budget",
 		budget.ID,
-		"Deleted budget for category "+budget.CategoryID,
+		fmt.Sprintf("Deleted budget for category %d", budget.CategoryID),
 		nil,
 	)
 
@@ -178,7 +177,7 @@ func (s *budgetService) DeleteBudget(ctx context.Context, budgetID, userID uuid.
 }
 
 // GetBudgetProgress calculates spending progress for a budget
-func (s *budgetService) GetBudgetProgress(ctx context.Context, budgetID, userID uuid.UUID) (*BudgetProgress, error) {
+func (s *budgetService) GetBudgetProgress(ctx context.Context, budgetID, userID uint) (*BudgetProgress, error) {
 	// Fetch the budget
 	budget, err := s.repo.FindByID(ctx, budgetID, userID)
 	if err != nil {

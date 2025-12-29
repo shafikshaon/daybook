@@ -8,8 +8,6 @@ import (
 
 	"daybook-backend/models"
 	"daybook-backend/repository"
-
-	"github.com/google/uuid"
 )
 
 // AssetWithStats includes an asset with calculated statistics
@@ -29,32 +27,32 @@ type AssetWithStats struct {
 // AssetService handles asset business logic
 type AssetService interface {
 	// ListAssets retrieves all assets with optional filters
-	ListAssets(ctx context.Context, userID uuid.UUID, filters repository.AssetFilters) ([]AssetWithStats, error)
+	ListAssets(ctx context.Context, userID uint, filters repository.AssetFilters) ([]AssetWithStats, error)
 
 	// GetAsset retrieves a specific asset by ID
-	GetAsset(ctx context.Context, assetID, userID uuid.UUID) (*AssetWithStats, error)
+	GetAsset(ctx context.Context, assetID, userID uint) (*AssetWithStats, error)
 
 	// CreateAsset creates a new asset
 	CreateAsset(ctx context.Context, asset *models.Asset) (*models.Asset, error)
 
 	// UpdateAsset updates an existing asset
-	UpdateAsset(ctx context.Context, assetID, userID uuid.UUID, updateData *models.Asset) (*models.Asset, error)
+	UpdateAsset(ctx context.Context, assetID, userID uint, updateData *models.Asset) (*models.Asset, error)
 
 	// DeleteAsset deletes an asset
-	DeleteAsset(ctx context.Context, assetID, userID uuid.UUID) error
+	DeleteAsset(ctx context.Context, assetID, userID uint) error
 
 	// GetStats calculates asset statistics
-	GetStats(ctx context.Context, userID uuid.UUID) (*repository.AssetStatsResponse, error)
+	GetStats(ctx context.Context, userID uint) (*repository.AssetStatsResponse, error)
 
 	// Service Record operations
 	CreateServiceRecord(ctx context.Context, record *models.ServiceRecord) (*models.ServiceRecord, error)
-	ListServiceRecords(ctx context.Context, assetID, userID uuid.UUID) ([]models.ServiceRecord, error)
-	DeleteServiceRecord(ctx context.Context, serviceID, userID uuid.UUID) error
+	ListServiceRecords(ctx context.Context, assetID, userID uint) ([]models.ServiceRecord, error)
+	DeleteServiceRecord(ctx context.Context, serviceID, userID uint) error
 
 	// Attachment operations
 	AddAttachment(ctx context.Context, attachment *models.AssetAttachment) (*models.AssetAttachment, error)
-	ListAttachments(ctx context.Context, assetID, userID uuid.UUID) ([]models.AssetAttachment, error)
-	DeleteAttachment(ctx context.Context, attachmentID, userID uuid.UUID) error
+	ListAttachments(ctx context.Context, assetID, userID uint) ([]models.AssetAttachment, error)
+	DeleteAttachment(ctx context.Context, attachmentID, userID uint) error
 }
 
 type assetService struct {
@@ -74,7 +72,7 @@ func NewAssetService(
 }
 
 // ListAssets retrieves assets with optional filters
-func (s *assetService) ListAssets(ctx context.Context, userID uuid.UUID, filters repository.AssetFilters) ([]AssetWithStats, error) {
+func (s *assetService) ListAssets(ctx context.Context, userID uint, filters repository.AssetFilters) ([]AssetWithStats, error) {
 	assets, err := s.repo.FindWithFilters(ctx, userID, filters)
 	if err != nil {
 		return nil, err
@@ -90,7 +88,7 @@ func (s *assetService) ListAssets(ctx context.Context, userID uuid.UUID, filters
 }
 
 // GetAsset retrieves a specific asset
-func (s *assetService) GetAsset(ctx context.Context, assetID, userID uuid.UUID) (*AssetWithStats, error) {
+func (s *assetService) GetAsset(ctx context.Context, assetID, userID uint) (*AssetWithStats, error) {
 	asset, err := s.repo.FindByIDWithPreloads(ctx, assetID, userID)
 	if err != nil {
 		return nil, errors.New("asset not found")
@@ -122,7 +120,7 @@ func (s *assetService) CreateAsset(ctx context.Context, asset *models.Asset) (*m
 }
 
 // UpdateAsset updates an existing asset
-func (s *assetService) UpdateAsset(ctx context.Context, assetID, userID uuid.UUID, updateData *models.Asset) (*models.Asset, error) {
+func (s *assetService) UpdateAsset(ctx context.Context, assetID, userID uint, updateData *models.Asset) (*models.Asset, error) {
 	// Fetch existing asset
 	existing, err := s.repo.FindByID(ctx, assetID, userID)
 	if err != nil {
@@ -166,7 +164,7 @@ func (s *assetService) UpdateAsset(ctx context.Context, assetID, userID uuid.UUI
 }
 
 // DeleteAsset deletes an asset
-func (s *assetService) DeleteAsset(ctx context.Context, assetID, userID uuid.UUID) error {
+func (s *assetService) DeleteAsset(ctx context.Context, assetID, userID uint) error {
 	// Fetch the asset to get its details
 	asset, err := s.repo.FindByID(ctx, assetID, userID)
 	if err != nil {
@@ -194,7 +192,7 @@ func (s *assetService) DeleteAsset(ctx context.Context, assetID, userID uuid.UUI
 }
 
 // GetStats calculates asset statistics
-func (s *assetService) GetStats(ctx context.Context, userID uuid.UUID) (*repository.AssetStatsResponse, error) {
+func (s *assetService) GetStats(ctx context.Context, userID uint) (*repository.AssetStatsResponse, error) {
 	return s.repo.GetStats(ctx, userID)
 }
 
@@ -226,7 +224,7 @@ func (s *assetService) CreateServiceRecord(ctx context.Context, record *models.S
 }
 
 // ListServiceRecords retrieves all service records for an asset
-func (s *assetService) ListServiceRecords(ctx context.Context, assetID, userID uuid.UUID) ([]models.ServiceRecord, error) {
+func (s *assetService) ListServiceRecords(ctx context.Context, assetID, userID uint) ([]models.ServiceRecord, error) {
 	// Verify asset exists and belongs to user
 	_, err := s.repo.FindByID(ctx, assetID, userID)
 	if err != nil {
@@ -237,7 +235,7 @@ func (s *assetService) ListServiceRecords(ctx context.Context, assetID, userID u
 }
 
 // DeleteServiceRecord deletes a service record
-func (s *assetService) DeleteServiceRecord(ctx context.Context, serviceID, userID uuid.UUID) error {
+func (s *assetService) DeleteServiceRecord(ctx context.Context, serviceID, userID uint) error {
 	if err := s.repo.DeleteServiceRecord(ctx, serviceID, userID); err != nil {
 		return err
 	}
@@ -285,7 +283,7 @@ func (s *assetService) AddAttachment(ctx context.Context, attachment *models.Ass
 }
 
 // ListAttachments retrieves all attachments for an asset
-func (s *assetService) ListAttachments(ctx context.Context, assetID, userID uuid.UUID) ([]models.AssetAttachment, error) {
+func (s *assetService) ListAttachments(ctx context.Context, assetID, userID uint) ([]models.AssetAttachment, error) {
 	// Verify asset exists and belongs to user
 	_, err := s.repo.FindByID(ctx, assetID, userID)
 	if err != nil {
@@ -296,7 +294,7 @@ func (s *assetService) ListAttachments(ctx context.Context, assetID, userID uuid
 }
 
 // DeleteAttachment deletes an attachment
-func (s *assetService) DeleteAttachment(ctx context.Context, attachmentID, userID uuid.UUID) error {
+func (s *assetService) DeleteAttachment(ctx context.Context, attachmentID, userID uint) error {
 	// Get attachment to retrieve file path
 	attachment, err := s.repo.FindAttachmentByID(ctx, attachmentID, userID)
 	if err != nil {

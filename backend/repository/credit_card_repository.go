@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -15,22 +14,22 @@ type CreditCardRepository interface {
 
 	// Transaction operations
 	CreateTransaction(ctx context.Context, transaction *models.CreditCardTransaction) error
-	FindTransactionsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardTransaction, error)
-	FindTransactionByID(ctx context.Context, transactionID, userID uuid.UUID) (*models.CreditCardTransaction, error)
-	DeleteTransaction(ctx context.Context, transactionID, userID uuid.UUID) error
+	FindTransactionsByCard(ctx context.Context, cardID, userID uint) ([]models.CreditCardTransaction, error)
+	FindTransactionByID(ctx context.Context, transactionID, userID uint) (*models.CreditCardTransaction, error)
+	DeleteTransaction(ctx context.Context, transactionID, userID uint) error
 
 	// Payment operations
 	CreatePayment(ctx context.Context, payment *models.CreditCardPayment) error
-	FindPaymentsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardPayment, error)
+	FindPaymentsByCard(ctx context.Context, cardID, userID uint) ([]models.CreditCardPayment, error)
 
 	// Statement operations
 	CreateStatement(ctx context.Context, statement *models.Statement) error
-	FindStatementsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.Statement, error)
+	FindStatementsByCard(ctx context.Context, cardID, userID uint) ([]models.Statement, error)
 
 	// Reward operations
 	CreateReward(ctx context.Context, reward *models.Reward) error
-	FindRewardsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.Reward, error)
-	FindRewardsByUser(ctx context.Context, userID uuid.UUID) ([]models.Reward, error)
+	FindRewardsByCard(ctx context.Context, cardID, userID uint) ([]models.Reward, error)
+	FindRewardsByUser(ctx context.Context, userID uint) ([]models.Reward, error)
 }
 
 type creditCardRepository struct {
@@ -50,7 +49,7 @@ func (r *creditCardRepository) CreateTransaction(ctx context.Context, transactio
 }
 
 // FindTransactionsByCard retrieves all transactions for a credit card
-func (r *creditCardRepository) FindTransactionsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardTransaction, error) {
+func (r *creditCardRepository) FindTransactionsByCard(ctx context.Context, cardID, userID uint) ([]models.CreditCardTransaction, error) {
 	var transactions []models.CreditCardTransaction
 	err := r.db.WithContext(ctx).
 		Where("card_id = ? AND user_id = ?", cardID, userID).
@@ -60,7 +59,7 @@ func (r *creditCardRepository) FindTransactionsByCard(ctx context.Context, cardI
 }
 
 // FindTransactionByID retrieves a specific credit card transaction
-func (r *creditCardRepository) FindTransactionByID(ctx context.Context, transactionID, userID uuid.UUID) (*models.CreditCardTransaction, error) {
+func (r *creditCardRepository) FindTransactionByID(ctx context.Context, transactionID, userID uint) (*models.CreditCardTransaction, error) {
 	var transaction models.CreditCardTransaction
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", transactionID, userID).
@@ -72,7 +71,7 @@ func (r *creditCardRepository) FindTransactionByID(ctx context.Context, transact
 }
 
 // DeleteTransaction deletes a credit card transaction
-func (r *creditCardRepository) DeleteTransaction(ctx context.Context, transactionID, userID uuid.UUID) error {
+func (r *creditCardRepository) DeleteTransaction(ctx context.Context, transactionID, userID uint) error {
 	return r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", transactionID, userID).
 		Delete(&models.CreditCardTransaction{}).Error
@@ -84,7 +83,7 @@ func (r *creditCardRepository) CreatePayment(ctx context.Context, payment *model
 }
 
 // FindPaymentsByCard retrieves all payments for a credit card
-func (r *creditCardRepository) FindPaymentsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardPayment, error) {
+func (r *creditCardRepository) FindPaymentsByCard(ctx context.Context, cardID, userID uint) ([]models.CreditCardPayment, error) {
 	var payments []models.CreditCardPayment
 	err := r.db.WithContext(ctx).
 		Where("card_id = ? AND user_id = ?", cardID, userID).
@@ -99,7 +98,7 @@ func (r *creditCardRepository) CreateStatement(ctx context.Context, statement *m
 }
 
 // FindStatementsByCard retrieves all statements for a credit card
-func (r *creditCardRepository) FindStatementsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.Statement, error) {
+func (r *creditCardRepository) FindStatementsByCard(ctx context.Context, cardID, userID uint) ([]models.Statement, error) {
 	var statements []models.Statement
 	err := r.db.WithContext(ctx).
 		Where("card_id = ? AND user_id = ?", cardID, userID).
@@ -114,7 +113,7 @@ func (r *creditCardRepository) CreateReward(ctx context.Context, reward *models.
 }
 
 // FindRewardsByCard retrieves all rewards for a credit card
-func (r *creditCardRepository) FindRewardsByCard(ctx context.Context, cardID, userID uuid.UUID) ([]models.Reward, error) {
+func (r *creditCardRepository) FindRewardsByCard(ctx context.Context, cardID, userID uint) ([]models.Reward, error) {
 	var rewards []models.Reward
 	err := r.db.WithContext(ctx).
 		Where("card_id = ? AND user_id = ?", cardID, userID).
@@ -124,11 +123,18 @@ func (r *creditCardRepository) FindRewardsByCard(ctx context.Context, cardID, us
 }
 
 // FindRewardsByUser retrieves all rewards for a user
-func (r *creditCardRepository) FindRewardsByUser(ctx context.Context, userID uuid.UUID) ([]models.Reward, error) {
+func (r *creditCardRepository) FindRewardsByUser(ctx context.Context, userID uint) ([]models.Reward, error) {
 	var rewards []models.Reward
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
 		Order("earned_date DESC").
 		Find(&rewards).Error
 	return rewards, err
+}
+
+// WithTx returns a new repository instance using the provided transaction
+func (r *creditCardRepository) WithTx(tx *gorm.DB) BaseRepository[models.CreditCard] {
+	return &creditCardRepository{
+		GormBaseRepository: NewGormBaseRepository[models.CreditCard](tx),
+	}
 }

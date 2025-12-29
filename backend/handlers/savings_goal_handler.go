@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"daybook-backend/database"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ListSavingsGoals returns all savings goals for the authenticated user
@@ -72,11 +72,13 @@ func GetSavingsGoal(c *gin.Context) {
 		return
 	}
 
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "Fetching savings goal with ID: %s", goalID)
 	var goal models.SavingsGoal
@@ -137,11 +139,13 @@ func UpdateSavingsGoal(c *gin.Context) {
 		return
 	}
 
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "Fetching existing savings goal with ID: %s", goalID)
 	var existingGoal models.SavingsGoal
@@ -193,11 +197,13 @@ func DeleteSavingsGoal(c *gin.Context) {
 		return
 	}
 
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "Fetching savings goal with ID: %s for deletion", goalID)
 	var goal models.SavingsGoal
@@ -235,15 +241,17 @@ func AddContribution(c *gin.Context) {
 		return
 	}
 
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	var contributionData struct {
 		Amount    float64    `json:"amount" binding:"required,gt=0"`
-		AccountID uuid.UUID  `json:"accountId" binding:"required"`
+		AccountID uint       `json:"accountId" binding:"required"`
 		Date      *time.Time `json:"date"`
 		Notes     string     `json:"notes"`
 	}
@@ -309,7 +317,7 @@ func AddContribution(c *gin.Context) {
 		AccountID:     contributionData.AccountID,
 		Type:          "expense",
 		Amount:        contributionData.Amount,
-		CategoryID:    "savings_contribution",
+		CategoryID:    0, // Use 0 for system transactions
 		Date:          models.Date{Time: contributionDate},
 		Description:   "Contribution to " + goal.Name,
 		SavingsGoalID: &goalID,
@@ -382,15 +390,17 @@ func WithdrawFromGoal(c *gin.Context) {
 		return
 	}
 
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid savings goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	var withdrawalData struct {
 		Amount    float64    `json:"amount" binding:"required,gt=0"`
-		AccountID uuid.UUID  `json:"accountId" binding:"required"`
+		AccountID uint       `json:"accountId" binding:"required"`
 		Date      *time.Time `json:"date"`
 		Notes     string     `json:"notes"`
 	}
@@ -462,7 +472,7 @@ func WithdrawFromGoal(c *gin.Context) {
 		AccountID:     withdrawalData.AccountID,
 		Type:          "income",
 		Amount:        withdrawalData.Amount,
-		CategoryID:    "savings_withdrawal",
+		CategoryID:    0, // Use 0 for system transactions
 		Date:          models.Date{Time: withdrawalDate},
 		Description:   "Withdrawal from " + goal.Name,
 		SavingsGoalID: &goalID,

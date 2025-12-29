@@ -3,19 +3,18 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // DebtRecord represents money borrowed from someone
 type DebtRecord struct {
-	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID          uint           `gorm:"not null;index" json:"userId"`
 	CreditorName    string         `gorm:"not null" json:"creditorName" binding:"required"` // Person/entity we owe
 	OriginalAmount  float64        `gorm:"not null" json:"originalAmount" binding:"required,gt=0"`
 	RemainingAmount float64        `gorm:"not null" json:"remainingAmount"`
-	AccountID       *uuid.UUID     `gorm:"type:uuid;index" json:"accountId"` // Account affected (if any)
-	Status          string         `gorm:"not null;index" json:"status"`     // active, partially_paid, fully_paid
+	AccountID       *uint          `gorm:"index" json:"accountId"`       // Account affected (if any)
+	Status          string         `gorm:"not null;index" json:"status"` // active, partially_paid, fully_paid
 	BorrowedDate    Date           `gorm:"not null;index" json:"borrowedDate"`
 	DueDate         *time.Time     `gorm:"type:timestamptz" json:"dueDate"`
 	InterestRate    *float64       `json:"interestRate"` // Annual interest rate in percentage
@@ -27,9 +26,6 @@ type DebtRecord struct {
 }
 
 func (d *DebtRecord) BeforeCreate(tx *gorm.DB) error {
-	if d.ID == uuid.Nil {
-		d.ID = uuid.New()
-	}
 	// Set remaining amount to original amount if not set
 	if d.RemainingAmount == 0 {
 		d.RemainingAmount = d.OriginalAmount
@@ -43,10 +39,10 @@ func (d *DebtRecord) BeforeCreate(tx *gorm.DB) error {
 
 // DebtPayment represents a payment made towards a debt
 type DebtPayment struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	DebtID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"debtId"`
-	AccountID   uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"` // Account from which payment is made
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"`
+	DebtID      uint           `gorm:"not null;index" json:"debtId"`
+	AccountID   uint           `gorm:"not null;index" json:"accountId"` // Account from which payment is made
 	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	PaymentDate Date           `gorm:"not null;index" json:"paymentDate"`
 	Description string         `json:"description"`
@@ -56,8 +52,5 @@ type DebtPayment struct {
 }
 
 func (dp *DebtPayment) BeforeCreate(tx *gorm.DB) error {
-	if dp.ID == uuid.Nil {
-		dp.ID = uuid.New()
-	}
 	return nil
 }

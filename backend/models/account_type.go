@@ -3,13 +3,12 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type AccountType struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"` // All types are user-specific
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"` // All types are user-specific
 	Name        string         `gorm:"not null" json:"name" binding:"required"`
 	Icon        string         `json:"icon"`
 	Description string         `json:"description"`
@@ -21,14 +20,11 @@ type AccountType struct {
 }
 
 func (at *AccountType) BeforeCreate(tx *gorm.DB) error {
-	if at.ID == uuid.Nil {
-		at.ID = uuid.New()
-	}
 	return nil
 }
 
 // SeedDefaultAccountTypes creates default account types for a new user
-func SeedDefaultAccountTypes(tx *gorm.DB, userID uuid.UUID) error {
+func SeedDefaultAccountTypes(tx *gorm.DB, userID uint) error {
 	// Define default types
 	defaultTypes := []AccountType{
 		{

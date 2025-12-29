@@ -6,15 +6,14 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // RecurringTransactionRepository handles recurring transaction data access
 type RecurringTransactionRepository interface {
 	BaseRepository[models.RecurringTransaction]
-	FindEnabled(ctx context.Context, userID uuid.UUID) ([]models.RecurringTransaction, error)
-	UpdateLastProcessed(ctx context.Context, id uuid.UUID, processedTime time.Time) error
+	FindEnabled(ctx context.Context, userID uint) ([]models.RecurringTransaction, error)
+	UpdateLastProcessed(ctx context.Context, id uint, processedTime time.Time) error
 }
 
 type recurringTransactionRepository struct {
@@ -29,7 +28,7 @@ func NewRecurringTransactionRepository(db *gorm.DB) RecurringTransactionReposito
 }
 
 // FindEnabled retrieves all enabled recurring transactions for a user
-func (r *recurringTransactionRepository) FindEnabled(ctx context.Context, userID uuid.UUID) ([]models.RecurringTransaction, error) {
+func (r *recurringTransactionRepository) FindEnabled(ctx context.Context, userID uint) ([]models.RecurringTransaction, error) {
 	var recurringTransactions []models.RecurringTransaction
 	err := r.db.WithContext(ctx).
 		Where("user_id = ? AND enabled = ?", userID, true).
@@ -38,7 +37,7 @@ func (r *recurringTransactionRepository) FindEnabled(ctx context.Context, userID
 }
 
 // UpdateLastProcessed updates the last processed timestamp for a recurring transaction
-func (r *recurringTransactionRepository) UpdateLastProcessed(ctx context.Context, id uuid.UUID, processedTime time.Time) error {
+func (r *recurringTransactionRepository) UpdateLastProcessed(ctx context.Context, id uint, processedTime time.Time) error {
 	return r.db.WithContext(ctx).
 		Model(&models.RecurringTransaction{}).
 		Where("id = ?", id).

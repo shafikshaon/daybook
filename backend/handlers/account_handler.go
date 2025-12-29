@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -10,7 +11,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // AccountHandler handles account-related HTTP requests
@@ -59,12 +59,14 @@ func (h *AccountHandler) GetAccount(c *gin.Context) {
 		return
 	}
 
-	accountID, err := uuid.Parse(c.Param("id"))
+	accountIDStr := c.Param("id")
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	logger.Debugf(ctx, "Fetching account %s for user: %s", accountID, userID)
 	account, err := h.service.GetAccount(ctx, accountID, userID)
@@ -123,12 +125,14 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 		return
 	}
 
-	accountID, err := uuid.Parse(c.Param("id"))
+	accountIDStr := c.Param("id")
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	logger.Debugf(ctx, "Parsing update data for account: %s", accountID)
 	var updateData models.Account
@@ -162,12 +166,14 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 		return
 	}
 
-	accountID, err := uuid.Parse(c.Param("id"))
+	accountIDStr := c.Param("id")
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	logger.Debugf(ctx, "Deleting account %s for user: %s", accountID, userID)
 	if err := h.service.DeleteAccount(ctx, accountID, userID); err != nil {

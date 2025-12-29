@@ -7,7 +7,6 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -26,25 +25,25 @@ type DebtPaymentResponse struct {
 // DebtService handles debt business logic
 type DebtService interface {
 	// ListDebts retrieves all debts with optional filters
-	ListDebts(ctx context.Context, userID uuid.UUID, filters repository.DebtFilters) ([]DebtResponse, error)
+	ListDebts(ctx context.Context, userID uint, filters repository.DebtFilters) ([]DebtResponse, error)
 
 	// GetDebt retrieves a specific debt by ID
-	GetDebt(ctx context.Context, debtID, userID uuid.UUID) (*DebtResponse, error)
+	GetDebt(ctx context.Context, debtID, userID uint) (*DebtResponse, error)
 
 	// CreateDebt creates a new debt
 	CreateDebt(ctx context.Context, debt *models.DebtRecord) (*models.DebtRecord, error)
 
 	// UpdateDebt updates an existing debt
-	UpdateDebt(ctx context.Context, debtID, userID uuid.UUID, updateData map[string]interface{}) (*models.DebtRecord, error)
+	UpdateDebt(ctx context.Context, debtID, userID uint, updateData map[string]interface{}) (*models.DebtRecord, error)
 
 	// DeleteDebt deletes a debt
-	DeleteDebt(ctx context.Context, debtID, userID uuid.UUID) error
+	DeleteDebt(ctx context.Context, debtID, userID uint) error
 
 	// RecordPayment records a payment towards a debt
-	RecordPayment(ctx context.Context, debtID, userID uuid.UUID, payment *models.DebtPayment) (*models.DebtPayment, *models.DebtRecord, error)
+	RecordPayment(ctx context.Context, debtID, userID uint, payment *models.DebtPayment) (*models.DebtPayment, *models.DebtRecord, error)
 
 	// ListPayments retrieves all payments for a specific debt
-	ListPayments(ctx context.Context, debtID, userID uuid.UUID) ([]DebtPaymentResponse, error)
+	ListPayments(ctx context.Context, debtID, userID uint) ([]DebtPaymentResponse, error)
 }
 
 type debtService struct {
@@ -70,7 +69,7 @@ func NewDebtService(
 }
 
 // ListDebts retrieves debts with optional filters
-func (s *debtService) ListDebts(ctx context.Context, userID uuid.UUID, filters repository.DebtFilters) ([]DebtResponse, error) {
+func (s *debtService) ListDebts(ctx context.Context, userID uint, filters repository.DebtFilters) ([]DebtResponse, error) {
 	debts, err := s.repo.FindWithFilters(ctx, userID, filters)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (s *debtService) ListDebts(ctx context.Context, userID uuid.UUID, filters r
 }
 
 // GetDebt retrieves a specific debt
-func (s *debtService) GetDebt(ctx context.Context, debtID, userID uuid.UUID) (*DebtResponse, error) {
+func (s *debtService) GetDebt(ctx context.Context, debtID, userID uint) (*DebtResponse, error) {
 	debt, err := s.repo.FindByID(ctx, debtID, userID)
 	if err != nil {
 		return nil, errors.New("debt not found")
@@ -142,7 +141,7 @@ func (s *debtService) CreateDebt(ctx context.Context, debt *models.DebtRecord) (
 					AccountID:   *debt.AccountID,
 					Type:        "income",
 					Amount:      debt.OriginalAmount,
-					CategoryID:  "debt",
+					CategoryID:  0, // Use 0 for system transactions
 					Date:        debt.BorrowedDate,
 					Description: "Borrowed from " + debt.CreditorName,
 				}
@@ -191,7 +190,7 @@ func (s *debtService) CreateDebt(ctx context.Context, debt *models.DebtRecord) (
 }
 
 // UpdateDebt updates an existing debt
-func (s *debtService) UpdateDebt(ctx context.Context, debtID, userID uuid.UUID, updateData map[string]interface{}) (*models.DebtRecord, error) {
+func (s *debtService) UpdateDebt(ctx context.Context, debtID, userID uint, updateData map[string]interface{}) (*models.DebtRecord, error) {
 	// Fetch existing debt
 	existing, err := s.repo.FindByID(ctx, debtID, userID)
 	if err != nil {
@@ -232,7 +231,7 @@ func (s *debtService) UpdateDebt(ctx context.Context, debtID, userID uuid.UUID, 
 }
 
 // DeleteDebt deletes a debt
-func (s *debtService) DeleteDebt(ctx context.Context, debtID, userID uuid.UUID) error {
+func (s *debtService) DeleteDebt(ctx context.Context, debtID, userID uint) error {
 	// Fetch the debt to get its details
 	debt, err := s.repo.FindByID(ctx, debtID, userID)
 	if err != nil {
@@ -260,7 +259,7 @@ func (s *debtService) DeleteDebt(ctx context.Context, debtID, userID uuid.UUID) 
 }
 
 // RecordPayment records a payment towards a debt
-func (s *debtService) RecordPayment(ctx context.Context, debtID, userID uuid.UUID, payment *models.DebtPayment) (*models.DebtPayment, *models.DebtRecord, error) {
+func (s *debtService) RecordPayment(ctx context.Context, debtID, userID uint, payment *models.DebtPayment) (*models.DebtPayment, *models.DebtRecord, error) {
 	// Validate payment date
 	if payment.PaymentDate.IsZero() {
 		return nil, nil, errors.New("payment date is required")
@@ -325,7 +324,7 @@ func (s *debtService) RecordPayment(ctx context.Context, debtID, userID uuid.UUI
 			AccountID:   payment.AccountID,
 			Type:        "expense",
 			Amount:      payment.Amount,
-			CategoryID:  "debt_payment",
+			CategoryID:  0, // Use 0 for system transactions
 			Date:        payment.PaymentDate,
 			Description: description,
 		}
@@ -364,7 +363,7 @@ func (s *debtService) RecordPayment(ctx context.Context, debtID, userID uuid.UUI
 }
 
 // ListPayments retrieves all payments for a specific debt
-func (s *debtService) ListPayments(ctx context.Context, debtID, userID uuid.UUID) ([]DebtPaymentResponse, error) {
+func (s *debtService) ListPayments(ctx context.Context, debtID, userID uint) ([]DebtPaymentResponse, error) {
 	// Verify debt belongs to user
 	_, err := s.repo.FindByID(ctx, debtID, userID)
 	if err != nil {

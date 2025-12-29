@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // CategoryHandler handles category-related HTTP requests
@@ -63,12 +63,14 @@ func (h *CategoryHandler) GetCategory(c *gin.Context) {
 		return
 	}
 
-	categoryID, err := uuid.Parse(c.Param("id"))
+	categoryIDStr := c.Param("id")
+	categoryIDUint, err := strconv.ParseUint(categoryIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid category ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
+	categoryID := uint(categoryIDUint)
 
 	logger.Debugf(ctx, "Fetching category %s for user: %s", categoryID, userID)
 	category, err := h.service.GetCategory(ctx, categoryID, userID)
@@ -128,12 +130,14 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 		return
 	}
 
-	categoryID, err := uuid.Parse(c.Param("id"))
+	categoryIDStr := c.Param("id")
+	categoryIDUint, err := strconv.ParseUint(categoryIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid category ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
+	categoryID := uint(categoryIDUint)
 
 	logger.Debugf(ctx, "Parsing update request for category %s", categoryID)
 	var updateData models.Category
@@ -167,12 +171,14 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 		return
 	}
 
-	categoryID, err := uuid.Parse(c.Param("id"))
+	categoryIDStr := c.Param("id")
+	categoryIDUint, err := strconv.ParseUint(categoryIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid category ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid category ID")
 		return
 	}
+	categoryID := uint(categoryIDUint)
 
 	logger.Debugf(ctx, "Deleting category %s for user: %s", categoryID, userID)
 	if err := h.service.DeleteCategory(ctx, categoryID, userID); err != nil {
@@ -200,8 +206,8 @@ func (h *CategoryHandler) ReorderCategories(c *gin.Context) {
 	// Request payload structure
 	type ReorderRequest struct {
 		Categories []struct {
-			ID    uuid.UUID `json:"id" binding:"required"`
-			Order int       `json:"order" binding:"required"`
+			ID    uint `json:"id" binding:"required"`
+			Order int  `json:"order" binding:"required"`
 		} `json:"categories" binding:"required,min=1"`
 	}
 

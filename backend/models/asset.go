@@ -3,14 +3,13 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // Asset represents a purchased item with warranty tracking
 type Asset struct {
-	ID                uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID            uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID                uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID            uint           `gorm:"not null;index" json:"userId"`
 	Name              string         `gorm:"not null" json:"name" binding:"required"`
 	Description       string         `json:"description"`
 	Category          string         `gorm:"index" json:"category"` // Electronics, Appliances, Furniture, etc.
@@ -36,9 +35,6 @@ type Asset struct {
 }
 
 func (a *Asset) BeforeCreate(tx *gorm.DB) error {
-	if a.ID == uuid.Nil {
-		a.ID = uuid.New()
-	}
 	// Set default status to active if not set
 	if a.Status == "" {
 		a.Status = "active"
@@ -48,9 +44,9 @@ func (a *Asset) BeforeCreate(tx *gorm.DB) error {
 
 // ServiceRecord represents a service/repair record for an asset
 type ServiceRecord struct {
-	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	AssetID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"assetId"`
+	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID          uint           `gorm:"not null;index" json:"userId"`
+	AssetID         uint           `gorm:"not null;index" json:"assetId"`
 	ServiceDate     Date           `gorm:"column:service_date;not null;index" json:"serviceDate"`
 	ServiceType     string         `gorm:"not null" json:"serviceType"` // repair, maintenance, inspection, replacement
 	ServiceProvider string         `json:"serviceProvider"`             // Company/person who provided service
@@ -64,17 +60,14 @@ type ServiceRecord struct {
 }
 
 func (sr *ServiceRecord) BeforeCreate(tx *gorm.DB) error {
-	if sr.ID == uuid.Nil {
-		sr.ID = uuid.New()
-	}
 	return nil
 }
 
 // AssetAttachment represents an attachment (photo, receipt, warranty document) for an asset
 type AssetAttachment struct {
-	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID         uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	AssetID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"assetId"`
+	ID             uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID         uint           `gorm:"not null;index" json:"userId"`
+	AssetID        uint           `gorm:"not null;index" json:"assetId"`
 	FileName       string         `gorm:"not null" json:"fileName"`     // Unique filename on server
 	OriginalName   string         `gorm:"not null" json:"originalName"` // Original filename
 	FilePath       string         `gorm:"not null" json:"filePath"`     // Server file path
@@ -89,8 +82,5 @@ type AssetAttachment struct {
 }
 
 func (aa *AssetAttachment) BeforeCreate(tx *gorm.DB) error {
-	if aa.ID == uuid.Nil {
-		aa.ID = uuid.New()
-	}
 	return nil
 }

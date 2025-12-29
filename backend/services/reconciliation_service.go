@@ -3,46 +3,46 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // CreateReconciliationRequest represents the request body for creating a reconciliation
 type CreateReconciliationRequest struct {
-	AccountID          uuid.UUID   `json:"accountId" binding:"required"`
-	ReconciliationDate time.Time   `json:"reconciliationDate" binding:"required"`
-	StatementBalance   float64     `json:"statementBalance" binding:"required"`
-	Notes              string      `json:"notes"`
-	TransactionIDs     []uuid.UUID `json:"transactionIds"` // Optional: specific transactions to reconcile
+	AccountID          uint      `json:"accountId" binding:"required"`
+	ReconciliationDate time.Time `json:"reconciliationDate" binding:"required"`
+	StatementBalance   float64   `json:"statementBalance" binding:"required"`
+	Notes              string    `json:"notes"`
+	TransactionIDs     []uint    `json:"transactionIds"` // Optional: specific transactions to reconcile
 }
 
 // ReconciliationService handles reconciliation business logic
 type ReconciliationService interface {
 	// ListReconciliations retrieves all reconciliations with optional filters
-	ListReconciliations(ctx context.Context, userID uuid.UUID, filters repository.ReconciliationFilters) ([]models.Reconciliation, error)
+	ListReconciliations(ctx context.Context, userID uint, filters repository.ReconciliationFilters) ([]models.Reconciliation, error)
 
 	// GetReconciliation retrieves a specific reconciliation by ID
-	GetReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID) (*models.Reconciliation, error)
+	GetReconciliation(ctx context.Context, reconciliationID, userID uint) (*models.Reconciliation, error)
 
 	// CreateReconciliation creates a new reconciliation
-	CreateReconciliation(ctx context.Context, userID uuid.UUID, req *CreateReconciliationRequest) (*models.Reconciliation, error)
+	CreateReconciliation(ctx context.Context, userID uint, req *CreateReconciliationRequest) (*models.Reconciliation, error)
 
 	// UpdateReconciliation updates an existing reconciliation
-	UpdateReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID, updateData *models.Reconciliation) (*models.Reconciliation, error)
+	UpdateReconciliation(ctx context.Context, reconciliationID, userID uint, updateData *models.Reconciliation) (*models.Reconciliation, error)
 
 	// DeleteReconciliation deletes a reconciliation
-	DeleteReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID) error
+	DeleteReconciliation(ctx context.Context, reconciliationID, userID uint) error
 
 	// GetUnreconciledTransactions retrieves unreconciled transactions for an account
-	GetUnreconciledTransactions(ctx context.Context, accountID, userID uuid.UUID) ([]models.Transaction, error)
+	GetUnreconciledTransactions(ctx context.Context, accountID, userID uint) ([]models.Transaction, error)
 
 	// GetStats calculates reconciliation statistics for an account
-	GetStats(ctx context.Context, accountID, userID uuid.UUID) (*repository.ReconciliationStats, error)
+	GetStats(ctx context.Context, accountID, userID uint) (*repository.ReconciliationStats, error)
 }
 
 type reconciliationService struct {
@@ -68,17 +68,17 @@ func NewReconciliationService(
 }
 
 // ListReconciliations retrieves reconciliations with optional filters
-func (s *reconciliationService) ListReconciliations(ctx context.Context, userID uuid.UUID, filters repository.ReconciliationFilters) ([]models.Reconciliation, error) {
+func (s *reconciliationService) ListReconciliations(ctx context.Context, userID uint, filters repository.ReconciliationFilters) ([]models.Reconciliation, error) {
 	return s.repo.FindWithFilters(ctx, userID, filters)
 }
 
 // GetReconciliation retrieves a specific reconciliation
-func (s *reconciliationService) GetReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID) (*models.Reconciliation, error) {
+func (s *reconciliationService) GetReconciliation(ctx context.Context, reconciliationID, userID uint) (*models.Reconciliation, error) {
 	return s.repo.FindByIDWithPreloads(ctx, reconciliationID, userID)
 }
 
 // CreateReconciliation creates a new reconciliation
-func (s *reconciliationService) CreateReconciliation(ctx context.Context, userID uuid.UUID, req *CreateReconciliationRequest) (*models.Reconciliation, error) {
+func (s *reconciliationService) CreateReconciliation(ctx context.Context, userID uint, req *CreateReconciliationRequest) (*models.Reconciliation, error) {
 	// Verify account belongs to user
 	account, err := s.accountRepo.FindByID(ctx, req.AccountID, userID)
 	if err != nil {
@@ -112,7 +112,7 @@ func (s *reconciliationService) CreateReconciliation(ctx context.Context, userID
 				if err := tx.WithContext(ctx).
 					Where("id = ? AND user_id = ? AND account_id = ?", transactionID, userID, req.AccountID).
 					First(&transaction).Error; err != nil {
-					return errors.New("invalid transaction ID: " + transactionID.String())
+					return fmt.Errorf("invalid transaction ID: %d", transactionID)
 				}
 			}
 
@@ -164,7 +164,7 @@ func (s *reconciliationService) CreateReconciliation(ctx context.Context, userID
 }
 
 // UpdateReconciliation updates an existing reconciliation
-func (s *reconciliationService) UpdateReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID, updateData *models.Reconciliation) (*models.Reconciliation, error) {
+func (s *reconciliationService) UpdateReconciliation(ctx context.Context, reconciliationID, userID uint, updateData *models.Reconciliation) (*models.Reconciliation, error) {
 	// Fetch existing reconciliation
 	existing, err := s.repo.FindByID(ctx, reconciliationID, userID)
 	if err != nil {
@@ -210,7 +210,7 @@ func (s *reconciliationService) UpdateReconciliation(ctx context.Context, reconc
 }
 
 // DeleteReconciliation deletes a reconciliation
-func (s *reconciliationService) DeleteReconciliation(ctx context.Context, reconciliationID, userID uuid.UUID) error {
+func (s *reconciliationService) DeleteReconciliation(ctx context.Context, reconciliationID, userID uint) error {
 	// Fetch the reconciliation to get its details
 	reconciliation, err := s.repo.FindByID(ctx, reconciliationID, userID)
 	if err != nil {
@@ -254,7 +254,7 @@ func (s *reconciliationService) DeleteReconciliation(ctx context.Context, reconc
 }
 
 // GetUnreconciledTransactions retrieves unreconciled transactions for an account
-func (s *reconciliationService) GetUnreconciledTransactions(ctx context.Context, accountID, userID uuid.UUID) ([]models.Transaction, error) {
+func (s *reconciliationService) GetUnreconciledTransactions(ctx context.Context, accountID, userID uint) ([]models.Transaction, error) {
 	// Verify account belongs to user
 	_, err := s.accountRepo.FindByID(ctx, accountID, userID)
 	if err != nil {
@@ -265,7 +265,7 @@ func (s *reconciliationService) GetUnreconciledTransactions(ctx context.Context,
 }
 
 // GetStats calculates reconciliation statistics for an account
-func (s *reconciliationService) GetStats(ctx context.Context, accountID, userID uuid.UUID) (*repository.ReconciliationStats, error) {
+func (s *reconciliationService) GetStats(ctx context.Context, accountID, userID uint) (*repository.ReconciliationStats, error) {
 	// Verify account belongs to user
 	_, err := s.accountRepo.FindByID(ctx, accountID, userID)
 	if err != nil {

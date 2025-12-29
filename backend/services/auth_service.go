@@ -9,7 +9,6 @@ import (
 	"daybook-backend/repository"
 	"daybook-backend/utilities"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -22,13 +21,13 @@ type AuthService interface {
 	Login(ctx context.Context, req *models.LoginRequest) (*models.LoginResponse, error)
 
 	// GetProfile retrieves a user's profile
-	GetProfile(ctx context.Context, userID uuid.UUID) (*models.User, error)
+	GetProfile(ctx context.Context, userID uint) (*models.User, error)
 
 	// UpdateProfile updates a user's profile
-	UpdateProfile(ctx context.Context, userID uuid.UUID, req *models.UpdateProfileRequest) (*models.User, error)
+	UpdateProfile(ctx context.Context, userID uint, req *models.UpdateProfileRequest) (*models.User, error)
 
 	// ChangePassword changes a user's password
-	ChangePassword(ctx context.Context, userID uuid.UUID, req *models.ChangePasswordRequest) error
+	ChangePassword(ctx context.Context, userID uint, req *models.ChangePasswordRequest) error
 }
 
 type authService struct {
@@ -194,7 +193,7 @@ func (s *authService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 }
 
 // GetProfile retrieves a user's profile
-func (s *authService) GetProfile(ctx context.Context, userID uuid.UUID) (*models.User, error) {
+func (s *authService) GetProfile(ctx context.Context, userID uint) (*models.User, error) {
 	// Note: BaseRepository.FindByID expects (id, userID) but for User, we only have userID
 	// So we'll use the db directly here
 	var user models.User
@@ -206,7 +205,7 @@ func (s *authService) GetProfile(ctx context.Context, userID uuid.UUID) (*models
 }
 
 // UpdateProfile updates a user's profile
-func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *models.UpdateProfileRequest) (*models.User, error) {
+func (s *authService) UpdateProfile(ctx context.Context, userID uint, req *models.UpdateProfileRequest) (*models.User, error) {
 	// Get existing user
 	user, err := s.GetProfile(ctx, userID)
 	if err != nil {
@@ -247,7 +246,7 @@ func (s *authService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *
 }
 
 // ChangePassword changes a user's password
-func (s *authService) ChangePassword(ctx context.Context, userID uuid.UUID, req *models.ChangePasswordRequest) error {
+func (s *authService) ChangePassword(ctx context.Context, userID uint, req *models.ChangePasswordRequest) error {
 	// Get existing user
 	user, err := s.GetProfile(ctx, userID)
 	if err != nil {

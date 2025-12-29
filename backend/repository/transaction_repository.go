@@ -6,7 +6,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -43,9 +42,9 @@ type TransactionStats struct {
 // TransactionRepository handles transaction data access
 type TransactionRepository interface {
 	BaseRepository[models.Transaction]
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters TransactionFilters, pagination PaginationParams) (*TransactionListResult, error)
-	CountWithFilters(ctx context.Context, userID uuid.UUID, filters TransactionFilters) (int64, error)
-	CalculateStats(ctx context.Context, userID uuid.UUID, filters TransactionFilters) (*TransactionStats, error)
+	FindWithFilters(ctx context.Context, userID uint, filters TransactionFilters, pagination PaginationParams) (*TransactionListResult, error)
+	CountWithFilters(ctx context.Context, userID uint, filters TransactionFilters) (int64, error)
+	CalculateStats(ctx context.Context, userID uint, filters TransactionFilters) (*TransactionStats, error)
 	BulkCreate(ctx context.Context, transactions []models.Transaction) error
 }
 
@@ -61,7 +60,7 @@ func NewTransactionRepository(db *gorm.DB) TransactionRepository {
 }
 
 // FindWithFilters retrieves transactions with filtering and pagination
-func (r *transactionRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters TransactionFilters, pagination PaginationParams) (*TransactionListResult, error) {
+func (r *transactionRepository) FindWithFilters(ctx context.Context, userID uint, filters TransactionFilters, pagination PaginationParams) (*TransactionListResult, error) {
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
 
 	// Exclude tracking transactions unless explicitly requested
@@ -109,7 +108,7 @@ func (r *transactionRepository) FindWithFilters(ctx context.Context, userID uuid
 }
 
 // CountWithFilters counts transactions matching the filters
-func (r *transactionRepository) CountWithFilters(ctx context.Context, userID uuid.UUID, filters TransactionFilters) (int64, error) {
+func (r *transactionRepository) CountWithFilters(ctx context.Context, userID uint, filters TransactionFilters) (int64, error) {
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
 
 	if !filters.IncludeTracking {
@@ -137,7 +136,7 @@ func (r *transactionRepository) CountWithFilters(ctx context.Context, userID uui
 }
 
 // CalculateStats calculates transaction statistics based on filters
-func (r *transactionRepository) CalculateStats(ctx context.Context, userID uuid.UUID, filters TransactionFilters) (*TransactionStats, error) {
+func (r *transactionRepository) CalculateStats(ctx context.Context, userID uint, filters TransactionFilters) (*TransactionStats, error) {
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
 
 	if !filters.IncludeTracking {

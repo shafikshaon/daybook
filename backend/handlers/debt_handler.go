@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // DebtHandler handles debt-related HTTP requests
@@ -69,12 +69,14 @@ func (h *DebtHandler) GetDebt(c *gin.Context) {
 		return
 	}
 
-	debtID, err := uuid.Parse(c.Param("id"))
+	debtIDStr := c.Param("id")
+	debtIDUint, err := strconv.ParseUint(debtIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid debt ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid debt ID")
 		return
 	}
+	debtID := uint(debtIDUint)
 
 	logger.Debugf(ctx, "Fetching debt: %s for user: %s", debtID, userID)
 	debt, err := h.service.GetDebt(ctx, debtID, userID)
@@ -139,12 +141,14 @@ func (h *DebtHandler) UpdateDebt(c *gin.Context) {
 		return
 	}
 
-	debtID, err := uuid.Parse(c.Param("id"))
+	debtIDStr := c.Param("id")
+	debtIDUint, err := strconv.ParseUint(debtIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid debt ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid debt ID")
 		return
 	}
+	debtID := uint(debtIDUint)
 
 	logger.Debugf(ctx, "Processing request for user: %s, debt: %s", userID, debtID)
 
@@ -183,12 +187,14 @@ func (h *DebtHandler) DeleteDebt(c *gin.Context) {
 		return
 	}
 
-	debtID, err := uuid.Parse(c.Param("id"))
+	debtIDStr := c.Param("id")
+	debtIDUint, err := strconv.ParseUint(debtIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid debt ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid debt ID")
 		return
 	}
+	debtID := uint(debtIDUint)
 
 	logger.Debugf(ctx, "Deleting debt: %s for user: %s", debtID, userID)
 	if err := h.service.DeleteDebt(ctx, debtID, userID); err != nil {
@@ -217,12 +223,14 @@ func (h *DebtHandler) RecordDebtPayment(c *gin.Context) {
 		return
 	}
 
-	debtID, err := uuid.Parse(c.Param("id"))
+	debtIDStr := c.Param("id")
+	debtIDUint, err := strconv.ParseUint(debtIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid debt ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid debt ID")
 		return
 	}
+	debtID := uint(debtIDUint)
 
 	logger.Debugf(ctx, "Processing request for user: %s, debt: %s", userID, debtID)
 
@@ -260,12 +268,14 @@ func (h *DebtHandler) ListDebtPayments(c *gin.Context) {
 		return
 	}
 
-	debtID, err := uuid.Parse(c.Param("id"))
+	debtIDStr := c.Param("id")
+	debtIDUint, err := strconv.ParseUint(debtIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid debt ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid debt ID")
 		return
 	}
+	debtID := uint(debtIDUint)
 
 	logger.Debugf(ctx, "Fetching debt payments for debt: %s, user: %s", debtID, userID)
 	payments, err := h.service.ListPayments(ctx, debtID, userID)

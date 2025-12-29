@@ -3,44 +3,40 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Transaction struct {
-	ID               uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID           uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	AccountID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"`
-	ToAccountID      *uuid.UUID     `gorm:"type:uuid;index" json:"toAccountId"`      // For transfers
+	ID               uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID           uint           `gorm:"not null;index" json:"userId"`
+	AccountID        uint           `gorm:"not null;index" json:"accountId"`
+	ToAccountID      *uint          `gorm:"index" json:"toAccountId"`                // For transfers
 	Type             string         `gorm:"not null" json:"type" binding:"required"` // income, expense, transfer
 	Amount           float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	CategoryID       string         `gorm:"not null;index" json:"categoryId" binding:"required"`
+	CategoryID       uint           `gorm:"not null;index" json:"categoryId" binding:"required"`
 	Date             Date           `gorm:"not null;index" json:"date"`
 	Description      string         `json:"description"`
 	Tags             []string       `gorm:"type:jsonb;serializer:json" json:"tags"`
-	SavingsGoalID    *uuid.UUID     `gorm:"type:uuid;index" json:"savingsGoalId"`
-	FixedDepositID   *uuid.UUID     `gorm:"type:uuid;index" json:"fixedDepositId"`
-	InvestmentID     *uuid.UUID     `gorm:"type:uuid;index" json:"investmentId"`
-	RecurringID      *uuid.UUID     `gorm:"type:uuid" json:"recurringId"`
-	CreditCardID     *uuid.UUID     `gorm:"type:uuid" json:"creditCardId"`
+	SavingsGoalID    *uint          `gorm:"index" json:"savingsGoalId"`
+	FixedDepositID   *uint          `gorm:"index" json:"fixedDepositId"`
+	InvestmentID     *uint          `gorm:"index" json:"investmentId"`
+	RecurringID      *uint          `json:"recurringId"`
+	CreditCardID     *uint          `json:"creditCardId"`
 	Attachments      []string       `gorm:"type:jsonb;serializer:json" json:"attachments"`
 	Reconciled       bool           `gorm:"default:false;index" json:"reconciled"`
-	ReconciliationID *uuid.UUID     `gorm:"type:uuid" json:"reconciliationId"`
+	ReconciliationID *uint          `json:"reconciliationId"`
 	CreatedAt        time.Time      `json:"createdAt"`
 	UpdatedAt        time.Time      `json:"updatedAt"`
 	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (t *Transaction) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
-	}
 	return nil
 }
 
 type RecurringTransaction struct {
-	ID                  uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID              uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID                  uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID              uint           `gorm:"not null;index" json:"userId"`
 	TransactionTemplate Transaction    `gorm:"embedded;embeddedPrefix:template_" json:"transactionTemplate"`
 	Frequency           string         `gorm:"not null" json:"frequency"` // daily, weekly, biweekly, monthly, quarterly, yearly
 	StartDate           Date           `gorm:"not null" json:"startDate"`
@@ -53,15 +49,12 @@ type RecurringTransaction struct {
 }
 
 func (rt *RecurringTransaction) BeforeCreate(tx *gorm.DB) error {
-	if rt.ID == uuid.Nil {
-		rt.ID = uuid.New()
-	}
 	return nil
 }
 
 type Tag struct {
-	ID        uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID        uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uint           `gorm:"not null;index" json:"userId"`
 	Name      string         `gorm:"not null" json:"name" binding:"required"`
 	Color     string         `json:"color"`
 	CreatedAt time.Time      `json:"createdAt"`
@@ -70,8 +63,5 @@ type Tag struct {
 }
 
 func (t *Tag) BeforeCreate(tx *gorm.DB) error {
-	if t.ID == uuid.Nil {
-		t.ID = uuid.New()
-	}
 	return nil
 }

@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -46,19 +44,19 @@ type FileUploadResponse struct {
 // UploadService handles file upload business logic
 type UploadService interface {
 	// UploadFile uploads a single file
-	UploadFile(userID uuid.UUID, fileHeader *multipart.FileHeader) (*FileUploadResponse, error)
+	UploadFile(userID uint, fileHeader *multipart.FileHeader) (*FileUploadResponse, error)
 
 	// UploadFiles uploads multiple files
-	UploadFiles(userID uuid.UUID, fileHeaders []*multipart.FileHeader) ([]FileUploadResponse, []string, error)
+	UploadFiles(userID uint, fileHeaders []*multipart.FileHeader) ([]FileUploadResponse, []string, error)
 
 	// DeleteFile deletes a file
-	DeleteFile(userID uuid.UUID, filename string) error
+	DeleteFile(userID uint, filename string) error
 
 	// GetFileInfo retrieves file information
-	GetFileInfo(userID uuid.UUID, filename string) (*FileUploadResponse, error)
+	GetFileInfo(userID uint, filename string) (*FileUploadResponse, error)
 
 	// GetFilePath builds the file path for serving
-	GetFilePath(userID uuid.UUID, filename string) (string, error)
+	GetFilePath(userID uint, filename string) (string, error)
 }
 
 type uploadService struct{}
@@ -69,7 +67,7 @@ func NewUploadService() UploadService {
 }
 
 // UploadFile uploads a single file
-func (s *uploadService) UploadFile(userID uuid.UUID, fileHeader *multipart.FileHeader) (*FileUploadResponse, error) {
+func (s *uploadService) UploadFile(userID uint, fileHeader *multipart.FileHeader) (*FileUploadResponse, error) {
 	// Validate file size
 	if fileHeader.Size > MaxFileSize {
 		return nil, fmt.Errorf("file exceeds maximum size of 10MB")
@@ -82,7 +80,7 @@ func (s *uploadService) UploadFile(userID uuid.UUID, fileHeader *multipart.FileH
 	}
 
 	// Create uploads directory
-	userUploadDir := filepath.Join(UploadDir, userID.String())
+	userUploadDir := filepath.Join(UploadDir, fmt.Sprintf("%d", userID))
 	if err := os.MkdirAll(userUploadDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create upload directory: %w", err)
 	}
@@ -112,7 +110,7 @@ func (s *uploadService) UploadFile(userID uuid.UUID, fileHeader *multipart.FileH
 	}
 
 	// Build file URL
-	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", userID.String(), uniqueFilename)
+	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", fmt.Sprintf("%d", userID), uniqueFilename)
 
 	return &FileUploadResponse{
 		FileName:     uniqueFilename,
@@ -125,7 +123,7 @@ func (s *uploadService) UploadFile(userID uuid.UUID, fileHeader *multipart.FileH
 }
 
 // UploadFiles uploads multiple files
-func (s *uploadService) UploadFiles(userID uuid.UUID, fileHeaders []*multipart.FileHeader) ([]FileUploadResponse, []string, error) {
+func (s *uploadService) UploadFiles(userID uint, fileHeaders []*multipart.FileHeader) ([]FileUploadResponse, []string, error) {
 	if len(fileHeaders) == 0 {
 		return nil, nil, fmt.Errorf("no files provided")
 	}
@@ -150,17 +148,17 @@ func (s *uploadService) UploadFiles(userID uuid.UUID, fileHeaders []*multipart.F
 }
 
 // DeleteFile deletes a file
-func (s *uploadService) DeleteFile(userID uuid.UUID, filename string) error {
+func (s *uploadService) DeleteFile(userID uint, filename string) error {
 	// Sanitize filename
 	cleanFilename := filepath.Base(filename)
 	if cleanFilename == "." || cleanFilename == ".." {
 		return fmt.Errorf("invalid filename")
 	}
 
-	filePath := filepath.Join(UploadDir, userID.String(), cleanFilename)
+	filePath := filepath.Join(UploadDir, fmt.Sprintf("%d", userID), cleanFilename)
 
 	// Verify path is within user's directory
-	userDir := filepath.Join(UploadDir, userID.String())
+	userDir := filepath.Join(UploadDir, fmt.Sprintf("%d", userID))
 	if !filepath.HasPrefix(filePath, userDir) {
 		return fmt.Errorf("access denied")
 	}
@@ -179,10 +177,10 @@ func (s *uploadService) DeleteFile(userID uuid.UUID, filename string) error {
 }
 
 // GetFileInfo retrieves file information
-func (s *uploadService) GetFileInfo(userID uuid.UUID, filename string) (*FileUploadResponse, error) {
+func (s *uploadService) GetFileInfo(userID uint, filename string) (*FileUploadResponse, error) {
 	// Sanitize filename
 	cleanFilename := filepath.Base(filename)
-	filePath := filepath.Join(UploadDir, userID.String(), cleanFilename)
+	filePath := filepath.Join(UploadDir, fmt.Sprintf("%d", userID), cleanFilename)
 
 	// Check if file exists
 	fileInfo, err := os.Stat(filePath)
@@ -205,7 +203,7 @@ func (s *uploadService) GetFileInfo(userID uuid.UUID, filename string) (*FileUpl
 	}
 
 	mimeType := http.DetectContentType(buffer)
-	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", userID.String(), filename)
+	fileURL := fmt.Sprintf("/api/v1/uploads/%s/%s", fmt.Sprintf("%d", userID), filename)
 
 	return &FileUploadResponse{
 		FileName:     filename,
@@ -218,17 +216,17 @@ func (s *uploadService) GetFileInfo(userID uuid.UUID, filename string) (*FileUpl
 }
 
 // GetFilePath builds the file path for serving and validates access
-func (s *uploadService) GetFilePath(userID uuid.UUID, filename string) (string, error) {
+func (s *uploadService) GetFilePath(userID uint, filename string) (string, error) {
 	// Sanitize filename
 	cleanFilename := filepath.Base(filename)
 	if cleanFilename == "." || cleanFilename == ".." {
 		return "", fmt.Errorf("invalid filename")
 	}
 
-	filePath := filepath.Join(UploadDir, userID.String(), cleanFilename)
+	filePath := filepath.Join(UploadDir, fmt.Sprintf("%d", userID), cleanFilename)
 
 	// Verify path is within user's directory
-	userDir := filepath.Join(UploadDir, userID.String())
+	userDir := filepath.Join(UploadDir, fmt.Sprintf("%d", userID))
 	if !filepath.HasPrefix(filePath, userDir) {
 		return "", fmt.Errorf("access denied")
 	}
@@ -256,7 +254,7 @@ func generateUniqueFilename(originalFilename string) string {
 	}, nameWithoutExt)
 
 	timestamp := time.Now().Unix()
-	uniqueID := uuid.New().String()[:8]
+	uniqueID := fmt.Sprintf("%x", time.Now().UnixNano())[:8]
 
 	return fmt.Sprintf("%s_%d_%s%s", nameWithoutExt, timestamp, uniqueID, ext)
 }

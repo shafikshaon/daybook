@@ -410,7 +410,7 @@ const apiService = {
 
   // Utility methods
   generateId() {
-    // Note: Backend generates UUIDs, so this is not used with real backend
+    // Note: Backend generates auto-increment IDs, so this is not used with real backend
     return Date.now().toString(36) + Math.random().toString(36).substring(2)
   }
 }

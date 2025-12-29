@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // BudgetHandler handles budget-related HTTP requests
@@ -51,7 +51,9 @@ func (h *BudgetHandler) ListBudgets(c *gin.Context) {
 	}
 
 	if categoryID := c.Query("categoryId"); categoryID != "" {
-		filters.CategoryID = categoryID
+		if categoryIDUint, err := strconv.ParseUint(categoryID, 10, 32); err == nil {
+			filters.CategoryID = uint(categoryIDUint)
+		}
 	}
 
 	logger.Debugf(ctx, "Fetching budgets from database...")
@@ -80,12 +82,14 @@ func (h *BudgetHandler) GetBudget(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	budgetID, err := uuid.Parse(c.Param("id"))
+	budgetIDStr := c.Param("id")
+	budgetIDUint, err := strconv.ParseUint(budgetIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid budget ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid budget ID")
 		return
 	}
+	budgetID := uint(budgetIDUint)
 
 	logger.Debugf(ctx, "Fetching budget: %s", budgetID)
 	budget, err := h.service.GetBudget(ctx, budgetID, userID)
@@ -148,12 +152,14 @@ func (h *BudgetHandler) UpdateBudget(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	budgetID, err := uuid.Parse(c.Param("id"))
+	budgetIDStr := c.Param("id")
+	budgetIDUint, err := strconv.ParseUint(budgetIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid budget ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid budget ID")
 		return
 	}
+	budgetID := uint(budgetIDUint)
 
 	var updateData models.Budget
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -188,12 +194,14 @@ func (h *BudgetHandler) DeleteBudget(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	budgetID, err := uuid.Parse(c.Param("id"))
+	budgetIDStr := c.Param("id")
+	budgetIDUint, err := strconv.ParseUint(budgetIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid budget ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid budget ID")
 		return
 	}
+	budgetID := uint(budgetIDUint)
 
 	logger.Debugf(ctx, "Deleting budget: %s", budgetID)
 	if err := h.service.DeleteBudget(ctx, budgetID, userID); err != nil {
@@ -220,12 +228,14 @@ func (h *BudgetHandler) GetBudgetProgress(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	budgetID, err := uuid.Parse(c.Param("id"))
+	budgetIDStr := c.Param("id")
+	budgetIDUint, err := strconv.ParseUint(budgetIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid budget ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid budget ID")
 		return
 	}
+	budgetID := uint(budgetIDUint)
 
 	logger.Debugf(ctx, "Calculating budget progress for: %s", budgetID)
 	progress, err := h.service.GetBudgetProgress(ctx, budgetID, userID)

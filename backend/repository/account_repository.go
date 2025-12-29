@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +25,7 @@ func NewAccountRepository(db *gorm.DB) AccountRepository {
 }
 
 // Override FindAll to order by created_at DESC
-func (r *accountRepository) FindAll(ctx context.Context, userID uuid.UUID) ([]models.Account, error) {
+func (r *accountRepository) FindAll(ctx context.Context, userID uint) ([]models.Account, error) {
 	var accounts []models.Account
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

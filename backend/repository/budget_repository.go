@@ -6,7 +6,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,7 +13,7 @@ import (
 type BudgetFilters struct {
 	Enabled    *bool
 	Period     string
-	CategoryID string
+	CategoryID uint
 }
 
 // BudgetRepository handles budget database operations
@@ -22,10 +21,10 @@ type BudgetRepository interface {
 	BaseRepository[models.Budget]
 
 	// FindWithFilters retrieves budgets with optional filters
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters BudgetFilters) ([]models.Budget, error)
+	FindWithFilters(ctx context.Context, userID uint, filters BudgetFilters) ([]models.Budget, error)
 
 	// CalculateTotalSpent calculates total spending for a category in a date range
-	CalculateTotalSpent(ctx context.Context, userID uuid.UUID, categoryID string, startDate, endDate time.Time) (float64, error)
+	CalculateTotalSpent(ctx context.Context, userID uint, categoryID uint, startDate, endDate time.Time) (float64, error)
 }
 
 type budgetRepository struct {
@@ -40,7 +39,7 @@ func NewBudgetRepository(db *gorm.DB) BudgetRepository {
 }
 
 // FindWithFilters retrieves budgets with optional filters
-func (r *budgetRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters BudgetFilters) ([]models.Budget, error) {
+func (r *budgetRepository) FindWithFilters(ctx context.Context, userID uint, filters BudgetFilters) ([]models.Budget, error) {
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
 
 	if filters.Enabled != nil {
@@ -51,7 +50,7 @@ func (r *budgetRepository) FindWithFilters(ctx context.Context, userID uuid.UUID
 		query = query.Where("period = ?", filters.Period)
 	}
 
-	if filters.CategoryID != "" {
+	if filters.CategoryID != 0 {
 		query = query.Where("category_id = ?", filters.CategoryID)
 	}
 
@@ -61,7 +60,7 @@ func (r *budgetRepository) FindWithFilters(ctx context.Context, userID uuid.UUID
 }
 
 // CalculateTotalSpent calculates total spending for a category in a date range
-func (r *budgetRepository) CalculateTotalSpent(ctx context.Context, userID uuid.UUID, categoryID string, startDate, endDate time.Time) (float64, error) {
+func (r *budgetRepository) CalculateTotalSpent(ctx context.Context, userID uint, categoryID uint, startDate, endDate time.Time) (float64, error) {
 	var totalSpent float64
 	err := r.db.WithContext(ctx).
 		Model(&models.Transaction{}).
@@ -73,7 +72,7 @@ func (r *budgetRepository) CalculateTotalSpent(ctx context.Context, userID uuid.
 }
 
 // Override FindAll to order by created_at DESC
-func (r *budgetRepository) FindAll(ctx context.Context, userID uuid.UUID) ([]models.Budget, error) {
+func (r *budgetRepository) FindAll(ctx context.Context, userID uint) ([]models.Budget, error) {
 	var budgets []models.Budget
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

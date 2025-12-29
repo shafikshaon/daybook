@@ -3,13 +3,12 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type CreditCard struct {
-	ID                uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID            uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID                uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID            uint           `gorm:"not null;index" json:"userId"`
 	Name              string         `gorm:"not null" json:"name" binding:"required"`
 	LastFourDigits    string         `json:"lastFourDigits"`
 	CardNetwork       string         `json:"cardNetwork"` // Visa, Mastercard, Amex, etc
@@ -30,16 +29,13 @@ type CreditCard struct {
 }
 
 func (cc *CreditCard) BeforeCreate(tx *gorm.DB) error {
-	if cc.ID == uuid.Nil {
-		cc.ID = uuid.New()
-	}
 	return nil
 }
 
 type Statement struct {
-	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	CardID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
+	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID          uint           `gorm:"not null;index" json:"userId"`
+	CardID          uint           `gorm:"not null;index" json:"cardId"`
 	StatementDate   time.Time      `gorm:"type:timestamptz;not null" json:"statementDate"`
 	DueDate         time.Time      `gorm:"type:timestamptz;not null" json:"dueDate"`
 	OpeningBalance  float64        `json:"openingBalance"`
@@ -56,16 +52,13 @@ type Statement struct {
 }
 
 func (s *Statement) BeforeCreate(tx *gorm.DB) error {
-	if s.ID == uuid.Nil {
-		s.ID = uuid.New()
-	}
 	return nil
 }
 
 type Reward struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	CardID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"`
+	CardID      uint           `gorm:"not null;index" json:"cardId"`
 	Type        string         `json:"type"` // cashback, points, miles
 	Amount      float64        `json:"amount"`
 	Description string         `json:"description"`
@@ -78,19 +71,16 @@ type Reward struct {
 }
 
 func (r *Reward) BeforeCreate(tx *gorm.DB) error {
-	if r.ID == uuid.Nil {
-		r.ID = uuid.New()
-	}
 	return nil
 }
 
 // CreditCardTransaction represents a transaction made with a credit card
 type CreditCardTransaction struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
-	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to main Transaction record
-	CategoryID    string         `json:"categoryId"`
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID        uint           `gorm:"not null;index" json:"userId"`
+	CardID        uint           `gorm:"not null;index" json:"cardId"`
+	TransactionID uint           `gorm:"index" json:"transactionId"` // Link to main Transaction record
+	CategoryID    uint           `json:"categoryId"`
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Description   string         `json:"description"`
 	Merchant      string         `json:"merchant"`
@@ -104,30 +94,24 @@ type CreditCardTransaction struct {
 }
 
 func (cct *CreditCardTransaction) BeforeCreate(tx *gorm.DB) error {
-	if cct.ID == uuid.Nil {
-		cct.ID = uuid.New()
-	}
 	return nil
 }
 
 // CreditCardPayment represents a payment made to a credit card
 type CreditCardPayment struct {
-	ID            uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	CardID        uuid.UUID      `gorm:"type:uuid;not null;index" json:"cardId"`
-	AccountID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"` // Account used to pay
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID        uint           `gorm:"not null;index" json:"userId"`
+	CardID        uint           `gorm:"not null;index" json:"cardId"`
+	AccountID     uint           `gorm:"not null;index" json:"accountId"` // Account used to pay
 	Amount        float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	PaymentDate   Date           `gorm:"not null" json:"paymentDate"`
 	Description   string         `json:"description"`
-	TransactionID uuid.UUID      `gorm:"type:uuid;index" json:"transactionId"` // Link to Transaction record
+	TransactionID uint           `gorm:"index" json:"transactionId"` // Link to Transaction record
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 func (ccp *CreditCardPayment) BeforeCreate(tx *gorm.DB) error {
-	if ccp.ID == uuid.Nil {
-		ccp.ID = uuid.New()
-	}
 	return nil
 }

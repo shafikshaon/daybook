@@ -7,13 +7,11 @@ import (
 
 	"daybook-backend/database"
 	"daybook-backend/models"
-
-	"github.com/google/uuid"
 )
 
 // BackfillOptions contains configuration for backfilling activity logs
 type BackfillOptions struct {
-	UserID    *uuid.UUID // If nil, backfill for all users
+	UserID    *uint      // If nil, backfill for all users
 	Module    string     // If empty, backfill for all modules
 	DryRun    bool       // If true, only count records without creating logs
 	StartDate *time.Time // Only backfill records created after this date
@@ -147,7 +145,6 @@ func backfillAccounts(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      account.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleAccount,
@@ -221,7 +218,6 @@ func backfillTransactions(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      transaction.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleTransaction,
@@ -296,13 +292,12 @@ func backfillBudgets(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      budget.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleBudget,
 				EntityType:  "Budget",
 				EntityID:    &budget.ID,
-				Description: fmt.Sprintf("Created budget for category %s (backfilled)", budget.CategoryID),
+				Description: fmt.Sprintf("Created budget for category %d (backfilled)", budget.CategoryID),
 				Metadata:    string(metadataJSON),
 				CreatedAt:   budget.CreatedAt,
 				UpdatedAt:   budget.CreatedAt,
@@ -369,7 +364,6 @@ func backfillCreditCards(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      card.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleCreditCard,
@@ -442,7 +436,6 @@ func backfillDebts(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      debt.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleDebt,
@@ -515,7 +508,6 @@ func backfillLends(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      lend.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleLend,
@@ -589,7 +581,6 @@ func backfillAssets(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      asset.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleAsset,
@@ -663,7 +654,6 @@ func backfillGoals(options BackfillOptions) (BackfillResult, error) {
 			metadataJSON, _ := json.Marshal(metadata)
 
 			activityLog := models.ActivityLog{
-				ID:          uuid.New(),
 				UserID:      goal.UserID,
 				Action:      models.ActionCreate,
 				Module:      models.ModuleGoal,
@@ -689,7 +679,7 @@ func backfillGoals(options BackfillOptions) (BackfillResult, error) {
 }
 
 // activityLogExists checks if an activity log already exists for the given parameters
-func activityLogExists(userID uuid.UUID, action, module string, entityID uuid.UUID, createdAt time.Time) bool {
+func activityLogExists(userID uint, action, module string, entityID uint, createdAt time.Time) bool {
 	var count int64
 	database.DB.Model(&models.ActivityLog{}).
 		Where("user_id = ? AND action = ? AND module = ? AND entity_id = ? AND created_at = ?",

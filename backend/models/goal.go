@@ -3,14 +3,13 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // Goal represents a financial objective (replaces SavingsGoal)
 type Goal struct {
-	ID     uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID uuid.UUID `gorm:"type:uuid;not null;index" json:"userId"`
+	ID     uint `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID uint `gorm:"not null;index" json:"userId"`
 
 	// Basic Info
 	Name        string `gorm:"not null" json:"name"`
@@ -49,9 +48,9 @@ type Goal struct {
 // GoalHolding represents an investment/savings instrument toward a goal
 // This replaces: Investment, FixedDeposit, and individual savings contributions
 type GoalHolding struct {
-	ID     uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID uuid.UUID `gorm:"type:uuid;not null;index" json:"userId"`
-	GoalID uuid.UUID `gorm:"type:uuid;not null;index" json:"goalId"`
+	ID     uint `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID uint `gorm:"not null;index" json:"userId"`
+	GoalID uint `gorm:"not null;index" json:"goalId"`
 
 	// Core Fields
 	Name         string  `gorm:"not null" json:"name"`
@@ -82,7 +81,7 @@ type GoalHolding struct {
 	Details map[string]interface{} `gorm:"type:jsonb;serializer:json" json:"details"`
 
 	// Transaction link (the transaction that created this holding)
-	TransactionID uuid.UUID `gorm:"type:uuid" json:"transactionId"`
+	TransactionID uint `json:"transactionId"`
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
@@ -91,10 +90,10 @@ type GoalHolding struct {
 
 // GoalContribution tracks all contributions/withdrawals/gains for a goal
 type GoalContribution struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"userId"`
-	GoalID    uuid.UUID  `gorm:"type:uuid;not null;index" json:"goalId"`
-	HoldingID *uuid.UUID `gorm:"type:uuid" json:"holdingId"` // Link to specific holding
+	ID        uint  `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID    uint  `gorm:"not null;index" json:"userId"`
+	GoalID    uint  `gorm:"not null;index" json:"goalId"`
+	HoldingID *uint `json:"holdingId"` // Link to specific holding
 
 	Type   string  `gorm:"not null" json:"type"` // contribution, withdrawal, dividend, interest, appreciation, depreciation, maturity
 	Amount float64 `gorm:"not null" json:"amount"`
@@ -102,7 +101,7 @@ type GoalContribution struct {
 	Notes  string  `json:"notes"`
 
 	// Transaction link (creates a transaction for account balance)
-	TransactionID uuid.UUID `gorm:"type:uuid;not null" json:"transactionId"`
+	TransactionID uint `gorm:"not null" json:"transactionId"`
 
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
@@ -111,23 +110,14 @@ type GoalContribution struct {
 
 // BeforeCreate hooks
 func (g *Goal) BeforeCreate(tx *gorm.DB) error {
-	if g.ID == uuid.Nil {
-		g.ID = uuid.New()
-	}
 	return nil
 }
 
 func (h *GoalHolding) BeforeCreate(tx *gorm.DB) error {
-	if h.ID == uuid.Nil {
-		h.ID = uuid.New()
-	}
 	return nil
 }
 
 func (c *GoalContribution) BeforeCreate(tx *gorm.DB) error {
-	if c.ID == uuid.Nil {
-		c.ID = uuid.New()
-	}
 	return nil
 }
 

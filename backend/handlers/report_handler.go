@@ -10,7 +10,6 @@ import (
 	"daybook-backend/services"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ReportHandler handles all report-related API endpoints
@@ -211,12 +210,13 @@ func (h *ReportHandler) GetAccountBalanceHistory(c *gin.Context) {
 
 	// Parse account ID from URL
 	accountIDStr := c.Param("id")
-	accountID, err := uuid.Parse(accountIDStr)
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Errorf(ctx, "Invalid account ID: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID"})
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	// Parse query parameters
 	startDateStr := c.Query("startDate")

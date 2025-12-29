@@ -2,43 +2,44 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // ReportRepository handles report data aggregation
 type ReportRepository interface {
 	// Income vs Expense
-	GetIncomeExpenseSummary(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (*IncomeExpenseSummary, error)
-	GetIncomeExpenseTrend(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]TrendData, error)
+	GetIncomeExpenseSummary(ctx context.Context, userID uint, startDate, endDate time.Time) (*IncomeExpenseSummary, error)
+	GetIncomeExpenseTrend(ctx context.Context, userID uint, startDate, endDate time.Time, groupBy string) ([]TrendData, error)
 
 	// Category Analysis
-	GetCategoryBreakdown(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, transactionType string) ([]CategoryBreakdown, error)
-	GetTopCategories(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, transactionType string, limit int) ([]CategoryBreakdown, error)
+	GetCategoryBreakdown(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]CategoryBreakdown, error)
+	GetTopCategories(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string, limit int) ([]CategoryBreakdown, error)
 
 	// Account Analysis
-	GetAccountBalances(ctx context.Context, userID uuid.UUID) ([]AccountBalance, error)
-	GetAccountBalanceHistory(ctx context.Context, userID uuid.UUID, accountID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]BalanceHistory, error)
+	GetAccountBalances(ctx context.Context, userID uint) ([]AccountBalance, error)
+	GetAccountBalanceHistory(ctx context.Context, userID uint, accountID uint, startDate, endDate time.Time, groupBy string) ([]BalanceHistory, error)
 
 	// Net Worth
-	GetNetWorth(ctx context.Context, userID uuid.UUID) (*NetWorth, error)
-	GetNetWorthTrend(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]NetWorthTrend, error)
+	GetNetWorth(ctx context.Context, userID uint) (*NetWorth, error)
+	GetNetWorthTrend(ctx context.Context, userID uint, startDate, endDate time.Time, groupBy string) ([]NetWorthTrend, error)
 
 	// Budget Analysis
-	GetBudgetPerformance(ctx context.Context, userID uuid.UUID, month time.Time) ([]BudgetPerformance, error)
+	GetBudgetPerformance(ctx context.Context, userID uint, month time.Time) ([]BudgetPerformance, error)
 
 	// Cash Flow
-	GetCashFlowSummary(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (*CashFlowSummary, error)
-	GetCashFlowByMonth(ctx context.Context, userID uuid.UUID, year int) ([]MonthlyCashFlow, error)
+	GetCashFlowSummary(ctx context.Context, userID uint, startDate, endDate time.Time) (*CashFlowSummary, error)
+	GetCashFlowByMonth(ctx context.Context, userID uint, year int) ([]MonthlyCashFlow, error)
+	GetCashFlowByDateRange(ctx context.Context, userID uint, startDate, endDate time.Time) ([]MonthlyCashFlow, error)
 
 	// Monthly/Yearly Summary
-	GetMonthlySummary(ctx context.Context, userID uuid.UUID, month time.Time) (*PeriodSummary, error)
-	GetYearlySummary(ctx context.Context, userID uuid.UUID, year int) (*PeriodSummary, error)
+	GetMonthlySummary(ctx context.Context, userID uint, month time.Time) (*PeriodSummary, error)
+	GetYearlySummary(ctx context.Context, userID uint, year int) (*PeriodSummary, error)
 
 	// Comparison Reports
-	GetPeriodComparison(ctx context.Context, userID uuid.UUID, period1Start, period1End, period2Start, period2End time.Time) (*PeriodComparison, error)
+	GetPeriodComparison(ctx context.Context, userID uint, period1Start, period1End, period2Start, period2End time.Time) (*PeriodComparison, error)
 }
 
 // Data structures for reports
@@ -66,10 +67,10 @@ type CategoryBreakdown struct {
 }
 
 type AccountBalance struct {
-	AccountID   uuid.UUID `json:"accountId"`
-	AccountName string    `json:"accountName"`
-	Balance     float64   `json:"balance"`
-	Type        string    `json:"type"`
+	AccountID   uint    `json:"accountId"`
+	AccountName string  `json:"accountName"`
+	Balance     float64 `json:"balance"`
+	Type        string  `json:"type"`
 }
 
 type BalanceHistory struct {
@@ -149,7 +150,7 @@ func NewReportRepository(db *gorm.DB) ReportRepository {
 }
 
 // GetIncomeExpenseSummary retrieves income vs expense summary
-func (r *reportRepository) GetIncomeExpenseSummary(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (*IncomeExpenseSummary, error) {
+func (r *reportRepository) GetIncomeExpenseSummary(ctx context.Context, userID uint, startDate, endDate time.Time) (*IncomeExpenseSummary, error) {
 	var result IncomeExpenseSummary
 
 	// Get total income
@@ -179,7 +180,7 @@ func (r *reportRepository) GetIncomeExpenseSummary(ctx context.Context, userID u
 }
 
 // GetIncomeExpenseTrend retrieves income vs expense trend over time
-func (r *reportRepository) GetIncomeExpenseTrend(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]TrendData, error) {
+func (r *reportRepository) GetIncomeExpenseTrend(ctx context.Context, userID uint, startDate, endDate time.Time, groupBy string) ([]TrendData, error) {
 	var trends []TrendData
 
 	// Determine SQL date grouping based on groupBy parameter
@@ -214,15 +215,16 @@ func (r *reportRepository) GetIncomeExpenseTrend(ctx context.Context, userID uui
 }
 
 // GetCategoryBreakdown retrieves spending/income by category
-func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, transactionType string) ([]CategoryBreakdown, error) {
+func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]CategoryBreakdown, error) {
 	var breakdowns []CategoryBreakdown
 
-	// First get the total for percentage calculation
+	// First get the total for percentage calculation (only transactions with categories)
 	var total float64
 	r.db.WithContext(ctx).
-		Table("transactions").
-		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
-		Select("COALESCE(SUM(amount), 0)").
+		Table("transactions t").
+		Joins("INNER JOIN categories c ON t.category_id = c.id").
+		Where("t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL AND c.deleted_at IS NULL", userID, transactionType, startDate, endDate).
+		Select("COALESCE(SUM(t.amount), 0)").
 		Scan(&total)
 
 	query := `
@@ -233,8 +235,8 @@ func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uuid
 			COUNT(*) as count,
 			CASE WHEN ? > 0 THEN (COALESCE(SUM(t.amount), 0) / ? * 100) ELSE 0 END as percentage
 		FROM transactions t
-		LEFT JOIN categories c ON t.category_id = c.id
-		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL
+		INNER JOIN categories c ON t.category_id = c.id
+		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL AND c.deleted_at IS NULL
 		GROUP BY t.category_id, c.name
 		ORDER BY amount DESC
 	`
@@ -244,14 +246,16 @@ func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uuid
 }
 
 // GetTopCategories retrieves top N categories by spending/income
-func (r *reportRepository) GetTopCategories(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, transactionType string, limit int) ([]CategoryBreakdown, error) {
+func (r *reportRepository) GetTopCategories(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string, limit int) ([]CategoryBreakdown, error) {
 	var breakdowns []CategoryBreakdown
 
+	// Get total for percentage calculation (only transactions with categories)
 	var total float64
 	r.db.WithContext(ctx).
-		Table("transactions").
-		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
-		Select("COALESCE(SUM(amount), 0)").
+		Table("transactions t").
+		Joins("INNER JOIN categories c ON t.category_id = c.id").
+		Where("t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL AND c.deleted_at IS NULL", userID, transactionType, startDate, endDate).
+		Select("COALESCE(SUM(t.amount), 0)").
 		Scan(&total)
 
 	query := `
@@ -262,8 +266,8 @@ func (r *reportRepository) GetTopCategories(ctx context.Context, userID uuid.UUI
 			COUNT(*) as count,
 			CASE WHEN ? > 0 THEN (COALESCE(SUM(t.amount), 0) / ? * 100) ELSE 0 END as percentage
 		FROM transactions t
-		LEFT JOIN categories c ON t.category_id = c.id
-		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL
+		INNER JOIN categories c ON t.category_id = c.id
+		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL AND c.deleted_at IS NULL
 		GROUP BY t.category_id, c.name
 		ORDER BY amount DESC
 		LIMIT ?
@@ -274,7 +278,7 @@ func (r *reportRepository) GetTopCategories(ctx context.Context, userID uuid.UUI
 }
 
 // GetAccountBalances retrieves current balances for all accounts
-func (r *reportRepository) GetAccountBalances(ctx context.Context, userID uuid.UUID) ([]AccountBalance, error) {
+func (r *reportRepository) GetAccountBalances(ctx context.Context, userID uint) ([]AccountBalance, error) {
 	var balances []AccountBalance
 
 	query := `
@@ -282,9 +286,8 @@ func (r *reportRepository) GetAccountBalances(ctx context.Context, userID uuid.U
 			a.id as account_id,
 			a.name as account_name,
 			a.balance,
-			at.name as type
+			a.type as type
 		FROM accounts a
-		LEFT JOIN account_types at ON a.account_type_id = at.id
 		WHERE a.user_id = ? AND a.deleted_at IS NULL
 		ORDER BY a.balance DESC
 	`
@@ -294,7 +297,7 @@ func (r *reportRepository) GetAccountBalances(ctx context.Context, userID uuid.U
 }
 
 // GetAccountBalanceHistory retrieves balance history for a specific account
-func (r *reportRepository) GetAccountBalanceHistory(ctx context.Context, userID uuid.UUID, accountID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]BalanceHistory, error) {
+func (r *reportRepository) GetAccountBalanceHistory(ctx context.Context, userID uint, accountID uint, startDate, endDate time.Time, groupBy string) ([]BalanceHistory, error) {
 	var history []BalanceHistory
 
 	// This is a complex query that needs to calculate running balance
@@ -346,7 +349,7 @@ func (r *reportRepository) GetAccountBalanceHistory(ctx context.Context, userID 
 }
 
 // GetNetWorth calculates total net worth
-func (r *reportRepository) GetNetWorth(ctx context.Context, userID uuid.UUID) (*NetWorth, error) {
+func (r *reportRepository) GetNetWorth(ctx context.Context, userID uint) (*NetWorth, error) {
 	var netWorth NetWorth
 
 	// Total assets (account balances + asset values + goal holdings)
@@ -394,7 +397,7 @@ func (r *reportRepository) GetNetWorth(ctx context.Context, userID uuid.UUID) (*
 }
 
 // GetNetWorthTrend retrieves net worth trend over time
-func (r *reportRepository) GetNetWorthTrend(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, groupBy string) ([]NetWorthTrend, error) {
+func (r *reportRepository) GetNetWorthTrend(ctx context.Context, userID uint, startDate, endDate time.Time, groupBy string) ([]NetWorthTrend, error) {
 	// This is a simplified version - in production you'd want to store snapshots
 	// For now, we'll return current net worth for each period
 	trends := []NetWorthTrend{}
@@ -417,7 +420,7 @@ func (r *reportRepository) GetNetWorthTrend(ctx context.Context, userID uuid.UUI
 }
 
 // GetBudgetPerformance retrieves budget vs actual spending
-func (r *reportRepository) GetBudgetPerformance(ctx context.Context, userID uuid.UUID, month time.Time) ([]BudgetPerformance, error) {
+func (r *reportRepository) GetBudgetPerformance(ctx context.Context, userID uint, month time.Time) ([]BudgetPerformance, error) {
 	var performances []BudgetPerformance
 
 	startDate := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
@@ -454,7 +457,7 @@ func (r *reportRepository) GetBudgetPerformance(ctx context.Context, userID uuid
 }
 
 // GetCashFlowSummary retrieves cash flow summary
-func (r *reportRepository) GetCashFlowSummary(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (*CashFlowSummary, error) {
+func (r *reportRepository) GetCashFlowSummary(ctx context.Context, userID uint, startDate, endDate time.Time) (*CashFlowSummary, error) {
 	var summary CashFlowSummary
 
 	// Get opening balance (sum of all accounts at start date)
@@ -482,7 +485,7 @@ func (r *reportRepository) GetCashFlowSummary(ctx context.Context, userID uuid.U
 }
 
 // GetCashFlowByMonth retrieves monthly cash flow for a year
-func (r *reportRepository) GetCashFlowByMonth(ctx context.Context, userID uuid.UUID, year int) ([]MonthlyCashFlow, error) {
+func (r *reportRepository) GetCashFlowByMonth(ctx context.Context, userID uint, year int) ([]MonthlyCashFlow, error) {
 	var cashFlows []MonthlyCashFlow
 
 	query := `
@@ -501,8 +504,28 @@ func (r *reportRepository) GetCashFlowByMonth(ctx context.Context, userID uuid.U
 	return cashFlows, err
 }
 
+// GetCashFlowByDateRange retrieves monthly cash flow for a date range
+func (r *reportRepository) GetCashFlowByDateRange(ctx context.Context, userID uint, startDate, endDate time.Time) ([]MonthlyCashFlow, error) {
+	var cashFlows []MonthlyCashFlow
+
+	query := `
+		SELECT
+			TO_CHAR(date, 'YYYY-MM') as month,
+			COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as inflow,
+			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as outflow,
+			COALESCE(SUM(CASE WHEN type = 'income' THEN amount WHEN type = 'expense' THEN -amount ELSE 0 END), 0) as net_cash_flow
+		FROM transactions
+		WHERE user_id = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL
+		GROUP BY month
+		ORDER BY month ASC
+	`
+
+	err := r.db.WithContext(ctx).Raw(query, userID, startDate, endDate).Scan(&cashFlows).Error
+	return cashFlows, err
+}
+
 // GetMonthlySummary retrieves summary for a specific month
-func (r *reportRepository) GetMonthlySummary(ctx context.Context, userID uuid.UUID, month time.Time) (*PeriodSummary, error) {
+func (r *reportRepository) GetMonthlySummary(ctx context.Context, userID uint, month time.Time) (*PeriodSummary, error) {
 	startDate := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, month.Location())
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Second)
 
@@ -510,15 +533,15 @@ func (r *reportRepository) GetMonthlySummary(ctx context.Context, userID uuid.UU
 }
 
 // GetYearlySummary retrieves summary for a specific year
-func (r *reportRepository) GetYearlySummary(ctx context.Context, userID uuid.UUID, year int) (*PeriodSummary, error) {
+func (r *reportRepository) GetYearlySummary(ctx context.Context, userID uint, year int) (*PeriodSummary, error) {
 	startDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 	endDate := time.Date(year, 12, 31, 23, 59, 59, 0, time.UTC)
 
-	return r.getPeriodSummary(ctx, userID, startDate, endDate, string(rune(year)))
+	return r.getPeriodSummary(ctx, userID, startDate, endDate, fmt.Sprintf("%d", year))
 }
 
 // getPeriodSummary is a helper function to get period summary
-func (r *reportRepository) getPeriodSummary(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, period string) (*PeriodSummary, error) {
+func (r *reportRepository) getPeriodSummary(ctx context.Context, userID uint, startDate, endDate time.Time, period string) (*PeriodSummary, error) {
 	var summary PeriodSummary
 	summary.Period = period
 
@@ -545,7 +568,7 @@ func (r *reportRepository) getPeriodSummary(ctx context.Context, userID uuid.UUI
 }
 
 // GetPeriodComparison compares two time periods
-func (r *reportRepository) GetPeriodComparison(ctx context.Context, userID uuid.UUID, period1Start, period1End, period2Start, period2End time.Time) (*PeriodComparison, error) {
+func (r *reportRepository) GetPeriodComparison(ctx context.Context, userID uint, period1Start, period1End, period2Start, period2End time.Time) (*PeriodComparison, error) {
 	comparison := &PeriodComparison{
 		Changes: &PeriodChanges{},
 	}

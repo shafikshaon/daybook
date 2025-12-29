@@ -491,7 +491,15 @@ export default {
         return { labels: [], datasets: [] }
       }
 
-      const breakdown = categoryReport.value.breakdown
+      // Filter out categories without names (null/empty) and with zero amounts
+      const breakdown = categoryReport.value.breakdown.filter(c =>
+        c.categoryName && c.categoryName.trim() !== '' && c.amount > 0
+      )
+
+      if (breakdown.length === 0) {
+        return { labels: [], datasets: [] }
+      }
+
       return {
         labels: breakdown.map(c => c.categoryName),
         datasets: [{
@@ -506,7 +514,12 @@ export default {
             'rgba(199, 199, 199, 0.8)',
             'rgba(83, 102, 255, 0.8)',
             'rgba(255, 99, 255, 0.8)',
-            'rgba(99, 255, 132, 0.8)'
+            'rgba(99, 255, 132, 0.8)',
+            'rgba(255, 159, 132, 0.8)',
+            'rgba(132, 162, 235, 0.8)',
+            'rgba(255, 192, 132, 0.8)',
+            'rgba(132, 255, 192, 0.8)',
+            'rgba(192, 132, 255, 0.8)'
           ]
         }]
       }

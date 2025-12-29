@@ -169,6 +169,7 @@ func NewContainer(db *gorm.DB) *Container {
 	c.GoalService = services.NewGoalService(
 		c.GoalRepo,
 		c.AccountRepo,
+		c.CategoryRepo,
 		c.TxManager,
 		c.ActivityLogService,
 	)

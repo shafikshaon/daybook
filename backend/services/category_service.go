@@ -8,29 +8,28 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // CategoryService handles category business logic
 type CategoryService interface {
 	// ListCategories retrieves all categories for a user, optionally filtered by type
-	ListCategories(ctx context.Context, userID uuid.UUID, categoryType string) ([]models.Category, error)
+	ListCategories(ctx context.Context, userID uint, categoryType string) ([]models.Category, error)
 
 	// GetCategory retrieves a specific category by ID
-	GetCategory(ctx context.Context, categoryID, userID uuid.UUID) (*models.Category, error)
+	GetCategory(ctx context.Context, categoryID, userID uint) (*models.Category, error)
 
 	// CreateCategory creates a new category
 	CreateCategory(ctx context.Context, category *models.Category) (*models.Category, error)
 
 	// UpdateCategory updates an existing category
-	UpdateCategory(ctx context.Context, categoryID, userID uuid.UUID, updateData *models.Category) (*models.Category, error)
+	UpdateCategory(ctx context.Context, categoryID, userID uint, updateData *models.Category) (*models.Category, error)
 
 	// DeleteCategory deletes a category
-	DeleteCategory(ctx context.Context, categoryID, userID uuid.UUID) error
+	DeleteCategory(ctx context.Context, categoryID, userID uint) error
 
 	// ReorderCategories updates the order of multiple categories
-	ReorderCategories(ctx context.Context, userID uuid.UUID, categoryOrders []repository.CategoryOrder) error
+	ReorderCategories(ctx context.Context, userID uint, categoryOrders []repository.CategoryOrder) error
 
 	// GetAvailableIcons returns the list of available icons
 	GetAvailableIcons() map[string][]string
@@ -53,7 +52,7 @@ func NewCategoryService(
 }
 
 // ListCategories retrieves categories, optionally filtered by type
-func (s *categoryService) ListCategories(ctx context.Context, userID uuid.UUID, categoryType string) ([]models.Category, error) {
+func (s *categoryService) ListCategories(ctx context.Context, userID uint, categoryType string) ([]models.Category, error) {
 	if categoryType != "" {
 		// Validate category type
 		if categoryType != "income" && categoryType != "expense" && categoryType != "transfer" {
@@ -65,7 +64,7 @@ func (s *categoryService) ListCategories(ctx context.Context, userID uuid.UUID, 
 }
 
 // GetCategory retrieves a specific category
-func (s *categoryService) GetCategory(ctx context.Context, categoryID, userID uuid.UUID) (*models.Category, error) {
+func (s *categoryService) GetCategory(ctx context.Context, categoryID, userID uint) (*models.Category, error) {
 	return s.repo.FindByID(ctx, categoryID, userID)
 }
 
@@ -116,7 +115,7 @@ func (s *categoryService) CreateCategory(ctx context.Context, category *models.C
 }
 
 // UpdateCategory updates an existing category
-func (s *categoryService) UpdateCategory(ctx context.Context, categoryID, userID uuid.UUID, updateData *models.Category) (*models.Category, error) {
+func (s *categoryService) UpdateCategory(ctx context.Context, categoryID, userID uint, updateData *models.Category) (*models.Category, error) {
 	// Fetch existing category
 	existing, err := s.repo.FindByID(ctx, categoryID, userID)
 	if err != nil {
@@ -175,7 +174,7 @@ func (s *categoryService) UpdateCategory(ctx context.Context, categoryID, userID
 }
 
 // DeleteCategory deletes a category
-func (s *categoryService) DeleteCategory(ctx context.Context, categoryID, userID uuid.UUID) error {
+func (s *categoryService) DeleteCategory(ctx context.Context, categoryID, userID uint) error {
 	// Fetch the category to get its name for logging
 	category, err := s.repo.FindByID(ctx, categoryID, userID)
 	if err != nil {
@@ -206,12 +205,12 @@ func (s *categoryService) DeleteCategory(ctx context.Context, categoryID, userID
 }
 
 // ReorderCategories updates the order of multiple categories
-func (s *categoryService) ReorderCategories(ctx context.Context, userID uuid.UUID, categoryOrders []repository.CategoryOrder) error {
+func (s *categoryService) ReorderCategories(ctx context.Context, userID uint, categoryOrders []repository.CategoryOrder) error {
 	// Validate that all categories belong to the user
 	for _, catOrder := range categoryOrders {
 		_, err := s.repo.FindByID(ctx, catOrder.ID, userID)
 		if err != nil {
-			return fmt.Errorf("category not found or unauthorized: %s", catOrder.ID)
+			return fmt.Errorf("category not found or unauthorized: %d", catOrder.ID)
 		}
 	}
 
@@ -227,7 +226,7 @@ func (s *categoryService) ReorderCategories(ctx context.Context, userID uuid.UUI
 		models.ActionUpdate,
 		models.ModuleCategory,
 		"Category",
-		uuid.Nil,
+		0,
 		"Reordered categories",
 		nil,
 	)

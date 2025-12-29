@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,13 +13,13 @@ type CategoryRepository interface {
 	BaseRepository[models.Category]
 
 	// FindByType retrieves categories filtered by type
-	FindByType(ctx context.Context, userID uuid.UUID, categoryType string) ([]models.Category, error)
+	FindByType(ctx context.Context, userID uint, categoryType string) ([]models.Category, error)
 
 	// FindByNameAndType finds a category by name and type for a user
-	FindByNameAndType(ctx context.Context, userID uuid.UUID, name, categoryType string) (*models.Category, error)
+	FindByNameAndType(ctx context.Context, userID uint, name, categoryType string) (*models.Category, error)
 
 	// GetMaxOrder gets the maximum order value for a given type
-	GetMaxOrder(ctx context.Context, userID uuid.UUID, categoryType string) (int, error)
+	GetMaxOrder(ctx context.Context, userID uint, categoryType string) (int, error)
 
 	// BulkUpdateOrder updates the order of multiple categories
 	BulkUpdateOrder(ctx context.Context, categoryOrders []CategoryOrder) error
@@ -28,7 +27,7 @@ type CategoryRepository interface {
 
 // CategoryOrder represents a category ID and its new order
 type CategoryOrder struct {
-	ID    uuid.UUID
+	ID    uint
 	Order int
 }
 
@@ -44,7 +43,7 @@ func NewCategoryRepository(db *gorm.DB) CategoryRepository {
 }
 
 // FindByType retrieves categories of a specific type
-func (r *categoryRepository) FindByType(ctx context.Context, userID uuid.UUID, categoryType string) ([]models.Category, error) {
+func (r *categoryRepository) FindByType(ctx context.Context, userID uint, categoryType string) ([]models.Category, error) {
 	var categories []models.Category
 	err := r.Query(ctx, userID).
 		Where("type = ?", categoryType).
@@ -54,7 +53,7 @@ func (r *categoryRepository) FindByType(ctx context.Context, userID uuid.UUID, c
 }
 
 // FindByNameAndType finds a category by name and type
-func (r *categoryRepository) FindByNameAndType(ctx context.Context, userID uuid.UUID, name, categoryType string) (*models.Category, error) {
+func (r *categoryRepository) FindByNameAndType(ctx context.Context, userID uint, name, categoryType string) (*models.Category, error) {
 	var category models.Category
 	err := r.db.WithContext(ctx).
 		Where("user_id = ? AND name = ? AND type = ?", userID, name, categoryType).
@@ -66,7 +65,7 @@ func (r *categoryRepository) FindByNameAndType(ctx context.Context, userID uuid.
 }
 
 // GetMaxOrder gets the maximum order value for a given type
-func (r *categoryRepository) GetMaxOrder(ctx context.Context, userID uuid.UUID, categoryType string) (int, error) {
+func (r *categoryRepository) GetMaxOrder(ctx context.Context, userID uint, categoryType string) (int, error) {
 	var maxOrder int
 	err := r.db.WithContext(ctx).
 		Model(&models.Category{}).
@@ -90,7 +89,7 @@ func (r *categoryRepository) BulkUpdateOrder(ctx context.Context, categoryOrders
 }
 
 // Override FindAll to order by order field
-func (r *categoryRepository) FindAll(ctx context.Context, userID uuid.UUID) ([]models.Category, error) {
+func (r *categoryRepository) FindAll(ctx context.Context, userID uint) ([]models.Category, error) {
 	var categories []models.Category
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

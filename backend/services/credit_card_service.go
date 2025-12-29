@@ -8,7 +8,6 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +19,7 @@ type RecordTransactionRequest struct {
 // RecordPaymentRequest represents the request to record a credit card payment
 type RecordPaymentRequest struct {
 	Amount      float64    `json:"amount" binding:"required,gt=0"`
-	AccountID   uuid.UUID  `json:"accountId" binding:"required"`
+	AccountID   uint       `json:"accountId" binding:"required"`
 	PaymentDate *time.Time `json:"paymentDate"`
 	Description string     `json:"description"`
 }
@@ -34,43 +33,43 @@ type RecordPaymentResponse struct {
 // CreditCardService handles credit card business logic
 type CreditCardService interface {
 	// ListCreditCards retrieves all credit cards
-	ListCreditCards(ctx context.Context, userID uuid.UUID) ([]models.CreditCard, error)
+	ListCreditCards(ctx context.Context, userID uint) ([]models.CreditCard, error)
 
 	// GetCreditCard retrieves a specific credit card by ID
-	GetCreditCard(ctx context.Context, cardID, userID uuid.UUID) (*models.CreditCard, error)
+	GetCreditCard(ctx context.Context, cardID, userID uint) (*models.CreditCard, error)
 
 	// CreateCreditCard creates a new credit card
 	CreateCreditCard(ctx context.Context, card *models.CreditCard) (*models.CreditCard, error)
 
 	// UpdateCreditCard updates an existing credit card
-	UpdateCreditCard(ctx context.Context, cardID, userID uuid.UUID, updateData *models.CreditCard) (*models.CreditCard, error)
+	UpdateCreditCard(ctx context.Context, cardID, userID uint, updateData *models.CreditCard) (*models.CreditCard, error)
 
 	// DeleteCreditCard deletes a credit card
-	DeleteCreditCard(ctx context.Context, cardID, userID uuid.UUID) error
+	DeleteCreditCard(ctx context.Context, cardID, userID uint) error
 
 	// RecordTransaction records a credit card transaction
-	RecordTransaction(ctx context.Context, cardID, userID uuid.UUID, req *RecordTransactionRequest) (*models.CreditCardTransaction, error)
+	RecordTransaction(ctx context.Context, cardID, userID uint, req *RecordTransactionRequest) (*models.CreditCardTransaction, error)
 
 	// GetTransactions retrieves all transactions for a credit card
-	GetTransactions(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardTransaction, error)
+	GetTransactions(ctx context.Context, cardID, userID uint) ([]models.CreditCardTransaction, error)
 
 	// DeleteTransaction deletes a credit card transaction
-	DeleteTransaction(ctx context.Context, cardID, transactionID, userID uuid.UUID) error
+	DeleteTransaction(ctx context.Context, cardID, transactionID, userID uint) error
 
 	// RecordPayment records a credit card payment
-	RecordPayment(ctx context.Context, cardID, userID uuid.UUID, req *RecordPaymentRequest) (*RecordPaymentResponse, error)
+	RecordPayment(ctx context.Context, cardID, userID uint, req *RecordPaymentRequest) (*RecordPaymentResponse, error)
 
 	// GetPayments retrieves all payments for a credit card
-	GetPayments(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardPayment, error)
+	GetPayments(ctx context.Context, cardID, userID uint) ([]models.CreditCardPayment, error)
 
 	// GetStatements retrieves all statements for a credit card
-	GetStatements(ctx context.Context, cardID, userID uuid.UUID) ([]models.Statement, error)
+	GetStatements(ctx context.Context, cardID, userID uint) ([]models.Statement, error)
 
 	// CreateStatement creates a new statement
 	CreateStatement(ctx context.Context, statement *models.Statement) (*models.Statement, error)
 
 	// ListRewards retrieves all rewards for a user
-	ListRewards(ctx context.Context, userID uuid.UUID) ([]models.Reward, error)
+	ListRewards(ctx context.Context, userID uint) ([]models.Reward, error)
 
 	// RecordReward records a new reward
 	RecordReward(ctx context.Context, reward *models.Reward) (*models.Reward, error)
@@ -99,12 +98,12 @@ func NewCreditCardService(
 }
 
 // ListCreditCards retrieves all credit cards
-func (s *creditCardService) ListCreditCards(ctx context.Context, userID uuid.UUID) ([]models.CreditCard, error) {
+func (s *creditCardService) ListCreditCards(ctx context.Context, userID uint) ([]models.CreditCard, error) {
 	return s.repo.FindAll(ctx, userID)
 }
 
 // GetCreditCard retrieves a specific credit card
-func (s *creditCardService) GetCreditCard(ctx context.Context, cardID, userID uuid.UUID) (*models.CreditCard, error) {
+func (s *creditCardService) GetCreditCard(ctx context.Context, cardID, userID uint) (*models.CreditCard, error) {
 	card, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
 		return nil, errors.New("credit card not found")
@@ -134,7 +133,7 @@ func (s *creditCardService) CreateCreditCard(ctx context.Context, card *models.C
 }
 
 // UpdateCreditCard updates an existing credit card
-func (s *creditCardService) UpdateCreditCard(ctx context.Context, cardID, userID uuid.UUID, updateData *models.CreditCard) (*models.CreditCard, error) {
+func (s *creditCardService) UpdateCreditCard(ctx context.Context, cardID, userID uint, updateData *models.CreditCard) (*models.CreditCard, error) {
 	// Fetch existing card
 	existing, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -174,7 +173,7 @@ func (s *creditCardService) UpdateCreditCard(ctx context.Context, cardID, userID
 }
 
 // DeleteCreditCard deletes a credit card
-func (s *creditCardService) DeleteCreditCard(ctx context.Context, cardID, userID uuid.UUID) error {
+func (s *creditCardService) DeleteCreditCard(ctx context.Context, cardID, userID uint) error {
 	// Fetch the card to get its details
 	card, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -202,7 +201,7 @@ func (s *creditCardService) DeleteCreditCard(ctx context.Context, cardID, userID
 }
 
 // RecordTransaction records a credit card transaction
-func (s *creditCardService) RecordTransaction(ctx context.Context, cardID, userID uuid.UUID, req *RecordTransactionRequest) (*models.CreditCardTransaction, error) {
+func (s *creditCardService) RecordTransaction(ctx context.Context, cardID, userID uint, req *RecordTransactionRequest) (*models.CreditCardTransaction, error) {
 	// Verify card belongs to user
 	card, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -285,7 +284,7 @@ func (s *creditCardService) RecordTransaction(ctx context.Context, cardID, userI
 }
 
 // GetTransactions retrieves all transactions for a credit card
-func (s *creditCardService) GetTransactions(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardTransaction, error) {
+func (s *creditCardService) GetTransactions(ctx context.Context, cardID, userID uint) ([]models.CreditCardTransaction, error) {
 	// Verify card belongs to user
 	_, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -296,7 +295,7 @@ func (s *creditCardService) GetTransactions(ctx context.Context, cardID, userID 
 }
 
 // DeleteTransaction deletes a credit card transaction
-func (s *creditCardService) DeleteTransaction(ctx context.Context, cardID, transactionID, userID uuid.UUID) error {
+func (s *creditCardService) DeleteTransaction(ctx context.Context, cardID, transactionID, userID uint) error {
 	// Get the transaction
 	transaction, err := s.repo.FindTransactionByID(ctx, transactionID, userID)
 	if err != nil {
@@ -332,7 +331,7 @@ func (s *creditCardService) DeleteTransaction(ctx context.Context, cardID, trans
 		}
 
 		// Delete main transaction if it exists
-		if transaction.TransactionID != uuid.Nil {
+		if transaction.TransactionID != 0 {
 			if err := tx.WithContext(ctx).Delete(&models.Transaction{}, transaction.TransactionID).Error; err != nil {
 				return err
 			}
@@ -365,7 +364,7 @@ func (s *creditCardService) DeleteTransaction(ctx context.Context, cardID, trans
 }
 
 // RecordPayment records a credit card payment
-func (s *creditCardService) RecordPayment(ctx context.Context, cardID, userID uuid.UUID, req *RecordPaymentRequest) (*RecordPaymentResponse, error) {
+func (s *creditCardService) RecordPayment(ctx context.Context, cardID, userID uint, req *RecordPaymentRequest) (*RecordPaymentResponse, error) {
 	// Get the credit card
 	card, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -401,7 +400,7 @@ func (s *creditCardService) RecordPayment(ctx context.Context, cardID, userID uu
 		transaction := models.Transaction{
 			UserID:       userID,
 			AccountID:    req.AccountID,
-			CategoryID:   "credit_card_payment",
+			CategoryID:   0, // Use 0 for system transactions
 			Amount:       req.Amount,
 			Type:         "expense",
 			Date:         models.Date{Time: paymentDate},
@@ -492,7 +491,7 @@ func (s *creditCardService) RecordPayment(ctx context.Context, cardID, userID uu
 }
 
 // GetPayments retrieves all payments for a credit card
-func (s *creditCardService) GetPayments(ctx context.Context, cardID, userID uuid.UUID) ([]models.CreditCardPayment, error) {
+func (s *creditCardService) GetPayments(ctx context.Context, cardID, userID uint) ([]models.CreditCardPayment, error) {
 	// Verify card belongs to user
 	_, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -503,7 +502,7 @@ func (s *creditCardService) GetPayments(ctx context.Context, cardID, userID uuid
 }
 
 // GetStatements retrieves all statements for a credit card
-func (s *creditCardService) GetStatements(ctx context.Context, cardID, userID uuid.UUID) ([]models.Statement, error) {
+func (s *creditCardService) GetStatements(ctx context.Context, cardID, userID uint) ([]models.Statement, error) {
 	// Verify card belongs to user
 	_, err := s.repo.FindByID(ctx, cardID, userID)
 	if err != nil {
@@ -541,7 +540,7 @@ func (s *creditCardService) CreateStatement(ctx context.Context, statement *mode
 }
 
 // ListRewards retrieves all rewards for a user
-func (s *creditCardService) ListRewards(ctx context.Context, userID uuid.UUID) ([]models.Reward, error) {
+func (s *creditCardService) ListRewards(ctx context.Context, userID uint) ([]models.Reward, error) {
 	return s.repo.FindRewardsByUser(ctx, userID)
 }
 

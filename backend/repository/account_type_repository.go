@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,7 +13,7 @@ type AccountTypeRepository interface {
 	BaseRepository[models.AccountType]
 
 	// CountAccountsUsingType counts how many accounts use this account type
-	CountAccountsUsingType(ctx context.Context, userID uuid.UUID, typeName string) (int64, error)
+	CountAccountsUsingType(ctx context.Context, userID uint, typeName string) (int64, error)
 }
 
 type accountTypeRepository struct {
@@ -29,7 +28,7 @@ func NewAccountTypeRepository(db *gorm.DB) AccountTypeRepository {
 }
 
 // CountAccountsUsingType counts how many accounts use this account type
-func (r *accountTypeRepository) CountAccountsUsingType(ctx context.Context, userID uuid.UUID, typeName string) (int64, error) {
+func (r *accountTypeRepository) CountAccountsUsingType(ctx context.Context, userID uint, typeName string) (int64, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
 		Model(&models.Account{}).
@@ -39,7 +38,7 @@ func (r *accountTypeRepository) CountAccountsUsingType(ctx context.Context, user
 }
 
 // Override FindAll to order by sort_order
-func (r *accountTypeRepository) FindAll(ctx context.Context, userID uuid.UUID) ([]models.AccountType, error) {
+func (r *accountTypeRepository) FindAll(ctx context.Context, userID uint) ([]models.AccountType, error) {
 	var accountTypes []models.AccountType
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).

@@ -7,26 +7,24 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 	"daybook-backend/utilities"
-
-	"github.com/google/uuid"
 )
 
 // AccountTypeService handles account type business logic
 type AccountTypeService interface {
 	// ListAccountTypes retrieves all account types for a user
-	ListAccountTypes(ctx context.Context, userID uuid.UUID) ([]models.AccountType, error)
+	ListAccountTypes(ctx context.Context, userID uint) ([]models.AccountType, error)
 
 	// GetAccountType retrieves a specific account type by ID
-	GetAccountType(ctx context.Context, accountTypeID, userID uuid.UUID) (*models.AccountType, error)
+	GetAccountType(ctx context.Context, accountTypeID, userID uint) (*models.AccountType, error)
 
 	// CreateAccountType creates a new account type
 	CreateAccountType(ctx context.Context, accountType *models.AccountType) (*models.AccountType, error)
 
 	// UpdateAccountType updates an existing account type
-	UpdateAccountType(ctx context.Context, accountTypeID, userID uuid.UUID, updateData *models.AccountType) (*models.AccountType, error)
+	UpdateAccountType(ctx context.Context, accountTypeID, userID uint, updateData *models.AccountType) (*models.AccountType, error)
 
 	// DeleteAccountType deletes an account type
-	DeleteAccountType(ctx context.Context, accountTypeID, userID uuid.UUID) error
+	DeleteAccountType(ctx context.Context, accountTypeID, userID uint) error
 }
 
 type accountTypeService struct {
@@ -46,12 +44,12 @@ func NewAccountTypeService(
 }
 
 // ListAccountTypes retrieves all account types
-func (s *accountTypeService) ListAccountTypes(ctx context.Context, userID uuid.UUID) ([]models.AccountType, error) {
+func (s *accountTypeService) ListAccountTypes(ctx context.Context, userID uint) ([]models.AccountType, error) {
 	return s.repo.FindAll(ctx, userID)
 }
 
 // GetAccountType retrieves a specific account type
-func (s *accountTypeService) GetAccountType(ctx context.Context, accountTypeID, userID uuid.UUID) (*models.AccountType, error) {
+func (s *accountTypeService) GetAccountType(ctx context.Context, accountTypeID, userID uint) (*models.AccountType, error) {
 	return s.repo.FindByID(ctx, accountTypeID, userID)
 }
 
@@ -83,7 +81,7 @@ func (s *accountTypeService) CreateAccountType(ctx context.Context, accountType 
 }
 
 // UpdateAccountType updates an existing account type
-func (s *accountTypeService) UpdateAccountType(ctx context.Context, accountTypeID, userID uuid.UUID, updateData *models.AccountType) (*models.AccountType, error) {
+func (s *accountTypeService) UpdateAccountType(ctx context.Context, accountTypeID, userID uint, updateData *models.AccountType) (*models.AccountType, error) {
 	// Fetch existing account type
 	existing, err := s.repo.FindByID(ctx, accountTypeID, userID)
 	if err != nil {
@@ -120,7 +118,7 @@ func (s *accountTypeService) UpdateAccountType(ctx context.Context, accountTypeI
 }
 
 // DeleteAccountType deletes an account type
-func (s *accountTypeService) DeleteAccountType(ctx context.Context, accountTypeID, userID uuid.UUID) error {
+func (s *accountTypeService) DeleteAccountType(ctx context.Context, accountTypeID, userID uint) error {
 	// Fetch the account type to get its name
 	accountType, err := s.repo.FindByID(ctx, accountTypeID, userID)
 	if err != nil {

@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -21,17 +20,17 @@ type GoalRepository interface {
 	BaseRepository[models.Goal]
 
 	// FindWithFilters retrieves goals with optional filters and preloads
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters GoalFilters) ([]models.Goal, error)
+	FindWithFilters(ctx context.Context, userID uint, filters GoalFilters) ([]models.Goal, error)
 
 	// FindByIDWithPreloads retrieves a goal with all relationships
-	FindByIDWithPreloads(ctx context.Context, goalID, userID uuid.UUID) (*models.Goal, error)
+	FindByIDWithPreloads(ctx context.Context, goalID, userID uint) (*models.Goal, error)
 
 	// UpdateCurrentAmount recalculates current amount from all holdings
-	UpdateCurrentAmount(ctx context.Context, goalID uuid.UUID) error
+	UpdateCurrentAmount(ctx context.Context, goalID uint) error
 
 	// Holding operations
 	CreateHolding(ctx context.Context, holding *models.GoalHolding) error
-	FindHoldingByID(ctx context.Context, holdingID, userID uuid.UUID) (*models.GoalHolding, error)
+	FindHoldingByID(ctx context.Context, holdingID, userID uint) (*models.GoalHolding, error)
 	UpdateHolding(ctx context.Context, holding *models.GoalHolding) error
 
 	// Contribution operations
@@ -50,7 +49,7 @@ func NewGoalRepository(db *gorm.DB) GoalRepository {
 }
 
 // FindWithFilters retrieves goals with optional filters and preloads
-func (r *goalRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters GoalFilters) ([]models.Goal, error) {
+func (r *goalRepository) FindWithFilters(ctx context.Context, userID uint, filters GoalFilters) ([]models.Goal, error) {
 	var goals []models.Goal
 
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
@@ -74,7 +73,7 @@ func (r *goalRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, 
 }
 
 // FindByIDWithPreloads retrieves a goal with all relationships
-func (r *goalRepository) FindByIDWithPreloads(ctx context.Context, goalID, userID uuid.UUID) (*models.Goal, error) {
+func (r *goalRepository) FindByIDWithPreloads(ctx context.Context, goalID, userID uint) (*models.Goal, error) {
 	var goal models.Goal
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", goalID, userID).
@@ -88,7 +87,7 @@ func (r *goalRepository) FindByIDWithPreloads(ctx context.Context, goalID, userI
 }
 
 // UpdateCurrentAmount recalculates current amount from all holdings
-func (r *goalRepository) UpdateCurrentAmount(ctx context.Context, goalID uuid.UUID) error {
+func (r *goalRepository) UpdateCurrentAmount(ctx context.Context, goalID uint) error {
 	var total float64
 
 	// Calculate sum of all active/matured holdings for this goal
@@ -110,7 +109,7 @@ func (r *goalRepository) CreateHolding(ctx context.Context, holding *models.Goal
 }
 
 // FindHoldingByID retrieves a specific holding
-func (r *goalRepository) FindHoldingByID(ctx context.Context, holdingID, userID uuid.UUID) (*models.GoalHolding, error) {
+func (r *goalRepository) FindHoldingByID(ctx context.Context, holdingID, userID uint) (*models.GoalHolding, error) {
 	var holding models.GoalHolding
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", holdingID, userID).
@@ -129,4 +128,11 @@ func (r *goalRepository) UpdateHolding(ctx context.Context, holding *models.Goal
 // CreateContribution creates a new goal contribution
 func (r *goalRepository) CreateContribution(ctx context.Context, contribution *models.GoalContribution) error {
 	return r.db.WithContext(ctx).Create(contribution).Error
+}
+
+// WithTx returns a new repository instance using the provided transaction
+func (r *goalRepository) WithTx(tx *gorm.DB) BaseRepository[models.Goal] {
+	return &goalRepository{
+		GormBaseRepository: NewGormBaseRepository[models.Goal](tx),
+	}
 }

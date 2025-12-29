@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -10,7 +11,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type CreditCardHandler struct {
@@ -62,12 +62,14 @@ func (h *CreditCardHandler) GetCreditCard(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	logger.Debugf(ctx, "Fetching credit card: %s", cardID)
 	card, err := h.service.GetCreditCard(ctx, cardID, userID)
@@ -130,12 +132,14 @@ func (h *CreditCardHandler) UpdateCreditCard(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	logger.Debugf(ctx, "Fetching existing credit card: %s", cardID)
 
@@ -171,12 +175,14 @@ func (h *CreditCardHandler) DeleteCreditCard(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	logger.Debugf(ctx, "Deleting credit card: %s", cardID)
 
@@ -204,12 +210,14 @@ func (h *CreditCardHandler) RecordCreditCardTransaction(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	var transactionRequest services.RecordTransactionRequest
 	if err := c.ShouldBindJSON(&transactionRequest); err != nil {
@@ -243,12 +251,14 @@ func (h *CreditCardHandler) GetCreditCardTransactions(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	transactions, err := h.service.GetTransactions(ctx, cardID, userID)
 	if err != nil {
@@ -275,19 +285,23 @@ func (h *CreditCardHandler) DeleteCreditCardTransaction(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
-	transactionID, err := uuid.Parse(c.Param("transactionId"))
+	transactionIDStr := c.Param("transactionId")
+	transactionIDUint, err := strconv.ParseUint(transactionIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
+	transactionID := uint(transactionIDUint)
 
 	if err := h.service.DeleteTransaction(ctx, cardID, transactionID, userID); err != nil {
 		logger.Errorf(ctx, "Service operation failed: %v", err)
@@ -313,12 +327,14 @@ func (h *CreditCardHandler) RecordPayment(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	var paymentRequest services.RecordPaymentRequest
 	if err := c.ShouldBindJSON(&paymentRequest); err != nil {
@@ -352,12 +368,14 @@ func (h *CreditCardHandler) GetPayments(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	payments, err := h.service.GetPayments(ctx, cardID, userID)
 	if err != nil {
@@ -384,12 +402,14 @@ func (h *CreditCardHandler) GetStatements(c *gin.Context) {
 
 	logger.Debugf(ctx, "Processing request for user: %s", userID)
 
-	cardID, err := uuid.Parse(c.Param("id"))
+	cardIDStr := c.Param("id")
+	cardIDUint, err := strconv.ParseUint(cardIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid credit card ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid credit card ID")
 		return
 	}
+	cardID := uint(cardIDUint)
 
 	statements, err := h.service.GetStatements(ctx, cardID, userID)
 	if err != nil {

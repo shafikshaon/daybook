@@ -8,14 +8,13 @@ import (
 	"daybook-backend/models"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/google/uuid"
 )
 
 type Claims struct {
-	UserID   uuid.UUID `json:"userId"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
-	Role     string    `json:"role"`
+	UserID   uint   `json:"userId"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 

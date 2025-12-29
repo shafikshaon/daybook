@@ -6,17 +6,16 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // SettingsService handles settings business logic
 type SettingsService interface {
 	// GetSettings retrieves user settings, creating default settings if none exist
-	GetSettings(ctx context.Context, userID uuid.UUID) (*models.Settings, error)
+	GetSettings(ctx context.Context, userID uint) (*models.Settings, error)
 
 	// UpdateSettings updates user settings
-	UpdateSettings(ctx context.Context, userID uuid.UUID, settings *models.Settings) (*models.Settings, error)
+	UpdateSettings(ctx context.Context, userID uint, settings *models.Settings) (*models.Settings, error)
 }
 
 type settingsService struct {
@@ -36,7 +35,7 @@ func NewSettingsService(
 }
 
 // GetSettings retrieves user settings, creating defaults if needed
-func (s *settingsService) GetSettings(ctx context.Context, userID uuid.UUID) (*models.Settings, error) {
+func (s *settingsService) GetSettings(ctx context.Context, userID uint) (*models.Settings, error) {
 	settings, err := s.repo.FindByUserID(ctx, userID)
 
 	// If settings don't exist, create default settings
@@ -78,7 +77,7 @@ func (s *settingsService) GetSettings(ctx context.Context, userID uuid.UUID) (*m
 }
 
 // UpdateSettings updates user settings
-func (s *settingsService) UpdateSettings(ctx context.Context, userID uuid.UUID, updateData *models.Settings) (*models.Settings, error) {
+func (s *settingsService) UpdateSettings(ctx context.Context, userID uint, updateData *models.Settings) (*models.Settings, error) {
 	// Ensure the userID is set correctly
 	updateData.UserID = userID
 

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ReconciliationHandler handles reconciliation-related HTTP requests
@@ -42,12 +42,13 @@ func (h *ReconciliationHandler) ListReconciliations(c *gin.Context) {
 	filters := repository.ReconciliationFilters{}
 
 	if accountID := c.Query("accountId"); accountID != "" {
-		accID, err := uuid.Parse(accountID)
+		accIDUint, err := strconv.ParseUint(accountID, 10, 32)
 		if err != nil {
 			logger.Warnf(ctx, "Invalid account ID: %v", err)
 			utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 			return
 		}
+		accID := uint(accIDUint)
 		filters.AccountID = &accID
 	}
 
@@ -75,12 +76,14 @@ func (h *ReconciliationHandler) GetReconciliation(c *gin.Context) {
 		return
 	}
 
-	reconciliationID, err := uuid.Parse(c.Param("id"))
+	reconciliationIDStr := c.Param("id")
+	reconciliationIDUint, err := strconv.ParseUint(reconciliationIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid reconciliation ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid reconciliation ID")
 		return
 	}
+	reconciliationID := uint(reconciliationIDUint)
 
 	logger.Debugf(ctx, "Fetching reconciliation: %s for user: %s", reconciliationID, userID)
 	reconciliation, err := h.service.GetReconciliation(ctx, reconciliationID, userID)
@@ -143,12 +146,14 @@ func (h *ReconciliationHandler) UpdateReconciliation(c *gin.Context) {
 		return
 	}
 
-	reconciliationID, err := uuid.Parse(c.Param("id"))
+	reconciliationIDStr := c.Param("id")
+	reconciliationIDUint, err := strconv.ParseUint(reconciliationIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid reconciliation ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid reconciliation ID")
 		return
 	}
+	reconciliationID := uint(reconciliationIDUint)
 
 	logger.Debugf(ctx, "Processing request for user: %s, reconciliation: %s", userID, reconciliationID)
 
@@ -187,12 +192,14 @@ func (h *ReconciliationHandler) DeleteReconciliation(c *gin.Context) {
 		return
 	}
 
-	reconciliationID, err := uuid.Parse(c.Param("id"))
+	reconciliationIDStr := c.Param("id")
+	reconciliationIDUint, err := strconv.ParseUint(reconciliationIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid reconciliation ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid reconciliation ID")
 		return
 	}
+	reconciliationID := uint(reconciliationIDUint)
 
 	logger.Debugf(ctx, "Deleting reconciliation: %s for user: %s", reconciliationID, userID)
 	if err := h.service.DeleteReconciliation(ctx, reconciliationID, userID); err != nil {
@@ -221,12 +228,14 @@ func (h *ReconciliationHandler) GetUnreconciledTransactions(c *gin.Context) {
 		return
 	}
 
-	accountID, err := uuid.Parse(c.Param("id"))
+	accountIDStr := c.Param("id")
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	logger.Debugf(ctx, "Fetching unreconciled transactions for account: %s, user: %s", accountID, userID)
 	transactions, err := h.service.GetUnreconciledTransactions(ctx, accountID, userID)
@@ -256,12 +265,14 @@ func (h *ReconciliationHandler) GetReconciliationStats(c *gin.Context) {
 		return
 	}
 
-	accountID, err := uuid.Parse(c.Param("id"))
+	accountIDStr := c.Param("id")
+	accountIDUint, err := strconv.ParseUint(accountIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account ID")
 		return
 	}
+	accountID := uint(accountIDUint)
 
 	logger.Debugf(ctx, "Fetching reconciliation stats for account: %s, user: %s", accountID, userID)
 	stats, err := h.service.GetStats(ctx, accountID, userID)

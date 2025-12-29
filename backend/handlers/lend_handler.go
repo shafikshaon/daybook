@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // LendHandler handles lend-related HTTP requests
@@ -69,12 +69,14 @@ func (h *LendHandler) GetLend(c *gin.Context) {
 		return
 	}
 
-	lendID, err := uuid.Parse(c.Param("id"))
+	lendIDStr := c.Param("id")
+	lendIDUint, err := strconv.ParseUint(lendIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid lend ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid lend ID")
 		return
 	}
+	lendID := uint(lendIDUint)
 
 	logger.Debugf(ctx, "Fetching lend: %s for user: %s", lendID, userID)
 	lend, err := h.service.GetLend(ctx, lendID, userID)
@@ -139,12 +141,14 @@ func (h *LendHandler) UpdateLend(c *gin.Context) {
 		return
 	}
 
-	lendID, err := uuid.Parse(c.Param("id"))
+	lendIDStr := c.Param("id")
+	lendIDUint, err := strconv.ParseUint(lendIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid lend ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid lend ID")
 		return
 	}
+	lendID := uint(lendIDUint)
 
 	logger.Debugf(ctx, "Processing request for user: %s, lend: %s", userID, lendID)
 
@@ -183,12 +187,14 @@ func (h *LendHandler) DeleteLend(c *gin.Context) {
 		return
 	}
 
-	lendID, err := uuid.Parse(c.Param("id"))
+	lendIDStr := c.Param("id")
+	lendIDUint, err := strconv.ParseUint(lendIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid lend ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid lend ID")
 		return
 	}
+	lendID := uint(lendIDUint)
 
 	logger.Debugf(ctx, "Deleting lend: %s for user: %s", lendID, userID)
 	if err := h.service.DeleteLend(ctx, lendID, userID); err != nil {
@@ -217,12 +223,14 @@ func (h *LendHandler) RecordLendPayment(c *gin.Context) {
 		return
 	}
 
-	lendID, err := uuid.Parse(c.Param("id"))
+	lendIDStr := c.Param("id")
+	lendIDUint, err := strconv.ParseUint(lendIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid lend ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid lend ID")
 		return
 	}
+	lendID := uint(lendIDUint)
 
 	logger.Debugf(ctx, "Processing request for user: %s, lend: %s", userID, lendID)
 
@@ -260,12 +268,14 @@ func (h *LendHandler) ListLendPayments(c *gin.Context) {
 		return
 	}
 
-	lendID, err := uuid.Parse(c.Param("id"))
+	lendIDStr := c.Param("id")
+	lendIDUint, err := strconv.ParseUint(lendIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid lend ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid lend ID")
 		return
 	}
+	lendID := uint(lendIDUint)
 
 	logger.Debugf(ctx, "Fetching lend payments for lend: %s, user: %s", lendID, userID)
 	payments, err := h.service.ListPayments(ctx, lendID, userID)

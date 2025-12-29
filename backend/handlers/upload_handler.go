@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"daybook-backend/logger"
@@ -135,7 +136,7 @@ func (h *UploadHandler) ServeUploadedFile(c *gin.Context) {
 	logger.Debugf(ctx, "Processing request for user: %s, requested user: %s, file: %s", userID, requestedUserID, filename)
 
 	// Verify user can only access their own files
-	if userID.String() != requestedUserID {
+	if fmt.Sprintf("%d", userID) != requestedUserID {
 		logger.Warnf(ctx, "Access denied: user %s tried to access files of user %s", userID, requestedUserID)
 		utilities.ErrorResponse(c, http.StatusForbidden, "Access denied")
 		return

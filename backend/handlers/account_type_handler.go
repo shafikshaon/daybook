@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -10,7 +11,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // AccountTypeHandler handles account type-related HTTP requests
@@ -59,12 +59,14 @@ func (h *AccountTypeHandler) GetAccountType(c *gin.Context) {
 		return
 	}
 
-	accountTypeID, err := uuid.Parse(c.Param("id"))
+	accountTypeIDStr := c.Param("id")
+	accountTypeIDUint, err := strconv.ParseUint(accountTypeIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account type ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account type ID")
 		return
 	}
+	accountTypeID := uint(accountTypeIDUint)
 
 	logger.Debugf(ctx, "Fetching account type %s for user: %s", accountTypeID, userID)
 	accountType, err := h.service.GetAccountType(ctx, accountTypeID, userID)
@@ -125,12 +127,14 @@ func (h *AccountTypeHandler) UpdateAccountType(c *gin.Context) {
 		return
 	}
 
-	accountTypeID, err := uuid.Parse(c.Param("id"))
+	accountTypeIDStr := c.Param("id")
+	accountTypeIDUint, err := strconv.ParseUint(accountTypeIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account type ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account type ID")
 		return
 	}
+	accountTypeID := uint(accountTypeIDUint)
 
 	logger.Debugf(ctx, "Parsing update data for account type: %s", accountTypeID)
 	var updateData models.AccountType
@@ -164,12 +168,14 @@ func (h *AccountTypeHandler) DeleteAccountType(c *gin.Context) {
 		return
 	}
 
-	accountTypeID, err := uuid.Parse(c.Param("id"))
+	accountTypeIDStr := c.Param("id")
+	accountTypeIDUint, err := strconv.ParseUint(accountTypeIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid account type ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid account type ID")
 		return
 	}
+	accountTypeID := uint(accountTypeIDUint)
 
 	logger.Debugf(ctx, "Deleting account type %s for user: %s", accountTypeID, userID)
 	if err := h.service.DeleteAccountType(ctx, accountTypeID, userID); err != nil {

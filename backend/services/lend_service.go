@@ -7,7 +7,6 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -26,25 +25,25 @@ type LendPaymentResponse struct {
 // LendService handles lend business logic
 type LendService interface {
 	// ListLends retrieves all lends with optional filters
-	ListLends(ctx context.Context, userID uuid.UUID, filters repository.LendFilters) ([]LendResponse, error)
+	ListLends(ctx context.Context, userID uint, filters repository.LendFilters) ([]LendResponse, error)
 
 	// GetLend retrieves a specific lend by ID
-	GetLend(ctx context.Context, lendID, userID uuid.UUID) (*LendResponse, error)
+	GetLend(ctx context.Context, lendID, userID uint) (*LendResponse, error)
 
 	// CreateLend creates a new lend
 	CreateLend(ctx context.Context, lend *models.LendRecord) (*models.LendRecord, error)
 
 	// UpdateLend updates an existing lend
-	UpdateLend(ctx context.Context, lendID, userID uuid.UUID, updateData map[string]interface{}) (*models.LendRecord, error)
+	UpdateLend(ctx context.Context, lendID, userID uint, updateData map[string]interface{}) (*models.LendRecord, error)
 
 	// DeleteLend deletes a lend
-	DeleteLend(ctx context.Context, lendID, userID uuid.UUID) error
+	DeleteLend(ctx context.Context, lendID, userID uint) error
 
 	// RecordPayment records a payment received for a lend
-	RecordPayment(ctx context.Context, lendID, userID uuid.UUID, payment *models.LendPayment) (*models.LendPayment, *models.LendRecord, error)
+	RecordPayment(ctx context.Context, lendID, userID uint, payment *models.LendPayment) (*models.LendPayment, *models.LendRecord, error)
 
 	// ListPayments retrieves all payments for a specific lend
-	ListPayments(ctx context.Context, lendID, userID uuid.UUID) ([]LendPaymentResponse, error)
+	ListPayments(ctx context.Context, lendID, userID uint) ([]LendPaymentResponse, error)
 }
 
 type lendService struct {
@@ -70,7 +69,7 @@ func NewLendService(
 }
 
 // ListLends retrieves lends with optional filters
-func (s *lendService) ListLends(ctx context.Context, userID uuid.UUID, filters repository.LendFilters) ([]LendResponse, error) {
+func (s *lendService) ListLends(ctx context.Context, userID uint, filters repository.LendFilters) ([]LendResponse, error) {
 	lends, err := s.repo.FindWithFilters(ctx, userID, filters)
 	if err != nil {
 		return nil, err
@@ -93,7 +92,7 @@ func (s *lendService) ListLends(ctx context.Context, userID uuid.UUID, filters r
 }
 
 // GetLend retrieves a specific lend
-func (s *lendService) GetLend(ctx context.Context, lendID, userID uuid.UUID) (*LendResponse, error) {
+func (s *lendService) GetLend(ctx context.Context, lendID, userID uint) (*LendResponse, error) {
 	lend, err := s.repo.FindByID(ctx, lendID, userID)
 	if err != nil {
 		return nil, errors.New("lend not found")
@@ -142,7 +141,7 @@ func (s *lendService) CreateLend(ctx context.Context, lend *models.LendRecord) (
 					AccountID:   *lend.AccountID,
 					Type:        "expense",
 					Amount:      lend.OriginalAmount,
-					CategoryID:  "lend",
+					CategoryID:  0, // Use 0 for system transactions
 					Date:        lend.LentDate,
 					Description: "Lent to " + lend.DebtorName,
 				}
@@ -191,7 +190,7 @@ func (s *lendService) CreateLend(ctx context.Context, lend *models.LendRecord) (
 }
 
 // UpdateLend updates an existing lend
-func (s *lendService) UpdateLend(ctx context.Context, lendID, userID uuid.UUID, updateData map[string]interface{}) (*models.LendRecord, error) {
+func (s *lendService) UpdateLend(ctx context.Context, lendID, userID uint, updateData map[string]interface{}) (*models.LendRecord, error) {
 	// Fetch existing lend
 	existing, err := s.repo.FindByID(ctx, lendID, userID)
 	if err != nil {
@@ -232,7 +231,7 @@ func (s *lendService) UpdateLend(ctx context.Context, lendID, userID uuid.UUID, 
 }
 
 // DeleteLend deletes a lend
-func (s *lendService) DeleteLend(ctx context.Context, lendID, userID uuid.UUID) error {
+func (s *lendService) DeleteLend(ctx context.Context, lendID, userID uint) error {
 	// Fetch the lend to get its details
 	lend, err := s.repo.FindByID(ctx, lendID, userID)
 	if err != nil {
@@ -260,7 +259,7 @@ func (s *lendService) DeleteLend(ctx context.Context, lendID, userID uuid.UUID) 
 }
 
 // RecordPayment records a payment received for a lend
-func (s *lendService) RecordPayment(ctx context.Context, lendID, userID uuid.UUID, payment *models.LendPayment) (*models.LendPayment, *models.LendRecord, error) {
+func (s *lendService) RecordPayment(ctx context.Context, lendID, userID uint, payment *models.LendPayment) (*models.LendPayment, *models.LendRecord, error) {
 	// Validate payment date
 	if payment.PaymentDate.IsZero() {
 		return nil, nil, errors.New("payment date is required")
@@ -320,7 +319,7 @@ func (s *lendService) RecordPayment(ctx context.Context, lendID, userID uuid.UUI
 			AccountID:   payment.AccountID,
 			Type:        "income",
 			Amount:      payment.Amount,
-			CategoryID:  "lend_return",
+			CategoryID:  0, // Use 0 for system transactions
 			Date:        payment.PaymentDate,
 			Description: description,
 		}
@@ -359,7 +358,7 @@ func (s *lendService) RecordPayment(ctx context.Context, lendID, userID uuid.UUI
 }
 
 // ListPayments retrieves all payments for a specific lend
-func (s *lendService) ListPayments(ctx context.Context, lendID, userID uuid.UUID) ([]LendPaymentResponse, error) {
+func (s *lendService) ListPayments(ctx context.Context, lendID, userID uint) ([]LendPaymentResponse, error) {
 	// Verify lend belongs to user
 	_, err := s.repo.FindByID(ctx, lendID, userID)
 	if err != nil {

@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -14,16 +13,16 @@ type BaseRepository[T any] interface {
 	Create(ctx context.Context, entity *T) error
 
 	// FindByID retrieves an entity by its ID and user ID (user-scoped)
-	FindByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*T, error)
+	FindByID(ctx context.Context, id uint, userID uint) (*T, error)
 
 	// FindAll retrieves all entities for a specific user
-	FindAll(ctx context.Context, userID uuid.UUID) ([]T, error)
+	FindAll(ctx context.Context, userID uint) ([]T, error)
 
 	// Update saves changes to an existing entity
 	Update(ctx context.Context, entity *T) error
 
 	// Delete removes an entity by ID (user-scoped, soft delete)
-	Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error
+	Delete(ctx context.Context, id uint, userID uint) error
 
 	// WithTx returns a new repository instance using the provided transaction
 	// This allows repositories to participate in transactions
@@ -31,7 +30,7 @@ type BaseRepository[T any] interface {
 
 	// Query returns a query builder scoped to the user
 	// Useful for custom queries in specific repositories
-	Query(ctx context.Context, userID uuid.UUID) *gorm.DB
+	Query(ctx context.Context, userID uint) *gorm.DB
 }
 
 // GormBaseRepository implements BaseRepository using GORM
@@ -50,7 +49,7 @@ func (r *GormBaseRepository[T]) Create(ctx context.Context, entity *T) error {
 }
 
 // FindByID retrieves an entity by ID and user ID
-func (r *GormBaseRepository[T]) FindByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (*T, error) {
+func (r *GormBaseRepository[T]) FindByID(ctx context.Context, id uint, userID uint) (*T, error) {
 	var entity T
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", id, userID).
@@ -62,7 +61,7 @@ func (r *GormBaseRepository[T]) FindByID(ctx context.Context, id uuid.UUID, user
 }
 
 // FindAll retrieves all entities for a user
-func (r *GormBaseRepository[T]) FindAll(ctx context.Context, userID uuid.UUID) ([]T, error) {
+func (r *GormBaseRepository[T]) FindAll(ctx context.Context, userID uint) ([]T, error) {
 	var entities []T
 	err := r.db.WithContext(ctx).
 		Where("user_id = ?", userID).
@@ -77,7 +76,7 @@ func (r *GormBaseRepository[T]) Update(ctx context.Context, entity *T) error {
 }
 
 // Delete soft-deletes an entity
-func (r *GormBaseRepository[T]) Delete(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+func (r *GormBaseRepository[T]) Delete(ctx context.Context, id uint, userID uint) error {
 	var entity T
 	return r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", id, userID).
@@ -90,6 +89,6 @@ func (r *GormBaseRepository[T]) WithTx(tx *gorm.DB) BaseRepository[T] {
 }
 
 // Query returns a query builder scoped to the user
-func (r *GormBaseRepository[T]) Query(ctx context.Context, userID uuid.UUID) *gorm.DB {
+func (r *GormBaseRepository[T]) Query(ctx context.Context, userID uint) *gorm.DB {
 	return r.db.WithContext(ctx).Where("user_id = ?", userID)
 }

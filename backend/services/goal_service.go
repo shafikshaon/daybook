@@ -8,20 +8,19 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // AddHoldingRequest represents the request to add a holding to a goal
 type AddHoldingRequest struct {
 	models.GoalHolding
-	AccountID  *uuid.UUID `json:"accountId"`
-	IsExisting bool       `json:"isExisting"`
+	AccountID  *uint `json:"accountId"`
+	IsExisting bool  `json:"isExisting"`
 }
 
 // RemoveHoldingRequest represents the request to remove a holding
 type RemoveHoldingRequest struct {
-	AccountID    uuid.UUID   `json:"accountId" binding:"required"`
+	AccountID    uint        `json:"accountId" binding:"required"`
 	CurrentValue float64     `json:"currentValue" binding:"required,gt=0"`
 	Date         models.Date `json:"date"`
 	Notes        string      `json:"notes"`
@@ -45,28 +44,28 @@ type RemoveHoldingResponse struct {
 // GoalService handles goal business logic
 type GoalService interface {
 	// ListGoals retrieves all goals with optional filters
-	ListGoals(ctx context.Context, userID uuid.UUID, filters repository.GoalFilters) ([]models.Goal, error)
+	ListGoals(ctx context.Context, userID uint, filters repository.GoalFilters) ([]models.Goal, error)
 
 	// GetGoal retrieves a specific goal by ID
-	GetGoal(ctx context.Context, goalID, userID uuid.UUID) (*models.Goal, error)
+	GetGoal(ctx context.Context, goalID, userID uint) (*models.Goal, error)
 
 	// CreateGoal creates a new goal
 	CreateGoal(ctx context.Context, goal *models.Goal) (*models.Goal, error)
 
 	// UpdateGoal updates an existing goal
-	UpdateGoal(ctx context.Context, goalID, userID uuid.UUID, updateData *models.Goal) (*models.Goal, error)
+	UpdateGoal(ctx context.Context, goalID, userID uint, updateData *models.Goal) (*models.Goal, error)
 
 	// DeleteGoal deletes a goal
-	DeleteGoal(ctx context.Context, goalID, userID uuid.UUID) error
+	DeleteGoal(ctx context.Context, goalID, userID uint) error
 
 	// AddHolding adds a new holding to a goal
-	AddHolding(ctx context.Context, goalID, userID uuid.UUID, req *AddHoldingRequest) (*AddHoldingResponse, error)
+	AddHolding(ctx context.Context, goalID, userID uint, req *AddHoldingRequest) (*AddHoldingResponse, error)
 
 	// UpdateHolding updates a holding
-	UpdateHolding(ctx context.Context, holdingID, userID uuid.UUID, updateData *models.GoalHolding) (*models.GoalHolding, error)
+	UpdateHolding(ctx context.Context, holdingID, userID uint, updateData *models.GoalHolding) (*models.GoalHolding, error)
 
 	// RemoveHolding removes/liquidates a holding
-	RemoveHolding(ctx context.Context, holdingID, userID uuid.UUID, req *RemoveHoldingRequest) (*RemoveHoldingResponse, error)
+	RemoveHolding(ctx context.Context, holdingID, userID uint, req *RemoveHoldingRequest) (*RemoveHoldingResponse, error)
 
 	// GetHoldingTypes returns all available holding types
 	GetHoldingTypes(ctx context.Context) map[string]interface{}
@@ -75,6 +74,7 @@ type GoalService interface {
 type goalService struct {
 	repo           repository.GoalRepository
 	accountRepo    repository.AccountRepository
+	categoryRepo   repository.CategoryRepository
 	txManager      repository.TransactionManager
 	activityLogger ActivityLogService
 }
@@ -83,19 +83,21 @@ type goalService struct {
 func NewGoalService(
 	repo repository.GoalRepository,
 	accountRepo repository.AccountRepository,
+	categoryRepo repository.CategoryRepository,
 	txManager repository.TransactionManager,
 	activityLogger ActivityLogService,
 ) GoalService {
 	return &goalService{
 		repo:           repo,
 		accountRepo:    accountRepo,
+		categoryRepo:   categoryRepo,
 		txManager:      txManager,
 		activityLogger: activityLogger,
 	}
 }
 
 // ListGoals retrieves goals with optional filters
-func (s *goalService) ListGoals(ctx context.Context, userID uuid.UUID, filters repository.GoalFilters) ([]models.Goal, error) {
+func (s *goalService) ListGoals(ctx context.Context, userID uint, filters repository.GoalFilters) ([]models.Goal, error) {
 	goals, err := s.repo.FindWithFilters(ctx, userID, filters)
 	if err != nil {
 		return nil, err
@@ -111,7 +113,7 @@ func (s *goalService) ListGoals(ctx context.Context, userID uuid.UUID, filters r
 }
 
 // GetGoal retrieves a specific goal
-func (s *goalService) GetGoal(ctx context.Context, goalID, userID uuid.UUID) (*models.Goal, error) {
+func (s *goalService) GetGoal(ctx context.Context, goalID, userID uint) (*models.Goal, error) {
 	_, err := s.repo.FindByIDWithPreloads(ctx, goalID, userID)
 	if err != nil {
 		return nil, errors.New("goal not found")
@@ -149,7 +151,7 @@ func (s *goalService) CreateGoal(ctx context.Context, goal *models.Goal) (*model
 }
 
 // UpdateGoal updates an existing goal
-func (s *goalService) UpdateGoal(ctx context.Context, goalID, userID uuid.UUID, updateData *models.Goal) (*models.Goal, error) {
+func (s *goalService) UpdateGoal(ctx context.Context, goalID, userID uint, updateData *models.Goal) (*models.Goal, error) {
 	// Fetch existing goal
 	existing, err := s.repo.FindByID(ctx, goalID, userID)
 	if err != nil {
@@ -188,7 +190,7 @@ func (s *goalService) UpdateGoal(ctx context.Context, goalID, userID uuid.UUID, 
 }
 
 // DeleteGoal deletes a goal
-func (s *goalService) DeleteGoal(ctx context.Context, goalID, userID uuid.UUID) error {
+func (s *goalService) DeleteGoal(ctx context.Context, goalID, userID uint) error {
 	// Fetch the goal to get its details
 	goal, err := s.repo.FindByID(ctx, goalID, userID)
 	if err != nil {
@@ -216,7 +218,7 @@ func (s *goalService) DeleteGoal(ctx context.Context, goalID, userID uuid.UUID) 
 }
 
 // AddHolding adds a new holding to a goal
-func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, req *AddHoldingRequest) (*AddHoldingResponse, error) {
+func (s *goalService) AddHolding(ctx context.Context, goalID, userID uint, req *AddHoldingRequest) (*AddHoldingResponse, error) {
 	// Verify goal belongs to user
 	goal, err := s.repo.FindByID(ctx, goalID, userID)
 	if err != nil {
@@ -227,7 +229,7 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 	var account *models.Account
 	if !req.IsExisting {
 		// Verify account belongs to user
-		if req.AccountID == nil || *req.AccountID == uuid.Nil {
+		if req.AccountID == nil || *req.AccountID == 0 {
 			return nil, errors.New("account ID is required for new investments")
 		}
 
@@ -258,6 +260,32 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 
 	// Perform all operations within a transaction
 	err = s.txManager.WithTransaction(ctx, func(ctx context.Context, tx *gorm.DB) error {
+		// Look up "Savings & Investment" category
+		categoryRepoTx := s.categoryRepo.WithTx(tx)
+		categories, err := categoryRepoTx.FindAll(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		// Find the Savings & Investment category
+		var savingsCategoryID uint
+		for _, cat := range categories {
+			if cat.Name == "Savings & Investment" && cat.Type == "expense" {
+				savingsCategoryID = cat.ID
+				break
+			}
+		}
+
+		// If category doesn't exist, use first expense category as fallback
+		if savingsCategoryID == 0 {
+			for _, cat := range categories {
+				if cat.Type == "expense" {
+					savingsCategoryID = cat.ID
+					break
+				}
+			}
+		}
+
 		// Create holding
 		goalRepoTx := s.repo.WithTx(tx)
 		if err := goalRepoTx.(repository.GoalRepository).CreateHolding(ctx, &req.GoalHolding); err != nil {
@@ -267,8 +295,8 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 		// Create transaction record
 		var transaction models.Transaction
 		if req.IsExisting {
-			// For existing investments, create a special "tracking" type transaction
-			var trackingAccountID uuid.UUID
+			// For existing investments, also create as expense to show in reports
+			var trackingAccountID uint
 			if req.AccountID != nil {
 				trackingAccountID = *req.AccountID
 			}
@@ -276,12 +304,12 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 			transaction = models.Transaction{
 				UserID:      userID,
 				AccountID:   trackingAccountID,
-				Type:        "tracking",
+				Type:        "expense",
 				Amount:      req.Amount,
-				CategoryID:  "goal_external_holding",
+				CategoryID:  savingsCategoryID,
 				Date:        req.PurchaseDate,
-				Description: "External " + req.Name + " tracked for " + goal.Name,
-				Tags:        []string{"goal", "holding", "external", "tracking", "hidden"},
+				Description: "Investment: " + req.Name + " for " + goal.Name,
+				Tags:        []string{"goal", "holding", "investment", "savings"},
 			}
 		} else {
 			// For new investments, create normal transaction
@@ -290,10 +318,10 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 				AccountID:   *req.AccountID,
 				Type:        "expense",
 				Amount:      req.Amount,
-				CategoryID:  "goal_holding_added",
+				CategoryID:  savingsCategoryID,
 				Date:        req.PurchaseDate,
-				Description: "Added to " + goal.Name + ": " + req.Name,
-				Tags:        []string{"goal", "holding"},
+				Description: "Investment: " + req.Name + " for " + goal.Name,
+				Tags:        []string{"goal", "holding", "investment", "savings"},
 			}
 		}
 
@@ -379,7 +407,7 @@ func (s *goalService) AddHolding(ctx context.Context, goalID, userID uuid.UUID, 
 }
 
 // UpdateHolding updates a holding
-func (s *goalService) UpdateHolding(ctx context.Context, holdingID, userID uuid.UUID, updateData *models.GoalHolding) (*models.GoalHolding, error) {
+func (s *goalService) UpdateHolding(ctx context.Context, holdingID, userID uint, updateData *models.GoalHolding) (*models.GoalHolding, error) {
 	existingHolding, err := s.repo.FindHoldingByID(ctx, holdingID, userID)
 	if err != nil {
 		return nil, errors.New("holding not found")
@@ -461,7 +489,7 @@ func (s *goalService) UpdateHolding(ctx context.Context, holdingID, userID uuid.
 }
 
 // RemoveHolding removes/liquidates a holding
-func (s *goalService) RemoveHolding(ctx context.Context, holdingID, userID uuid.UUID, req *RemoveHoldingRequest) (*RemoveHoldingResponse, error) {
+func (s *goalService) RemoveHolding(ctx context.Context, holdingID, userID uint, req *RemoveHoldingRequest) (*RemoveHoldingResponse, error) {
 	holding, err := s.repo.FindHoldingByID(ctx, holdingID, userID)
 	if err != nil {
 		return nil, errors.New("holding not found")
@@ -496,7 +524,7 @@ func (s *goalService) RemoveHolding(ctx context.Context, holdingID, userID uuid.
 			AccountID:   req.AccountID,
 			Type:        "income",
 			Amount:      req.CurrentValue,
-			CategoryID:  "goal_holding_removed",
+			CategoryID:  0, // Use 0 for system transactions
 			Date:        req.Date,
 			Description: "Sold/Closed: " + holding.Name,
 			Tags:        []string{"goal", "holding", "liquidation"},

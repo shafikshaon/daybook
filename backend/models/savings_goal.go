@@ -3,13 +3,12 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type SavingsGoal struct {
-	ID                   uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID               uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID                   uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID               uint           `gorm:"not null;index" json:"userId"`
 	Name                 string         `gorm:"not null" json:"name" binding:"required"`
 	Description          string         `json:"description"`
 	TargetAmount         float64        `gorm:"not null" json:"targetAmount" binding:"required,gt=0"`
@@ -31,16 +30,13 @@ type SavingsGoal struct {
 }
 
 func (sg *SavingsGoal) BeforeCreate(tx *gorm.DB) error {
-	if sg.ID == uuid.Nil {
-		sg.ID = uuid.New()
-	}
 	return nil
 }
 
 type SavingsContribution struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	GoalID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"`
+	GoalID      uint           `gorm:"not null;index" json:"goalId"`
 	Amount      float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Date        time.Time      `gorm:"type:timestamptz;not null;index" json:"date"`
 	Notes       string         `json:"notes"`
@@ -51,16 +47,13 @@ type SavingsContribution struct {
 }
 
 func (sc *SavingsContribution) BeforeCreate(tx *gorm.DB) error {
-	if sc.ID == uuid.Nil {
-		sc.ID = uuid.New()
-	}
 	return nil
 }
 
 type AutomatedRule struct {
-	ID         uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	GoalID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"goalId"`
+	ID         uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID     uint           `gorm:"not null;index" json:"userId"`
+	GoalID     uint           `gorm:"not null;index" json:"goalId"`
 	RuleType   string         `gorm:"not null" json:"ruleType"` // percentage_of_income, fixed_amount, round_up
 	Amount     float64        `json:"amount"`
 	Percentage float64        `json:"percentage"`
@@ -72,8 +65,5 @@ type AutomatedRule struct {
 }
 
 func (ar *AutomatedRule) BeforeCreate(tx *gorm.DB) error {
-	if ar.ID == uuid.Nil {
-		ar.ID = uuid.New()
-	}
 	return nil
 }

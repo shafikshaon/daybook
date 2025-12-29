@@ -13,7 +13,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // TransactionHandler handles transaction HTTP requests
@@ -112,12 +111,14 @@ func (h *TransactionHandler) GetTransaction(c *gin.Context) {
 		return
 	}
 
-	transactionID, err := uuid.Parse(c.Param("id"))
+	transactionIDStr := c.Param("id")
+	transactionIDUint, err := strconv.ParseUint(transactionIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
+	transactionID := uint(transactionIDUint)
 
 	response, err := h.service.GetTransaction(ctx, transactionID, userID)
 	if err != nil {
@@ -174,12 +175,14 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 		return
 	}
 
-	transactionID, err := uuid.Parse(c.Param("id"))
+	transactionIDStr := c.Param("id")
+	transactionIDUint, err := strconv.ParseUint(transactionIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
+	transactionID := uint(transactionIDUint)
 
 	var updateData models.Transaction
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -211,12 +214,14 @@ func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 		return
 	}
 
-	transactionID, err := uuid.Parse(c.Param("id"))
+	transactionIDStr := c.Param("id")
+	transactionIDUint, err := strconv.ParseUint(transactionIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "Invalid transaction ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid transaction ID")
 		return
 	}
+	transactionID := uint(transactionIDUint)
 
 	if err := h.service.DeleteTransaction(ctx, transactionID, userID); err != nil {
 		logger.Errorf(ctx, "Service operation failed: %v", err)

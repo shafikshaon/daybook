@@ -3,13 +3,12 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Account struct {
-	ID                       uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID                   uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID                       uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID                   uint           `gorm:"not null;index" json:"userId"`
 	Name                     string         `gorm:"not null" json:"name" binding:"required"`
 	Type                     string         `gorm:"not null" json:"type" binding:"required"` // cash, checking, savings, credit_card, etc
 	InitialBalance           float64        `gorm:"default:0" json:"initialBalance"`         // Opening balance - never changes
@@ -28,9 +27,6 @@ type Account struct {
 
 // BeforeCreate sets the initial balance to current balance on account creation
 func (a *Account) BeforeCreate(tx *gorm.DB) error {
-	if a.ID == uuid.Nil {
-		a.ID = uuid.New()
-	}
 	// Set initial balance to the provided balance on creation
 	if a.InitialBalance == 0 && a.Balance != 0 {
 		a.InitialBalance = a.Balance

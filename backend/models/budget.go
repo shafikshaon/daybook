@@ -3,14 +3,13 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Budget struct {
-	ID              uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	CategoryID      string         `gorm:"not null;index" json:"categoryId" binding:"required"`
+	ID              uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID          uint           `gorm:"not null;index" json:"userId"`
+	CategoryID      uint           `gorm:"not null;index" json:"categoryId" binding:"required"`
 	Amount          float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	Period          string         `gorm:"not null" json:"period" binding:"required"` // weekly, monthly, quarterly, yearly, custom
 	CustomStartDate *time.Time     `gorm:"type:timestamptz" json:"customStartDate"`
@@ -25,8 +24,5 @@ type Budget struct {
 }
 
 func (b *Budget) BeforeCreate(tx *gorm.DB) error {
-	if b.ID == uuid.Nil {
-		b.ID = uuid.New()
-	}
 	return nil
 }

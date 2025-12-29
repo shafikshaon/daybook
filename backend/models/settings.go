@@ -3,13 +3,12 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Settings struct {
-	ID             uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID         uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"userId"`
+	ID             uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID         uint           `gorm:"uniqueIndex;not null" json:"userId"`
 	Currency       string         `gorm:"default:'BDT'" json:"currency"`
 	DarkMode       bool           `gorm:"default:false" json:"darkMode"`
 	DateFormat     string         `gorm:"default:'MM/DD/YYYY'" json:"dateFormat"`
@@ -28,8 +27,5 @@ type Notifications struct {
 }
 
 func (s *Settings) BeforeCreate(tx *gorm.DB) error {
-	if s.ID == uuid.Nil {
-		s.ID = uuid.New()
-	}
 	return nil
 }

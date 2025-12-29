@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -26,7 +25,7 @@ type UserRepository interface {
 	ExistsByUsernameOrEmail(ctx context.Context, username, email string) (bool, error)
 
 	// ExistsByEmail checks if a user exists by email (excluding a specific user ID)
-	ExistsByEmail(ctx context.Context, email string, excludeUserID uuid.UUID) (bool, error)
+	ExistsByEmail(ctx context.Context, email string, excludeUserID uint) (bool, error)
 }
 
 type userRepository struct {
@@ -87,7 +86,7 @@ func (r *userRepository) ExistsByUsernameOrEmail(ctx context.Context, username, 
 }
 
 // ExistsByEmail checks if a user exists by email (excluding a specific user ID)
-func (r *userRepository) ExistsByEmail(ctx context.Context, email string, excludeUserID uuid.UUID) (bool, error) {
+func (r *userRepository) ExistsByEmail(ctx context.Context, email string, excludeUserID uint) (bool, error) {
 	var count int64
 	err := r.db.WithContext(ctx).
 		Model(&models.User{}).

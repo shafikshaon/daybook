@@ -6,13 +6,12 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // ReconciliationFilters represents query filters for reconciliations
 type ReconciliationFilters struct {
-	AccountID *uuid.UUID
+	AccountID *uint
 }
 
 // ReconciliationStats represents reconciliation statistics
@@ -30,22 +29,22 @@ type ReconciliationRepository interface {
 	BaseRepository[models.Reconciliation]
 
 	// FindWithFilters retrieves reconciliations with optional filters
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters ReconciliationFilters) ([]models.Reconciliation, error)
+	FindWithFilters(ctx context.Context, userID uint, filters ReconciliationFilters) ([]models.Reconciliation, error)
 
 	// FindByIDWithPreloads retrieves a reconciliation with all relationships
-	FindByIDWithPreloads(ctx context.Context, id, userID uuid.UUID) (*models.Reconciliation, error)
+	FindByIDWithPreloads(ctx context.Context, id, userID uint) (*models.Reconciliation, error)
 
 	// GetUnreconciledTransactions retrieves unreconciled transactions for an account
-	GetUnreconciledTransactions(ctx context.Context, accountID, userID uuid.UUID) ([]models.Transaction, error)
+	GetUnreconciledTransactions(ctx context.Context, accountID, userID uint) ([]models.Transaction, error)
 
 	// GetStats calculates reconciliation statistics for an account
-	GetStats(ctx context.Context, accountID, userID uuid.UUID) (*ReconciliationStats, error)
+	GetStats(ctx context.Context, accountID, userID uint) (*ReconciliationStats, error)
 
 	// LinkTransactions links transactions to a reconciliation
-	LinkTransactions(ctx context.Context, reconciliationID uuid.UUID, transactionIDs []uuid.UUID) error
+	LinkTransactions(ctx context.Context, reconciliationID uint, transactionIDs []uint) error
 
 	// UnlinkAllTransactions unlinks all transactions from a reconciliation
-	UnlinkAllTransactions(ctx context.Context, reconciliationID uuid.UUID) error
+	UnlinkAllTransactions(ctx context.Context, reconciliationID uint) error
 
 	// CheckColumnExists checks if a column exists in the transactions table
 	CheckColumnExists(ctx context.Context, columnName string) bool
@@ -63,7 +62,7 @@ func NewReconciliationRepository(db *gorm.DB) ReconciliationRepository {
 }
 
 // FindWithFilters retrieves reconciliations with optional filters
-func (r *reconciliationRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters ReconciliationFilters) ([]models.Reconciliation, error) {
+func (r *reconciliationRepository) FindWithFilters(ctx context.Context, userID uint, filters ReconciliationFilters) ([]models.Reconciliation, error) {
 	var reconciliations []models.Reconciliation
 
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID).Preload("Account")
@@ -77,7 +76,7 @@ func (r *reconciliationRepository) FindWithFilters(ctx context.Context, userID u
 }
 
 // FindByIDWithPreloads retrieves a reconciliation with all relationships
-func (r *reconciliationRepository) FindByIDWithPreloads(ctx context.Context, id, userID uuid.UUID) (*models.Reconciliation, error) {
+func (r *reconciliationRepository) FindByIDWithPreloads(ctx context.Context, id, userID uint) (*models.Reconciliation, error) {
 	var reconciliation models.Reconciliation
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", id, userID).
@@ -91,7 +90,7 @@ func (r *reconciliationRepository) FindByIDWithPreloads(ctx context.Context, id,
 }
 
 // GetUnreconciledTransactions retrieves unreconciled transactions for an account
-func (r *reconciliationRepository) GetUnreconciledTransactions(ctx context.Context, accountID, userID uuid.UUID) ([]models.Transaction, error) {
+func (r *reconciliationRepository) GetUnreconciledTransactions(ctx context.Context, accountID, userID uint) ([]models.Transaction, error) {
 	var transactions []models.Transaction
 
 	query := r.db.WithContext(ctx).Where("account_id = ? AND user_id = ?", accountID, userID)
@@ -106,7 +105,7 @@ func (r *reconciliationRepository) GetUnreconciledTransactions(ctx context.Conte
 }
 
 // GetStats calculates reconciliation statistics for an account
-func (r *reconciliationRepository) GetStats(ctx context.Context, accountID, userID uuid.UUID) (*ReconciliationStats, error) {
+func (r *reconciliationRepository) GetStats(ctx context.Context, accountID, userID uint) (*ReconciliationStats, error) {
 	stats := &ReconciliationStats{}
 
 	// Total reconciliations
@@ -152,7 +151,7 @@ func (r *reconciliationRepository) GetStats(ctx context.Context, accountID, user
 }
 
 // LinkTransactions links transactions to a reconciliation
-func (r *reconciliationRepository) LinkTransactions(ctx context.Context, reconciliationID uuid.UUID, transactionIDs []uuid.UUID) error {
+func (r *reconciliationRepository) LinkTransactions(ctx context.Context, reconciliationID uint, transactionIDs []uint) error {
 	for _, transactionID := range transactionIDs {
 		reconciliationTransaction := models.ReconciliationTransaction{
 			ReconciliationID: reconciliationID,
@@ -178,7 +177,7 @@ func (r *reconciliationRepository) LinkTransactions(ctx context.Context, reconci
 }
 
 // UnlinkAllTransactions unlinks all transactions from a reconciliation
-func (r *reconciliationRepository) UnlinkAllTransactions(ctx context.Context, reconciliationID uuid.UUID) error {
+func (r *reconciliationRepository) UnlinkAllTransactions(ctx context.Context, reconciliationID uint) error {
 	// Get all reconciliation transactions
 	var reconciliationTransactions []models.ReconciliationTransaction
 	if err := r.db.WithContext(ctx).
@@ -212,4 +211,11 @@ func (r *reconciliationRepository) CheckColumnExists(ctx context.Context, column
 		columnName,
 	).Scan(&exists)
 	return exists
+}
+
+// WithTx returns a new repository instance using the provided transaction
+func (r *reconciliationRepository) WithTx(tx *gorm.DB) BaseRepository[models.Reconciliation] {
+	return &reconciliationRepository{
+		GormBaseRepository: NewGormBaseRepository[models.Reconciliation](tx),
+	}
 }

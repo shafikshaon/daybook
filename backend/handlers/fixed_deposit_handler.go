@@ -3,6 +3,7 @@ package handlers
 import (
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"daybook-backend/database"
@@ -12,7 +13,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ListFixedDeposits returns all fixed deposits for the authenticated user
@@ -60,12 +60,14 @@ func GetFixedDeposit(c *gin.Context) {
 		return
 	}
 
-	depositID, err := uuid.Parse(c.Param("id"))
+	depositIDStr := c.Param("id")
+	depositIDUint, err := strconv.ParseUint(depositIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "GetFixedDeposit - Invalid fixed deposit ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid fixed deposit ID")
 		return
 	}
+	depositID := uint(depositIDUint)
 
 	logger.Debugf(ctx, "GetFixedDeposit - Fetching fixed deposit: %s for user: %s", depositID, userID)
 
@@ -142,7 +144,7 @@ func CreateFixedDeposit(c *gin.Context) {
 
 	var depositData struct {
 		models.FixedDeposit
-		AccountID uuid.UUID `json:"accountId" binding:"required"`
+		AccountID uint `json:"accountId" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&depositData); err != nil {
@@ -205,7 +207,7 @@ func CreateFixedDeposit(c *gin.Context) {
 		AccountID:      depositData.AccountID,
 		Type:           "expense",
 		Amount:         depositData.Principal,
-		CategoryID:     "fixed_deposit_investment",
+		CategoryID:     0, // Use 0 for system transactions
 		Date:           models.Date{Time: depositData.StartDate},
 		Description:    "Fixed Deposit: " + depositData.Institution + " - " + depositData.AccountNumber,
 		FixedDepositID: &depositData.FixedDeposit.ID,
@@ -256,12 +258,14 @@ func UpdateFixedDeposit(c *gin.Context) {
 		return
 	}
 
-	depositID, err := uuid.Parse(c.Param("id"))
+	depositIDStr := c.Param("id")
+	depositIDUint, err := strconv.ParseUint(depositIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "UpdateFixedDeposit - Invalid fixed deposit ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid fixed deposit ID")
 		return
 	}
+	depositID := uint(depositIDUint)
 
 	logger.Debugf(ctx, "UpdateFixedDeposit - Updating fixed deposit: %s for user: %s", depositID, userID)
 
@@ -335,12 +339,14 @@ func DeleteFixedDeposit(c *gin.Context) {
 		return
 	}
 
-	depositID, err := uuid.Parse(c.Param("id"))
+	depositIDStr := c.Param("id")
+	depositIDUint, err := strconv.ParseUint(depositIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "DeleteFixedDeposit - Invalid fixed deposit ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid fixed deposit ID")
 		return
 	}
+	depositID := uint(depositIDUint)
 
 	logger.Debugf(ctx, "DeleteFixedDeposit - Deleting fixed deposit: %s for user: %s", depositID, userID)
 
@@ -379,15 +385,17 @@ func WithdrawFixedDeposit(c *gin.Context) {
 		return
 	}
 
-	depositID, err := uuid.Parse(c.Param("id"))
+	depositIDStr := c.Param("id")
+	depositIDUint, err := strconv.ParseUint(depositIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "WithdrawFixedDeposit - Invalid fixed deposit ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid fixed deposit ID")
 		return
 	}
+	depositID := uint(depositIDUint)
 
 	var withdrawalData struct {
-		AccountID            uuid.UUID  `json:"accountId" binding:"required"`
+		AccountID            uint       `json:"accountId" binding:"required"`
 		WithdrawnDate        *time.Time `json:"withdrawnDate"`
 		ActualMaturityAmount float64    `json:"actualMaturityAmount" binding:"required,gt=0"`
 	}
@@ -457,7 +465,7 @@ func WithdrawFixedDeposit(c *gin.Context) {
 		AccountID:      withdrawalData.AccountID,
 		Type:           "income",
 		Amount:         withdrawalData.ActualMaturityAmount,
-		CategoryID:     "fixed_deposit_maturity",
+		CategoryID:     0, // Use 0 for system transactions
 		Date:           models.Date{Time: withdrawnDate},
 		Description:    "FD Maturity: " + deposit.Institution + " - " + deposit.AccountNumber,
 		FixedDepositID: &depositID,

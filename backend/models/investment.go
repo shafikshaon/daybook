@@ -3,14 +3,13 @@ package models
 import (
 	"time"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type Investment struct {
-	ID               uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID           uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	PortfolioID      *uuid.UUID     `gorm:"type:uuid;index" json:"portfolioId"`
+	ID               uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID           uint           `gorm:"not null;index" json:"userId"`
+	PortfolioID      *uint          `gorm:"index" json:"portfolioId"`
 	Symbol           string         `gorm:"not null" json:"symbol" binding:"required"`
 	Name             string         `gorm:"not null" json:"name" binding:"required"`
 	AssetType        string         `gorm:"not null" json:"assetType" binding:"required"` // stocks, bonds, mutual_funds, etf, crypto, etc
@@ -27,15 +26,12 @@ type Investment struct {
 }
 
 func (i *Investment) BeforeCreate(tx *gorm.DB) error {
-	if i.ID == uuid.Nil {
-		i.ID = uuid.New()
-	}
 	return nil
 }
 
 type Portfolio struct {
-	ID          uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID      uint           `gorm:"not null;index" json:"userId"`
 	Name        string         `gorm:"not null" json:"name" binding:"required"`
 	Description string         `json:"description"`
 	Type        string         `json:"type"` // retirement, taxable, education, etc
@@ -45,16 +41,13 @@ type Portfolio struct {
 }
 
 func (p *Portfolio) BeforeCreate(tx *gorm.DB) error {
-	if p.ID == uuid.Nil {
-		p.ID = uuid.New()
-	}
 	return nil
 }
 
 type Dividend struct {
-	ID           uuid.UUID      `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID       uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
-	InvestmentID uuid.UUID      `gorm:"type:uuid;not null;index" json:"investmentId"`
+	ID           uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	UserID       uint           `gorm:"not null;index" json:"userId"`
+	InvestmentID uint           `gorm:"not null;index" json:"investmentId"`
 	Amount       float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
 	PaymentDate  time.Time      `gorm:"type:timestamptz;not null" json:"paymentDate"`
 	Reinvested   bool           `gorm:"default:false" json:"reinvested"`
@@ -64,8 +57,5 @@ type Dividend struct {
 }
 
 func (d *Dividend) BeforeCreate(tx *gorm.DB) error {
-	if d.ID == uuid.Nil {
-		d.ID = uuid.New()
-	}
 	return nil
 }

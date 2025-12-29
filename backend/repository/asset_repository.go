@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -31,24 +30,24 @@ type AssetRepository interface {
 	BaseRepository[models.Asset]
 
 	// FindWithFilters retrieves assets with optional filters and preloads
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters AssetFilters) ([]models.Asset, error)
+	FindWithFilters(ctx context.Context, userID uint, filters AssetFilters) ([]models.Asset, error)
 
 	// FindByIDWithPreloads retrieves an asset with all relationships
-	FindByIDWithPreloads(ctx context.Context, assetID, userID uuid.UUID) (*models.Asset, error)
+	FindByIDWithPreloads(ctx context.Context, assetID, userID uint) (*models.Asset, error)
 
 	// GetStats calculates asset statistics
-	GetStats(ctx context.Context, userID uuid.UUID) (*AssetStatsResponse, error)
+	GetStats(ctx context.Context, userID uint) (*AssetStatsResponse, error)
 
 	// Service Record operations
 	CreateServiceRecord(ctx context.Context, record *models.ServiceRecord) error
-	FindServiceRecordsByAsset(ctx context.Context, assetID, userID uuid.UUID) ([]models.ServiceRecord, error)
-	DeleteServiceRecord(ctx context.Context, serviceID, userID uuid.UUID) error
+	FindServiceRecordsByAsset(ctx context.Context, assetID, userID uint) ([]models.ServiceRecord, error)
+	DeleteServiceRecord(ctx context.Context, serviceID, userID uint) error
 
 	// Attachment operations
 	CreateAttachment(ctx context.Context, attachment *models.AssetAttachment) error
-	FindAttachmentsByAsset(ctx context.Context, assetID, userID uuid.UUID) ([]models.AssetAttachment, error)
-	FindAttachmentByID(ctx context.Context, attachmentID, userID uuid.UUID) (*models.AssetAttachment, error)
-	DeleteAttachment(ctx context.Context, attachmentID, userID uuid.UUID) error
+	FindAttachmentsByAsset(ctx context.Context, assetID, userID uint) ([]models.AssetAttachment, error)
+	FindAttachmentByID(ctx context.Context, attachmentID, userID uint) (*models.AssetAttachment, error)
+	DeleteAttachment(ctx context.Context, attachmentID, userID uint) error
 }
 
 type assetRepository struct {
@@ -63,7 +62,7 @@ func NewAssetRepository(db *gorm.DB) AssetRepository {
 }
 
 // FindWithFilters retrieves assets with optional filters and preloads
-func (r *assetRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters AssetFilters) ([]models.Asset, error) {
+func (r *assetRepository) FindWithFilters(ctx context.Context, userID uint, filters AssetFilters) ([]models.Asset, error) {
 	var assets []models.Asset
 
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
@@ -83,7 +82,7 @@ func (r *assetRepository) FindWithFilters(ctx context.Context, userID uuid.UUID,
 }
 
 // FindByIDWithPreloads retrieves an asset with all relationships
-func (r *assetRepository) FindByIDWithPreloads(ctx context.Context, assetID, userID uuid.UUID) (*models.Asset, error) {
+func (r *assetRepository) FindByIDWithPreloads(ctx context.Context, assetID, userID uint) (*models.Asset, error) {
 	var asset models.Asset
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", assetID, userID).
@@ -99,7 +98,7 @@ func (r *assetRepository) FindByIDWithPreloads(ctx context.Context, assetID, use
 }
 
 // GetStats calculates asset statistics
-func (r *assetRepository) GetStats(ctx context.Context, userID uuid.UUID) (*AssetStatsResponse, error) {
+func (r *assetRepository) GetStats(ctx context.Context, userID uint) (*AssetStatsResponse, error) {
 	stats := &AssetStatsResponse{}
 
 	// Total assets
@@ -156,7 +155,7 @@ func (r *assetRepository) CreateServiceRecord(ctx context.Context, record *model
 }
 
 // FindServiceRecordsByAsset retrieves all service records for an asset
-func (r *assetRepository) FindServiceRecordsByAsset(ctx context.Context, assetID, userID uuid.UUID) ([]models.ServiceRecord, error) {
+func (r *assetRepository) FindServiceRecordsByAsset(ctx context.Context, assetID, userID uint) ([]models.ServiceRecord, error) {
 	var records []models.ServiceRecord
 	err := r.db.WithContext(ctx).
 		Where("asset_id = ? AND user_id = ?", assetID, userID).
@@ -166,7 +165,7 @@ func (r *assetRepository) FindServiceRecordsByAsset(ctx context.Context, assetID
 }
 
 // DeleteServiceRecord deletes a service record
-func (r *assetRepository) DeleteServiceRecord(ctx context.Context, serviceID, userID uuid.UUID) error {
+func (r *assetRepository) DeleteServiceRecord(ctx context.Context, serviceID, userID uint) error {
 	return r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", serviceID, userID).
 		Delete(&models.ServiceRecord{}).Error
@@ -178,7 +177,7 @@ func (r *assetRepository) CreateAttachment(ctx context.Context, attachment *mode
 }
 
 // FindAttachmentsByAsset retrieves all attachments for an asset
-func (r *assetRepository) FindAttachmentsByAsset(ctx context.Context, assetID, userID uuid.UUID) ([]models.AssetAttachment, error) {
+func (r *assetRepository) FindAttachmentsByAsset(ctx context.Context, assetID, userID uint) ([]models.AssetAttachment, error) {
 	var attachments []models.AssetAttachment
 	err := r.db.WithContext(ctx).
 		Where("asset_id = ? AND user_id = ?", assetID, userID).
@@ -188,7 +187,7 @@ func (r *assetRepository) FindAttachmentsByAsset(ctx context.Context, assetID, u
 }
 
 // FindAttachmentByID retrieves a specific attachment
-func (r *assetRepository) FindAttachmentByID(ctx context.Context, attachmentID, userID uuid.UUID) (*models.AssetAttachment, error) {
+func (r *assetRepository) FindAttachmentByID(ctx context.Context, attachmentID, userID uint) (*models.AssetAttachment, error) {
 	var attachment models.AssetAttachment
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", attachmentID, userID).
@@ -200,7 +199,7 @@ func (r *assetRepository) FindAttachmentByID(ctx context.Context, attachmentID, 
 }
 
 // DeleteAttachment deletes an attachment
-func (r *assetRepository) DeleteAttachment(ctx context.Context, attachmentID, userID uuid.UUID) error {
+func (r *assetRepository) DeleteAttachment(ctx context.Context, attachmentID, userID uint) error {
 	return r.db.WithContext(ctx).
 		Where("id = ? AND user_id = ?", attachmentID, userID).
 		Delete(&models.AssetAttachment{}).Error

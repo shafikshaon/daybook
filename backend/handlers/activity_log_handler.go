@@ -12,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ListActivityLogs returns all activity logs for the authenticated user with filtering
@@ -108,11 +107,13 @@ func GetActivityLog(c *gin.Context) {
 		return
 	}
 
-	logID, err := uuid.Parse(c.Param("id"))
+	logIDStr := c.Param("id")
+	logIDUint, err := strconv.ParseUint(logIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid log ID")
 		return
 	}
+	logID := uint(logIDUint)
 
 	logger.Debugf(ctx, "Fetching activity log with ID: %s", logID)
 	var activityLog models.ActivityLog

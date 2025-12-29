@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type GoalHandler struct {
@@ -76,12 +76,14 @@ func (h *GoalHandler) GetGoal(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "GetGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "GetGoal - Fetching goal: %s", goalID)
 
@@ -144,12 +146,14 @@ func (h *GoalHandler) UpdateGoal(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "UpdateGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "UpdateGoal - Updating goal: %s", goalID)
 
@@ -184,12 +188,14 @@ func (h *GoalHandler) DeleteGoal(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "DeleteGoal - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "DeleteGoal - Deleting goal: %s", goalID)
 
@@ -216,12 +222,14 @@ func (h *GoalHandler) AddHolding(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	goalID, err := uuid.Parse(c.Param("id"))
+	goalIDStr := c.Param("id")
+	goalIDUint, err := strconv.ParseUint(goalIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "AddHolding - Invalid goal ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid goal ID")
 		return
 	}
+	goalID := uint(goalIDUint)
 
 	logger.Debugf(ctx, "AddHolding - Adding holding to goal: %s", goalID)
 
@@ -256,12 +264,14 @@ func (h *GoalHandler) UpdateHolding(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	holdingID, err := uuid.Parse(c.Param("holdingId"))
+	holdingIDStr := c.Param("holdingId")
+	holdingIDUint, err := strconv.ParseUint(holdingIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "UpdateHolding - Invalid holding ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid holding ID")
 		return
 	}
+	holdingID := uint(holdingIDUint)
 
 	logger.Debugf(ctx, "UpdateHolding - Updating holding: %s", holdingID)
 
@@ -296,12 +306,14 @@ func (h *GoalHandler) RemoveHolding(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	holdingID, err := uuid.Parse(c.Param("holdingId"))
+	holdingIDStr := c.Param("holdingId")
+	holdingIDUint, err := strconv.ParseUint(holdingIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "RemoveHolding - Invalid holding ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid holding ID")
 		return
 	}
+	holdingID := uint(holdingIDUint)
 
 	logger.Debugf(ctx, "RemoveHolding - Removing holding: %s", holdingID)
 

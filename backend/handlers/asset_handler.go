@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"daybook-backend/logger"
 	"daybook-backend/middleware"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type AssetHandler struct {
@@ -69,11 +69,13 @@ func (h *AssetHandler) GetAsset(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	logger.Debugf(ctx, "Fetching asset with ID: %s", assetID)
 	asset, err := h.service.GetAsset(ctx, assetID, userID)
@@ -137,11 +139,13 @@ func (h *AssetHandler) UpdateAsset(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	var updateData models.Asset
 	if err := c.ShouldBindJSON(&updateData); err != nil {
@@ -173,11 +177,13 @@ func (h *AssetHandler) DeleteAsset(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	logger.Debugf(ctx, "Deleting asset with ID: %s", assetID)
 	if err := h.service.DeleteAsset(ctx, assetID, userID); err != nil {
@@ -202,11 +208,13 @@ func (h *AssetHandler) CreateServiceRecord(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	var serviceRecord models.ServiceRecord
 	if err := c.ShouldBindJSON(&serviceRecord); err != nil {
@@ -247,11 +255,13 @@ func (h *AssetHandler) ListServiceRecords(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	logger.Debugf(ctx, "Fetching service records for asset ID: %s", assetID)
 	serviceRecords, err := h.service.ListServiceRecords(ctx, assetID, userID)
@@ -277,11 +287,13 @@ func (h *AssetHandler) DeleteServiceRecord(c *gin.Context) {
 		return
 	}
 
-	serviceID, err := uuid.Parse(c.Param("serviceId"))
+	serviceIDStr := c.Param("serviceId")
+	serviceIDUint, err := strconv.ParseUint(serviceIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid service record ID")
 		return
 	}
+	serviceID := uint(serviceIDUint)
 
 	logger.Debugf(ctx, "Deleting service record with ID: %s", serviceID)
 	if err := h.service.DeleteServiceRecord(ctx, serviceID, userID); err != nil {
@@ -306,11 +318,13 @@ func (h *AssetHandler) AddAttachment(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	var attachment models.AssetAttachment
 	if err := c.ShouldBindJSON(&attachment); err != nil {
@@ -345,11 +359,13 @@ func (h *AssetHandler) ListAttachments(c *gin.Context) {
 		return
 	}
 
-	assetID, err := uuid.Parse(c.Param("id"))
+	assetIDStr := c.Param("id")
+	assetIDUint, err := strconv.ParseUint(assetIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid asset ID")
 		return
 	}
+	assetID := uint(assetIDUint)
 
 	logger.Debugf(ctx, "Fetching attachments for asset ID: %s", assetID)
 	attachments, err := h.service.ListAttachments(ctx, assetID, userID)
@@ -375,11 +391,13 @@ func (h *AssetHandler) DeleteAttachment(c *gin.Context) {
 		return
 	}
 
-	attachmentID, err := uuid.Parse(c.Param("attachmentId"))
+	attachmentIDStr := c.Param("attachmentId")
+	attachmentIDUint, err := strconv.ParseUint(attachmentIDStr, 10, 32)
 	if err != nil {
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid attachment ID")
 		return
 	}
+	attachmentID := uint(attachmentIDUint)
 
 	logger.Debugf(ctx, "Deleting attachment with ID: %s", attachmentID)
 	if err := h.service.DeleteAttachment(ctx, attachmentID, userID); err != nil {

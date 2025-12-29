@@ -7,26 +7,25 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // AccountService handles account business logic
 type AccountService interface {
 	// ListAccounts retrieves all accounts for a user
-	ListAccounts(ctx context.Context, userID uuid.UUID) ([]models.Account, error)
+	ListAccounts(ctx context.Context, userID uint) ([]models.Account, error)
 
 	// GetAccount retrieves a specific account by ID
-	GetAccount(ctx context.Context, accountID, userID uuid.UUID) (*models.Account, error)
+	GetAccount(ctx context.Context, accountID, userID uint) (*models.Account, error)
 
 	// CreateAccount creates a new account with optional opening balance transaction
 	CreateAccount(ctx context.Context, account *models.Account) (*models.Account, error)
 
 	// UpdateAccount updates an existing account
-	UpdateAccount(ctx context.Context, accountID, userID uuid.UUID, updateData *models.Account) (*models.Account, error)
+	UpdateAccount(ctx context.Context, accountID, userID uint, updateData *models.Account) (*models.Account, error)
 
 	// DeleteAccount deletes an account
-	DeleteAccount(ctx context.Context, accountID, userID uuid.UUID) error
+	DeleteAccount(ctx context.Context, accountID, userID uint) error
 }
 
 type accountService struct {
@@ -52,12 +51,12 @@ func NewAccountService(
 }
 
 // ListAccounts retrieves all accounts
-func (s *accountService) ListAccounts(ctx context.Context, userID uuid.UUID) ([]models.Account, error) {
+func (s *accountService) ListAccounts(ctx context.Context, userID uint) ([]models.Account, error) {
 	return s.accountRepo.FindAll(ctx, userID)
 }
 
 // GetAccount retrieves a specific account
-func (s *accountService) GetAccount(ctx context.Context, accountID, userID uuid.UUID) (*models.Account, error) {
+func (s *accountService) GetAccount(ctx context.Context, accountID, userID uint) (*models.Account, error) {
 	return s.accountRepo.FindByID(ctx, accountID, userID)
 }
 
@@ -112,7 +111,7 @@ func (s *accountService) CreateAccount(ctx context.Context, account *models.Acco
 				UserID:      account.UserID,
 				AccountID:   account.ID,
 				Type:        "income",
-				CategoryID:  openingBalanceCategory.ID.String(),
+				CategoryID:  openingBalanceCategory.ID,
 				Amount:      account.InitialBalance,
 				Date:        models.Date{Time: account.CreatedAt},
 				Description: "Opening balance for " + account.Name,
@@ -145,7 +144,7 @@ func (s *accountService) CreateAccount(ctx context.Context, account *models.Acco
 }
 
 // UpdateAccount updates an existing account
-func (s *accountService) UpdateAccount(ctx context.Context, accountID, userID uuid.UUID, updateData *models.Account) (*models.Account, error) {
+func (s *accountService) UpdateAccount(ctx context.Context, accountID, userID uint, updateData *models.Account) (*models.Account, error) {
 	// Fetch existing account
 	existing, err := s.accountRepo.FindByID(ctx, accountID, userID)
 	if err != nil {
@@ -192,7 +191,7 @@ func (s *accountService) UpdateAccount(ctx context.Context, accountID, userID uu
 }
 
 // DeleteAccount deletes an account
-func (s *accountService) DeleteAccount(ctx context.Context, accountID, userID uuid.UUID) error {
+func (s *accountService) DeleteAccount(ctx context.Context, accountID, userID uint) error {
 	// Fetch the account to get its name
 	account, err := s.accountRepo.FindByID(ctx, accountID, userID)
 	if err != nil {

@@ -6,8 +6,6 @@ import (
 
 	"daybook-backend/models"
 	"daybook-backend/repository"
-
-	"github.com/google/uuid"
 )
 
 // ActivityLogService handles activity logging business logic
@@ -17,25 +15,25 @@ type ActivityLogService interface {
 	LogActivity(ctx context.Context, params ActivityLogParams) error
 
 	// LogEntityActivity logs an activity for a specific entity
-	LogEntityActivity(ctx context.Context, userID uuid.UUID, action, module, entityType string, entityID uuid.UUID, description string, metadata map[string]interface{}) error
+	LogEntityActivity(ctx context.Context, userID uint, action, module, entityType string, entityID uint, description string, metadata map[string]interface{}) error
 
 	// LogAuthActivity logs authentication-related activities
-	LogAuthActivity(ctx context.Context, userID uuid.UUID, action, description string) error
+	LogAuthActivity(ctx context.Context, userID uint, action, description string) error
 
 	// GetRecentLogs retrieves recent activity logs for a user
-	GetRecentLogs(ctx context.Context, userID uuid.UUID, limit int) ([]models.ActivityLog, error)
+	GetRecentLogs(ctx context.Context, userID uint, limit int) ([]models.ActivityLog, error)
 
 	// GetLogsByModule retrieves logs filtered by module
-	GetLogsByModule(ctx context.Context, userID uuid.UUID, module string, limit int) ([]models.ActivityLog, error)
+	GetLogsByModule(ctx context.Context, userID uint, module string, limit int) ([]models.ActivityLog, error)
 }
 
 // ActivityLogParams contains parameters for logging an activity
 type ActivityLogParams struct {
-	UserID      uuid.UUID
+	UserID      uint
 	Action      string
 	Module      string
 	EntityType  string
-	EntityID    *uuid.UUID
+	EntityID    *uint
 	Description string
 	IPAddress   string
 	UserAgent   string
@@ -89,7 +87,7 @@ func (s *activityLogService) LogActivity(ctx context.Context, params ActivityLog
 }
 
 // LogEntityActivity logs an activity for a specific entity
-func (s *activityLogService) LogEntityActivity(ctx context.Context, userID uuid.UUID, action, module, entityType string, entityID uuid.UUID, description string, metadata map[string]interface{}) error {
+func (s *activityLogService) LogEntityActivity(ctx context.Context, userID uint, action, module, entityType string, entityID uint, description string, metadata map[string]interface{}) error {
 	return s.LogActivity(ctx, ActivityLogParams{
 		UserID:      userID,
 		Action:      action,
@@ -102,7 +100,7 @@ func (s *activityLogService) LogEntityActivity(ctx context.Context, userID uuid.
 }
 
 // LogAuthActivity logs authentication-related activities
-func (s *activityLogService) LogAuthActivity(ctx context.Context, userID uuid.UUID, action, description string) error {
+func (s *activityLogService) LogAuthActivity(ctx context.Context, userID uint, action, description string) error {
 	return s.LogActivity(ctx, ActivityLogParams{
 		UserID:      userID,
 		Action:      action,
@@ -114,11 +112,11 @@ func (s *activityLogService) LogAuthActivity(ctx context.Context, userID uuid.UU
 }
 
 // GetRecentLogs retrieves recent activity logs for a user
-func (s *activityLogService) GetRecentLogs(ctx context.Context, userID uuid.UUID, limit int) ([]models.ActivityLog, error) {
+func (s *activityLogService) GetRecentLogs(ctx context.Context, userID uint, limit int) ([]models.ActivityLog, error) {
 	return s.repo.FindRecent(ctx, userID, limit)
 }
 
 // GetLogsByModule retrieves logs filtered by module
-func (s *activityLogService) GetLogsByModule(ctx context.Context, userID uuid.UUID, module string, limit int) ([]models.ActivityLog, error) {
+func (s *activityLogService) GetLogsByModule(ctx context.Context, userID uint, module string, limit int) ([]models.ActivityLog, error) {
 	return s.repo.FindByModule(ctx, userID, module, limit)
 }

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"daybook-backend/database"
@@ -11,7 +12,6 @@ import (
 	"daybook-backend/utilities"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ListInvestments returns all investments for the authenticated user
@@ -65,12 +65,14 @@ func GetInvestment(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	investmentID, err := uuid.Parse(c.Param("id"))
+	investmentIDStr := c.Param("id")
+	investmentIDUint, err := strconv.ParseUint(investmentIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "GetInvestment - Invalid investment ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid investment ID")
 		return
 	}
+	investmentID := uint(investmentIDUint)
 
 	logger.Debugf(ctx, "GetInvestment - Fetching investment: %s", investmentID)
 
@@ -148,12 +150,14 @@ func UpdateInvestment(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	investmentID, err := uuid.Parse(c.Param("id"))
+	investmentIDStr := c.Param("id")
+	investmentIDUint, err := strconv.ParseUint(investmentIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "UpdateInvestment - Invalid investment ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid investment ID")
 		return
 	}
+	investmentID := uint(investmentIDUint)
 
 	logger.Debugf(ctx, "UpdateInvestment - Updating investment: %s", investmentID)
 
@@ -210,12 +214,14 @@ func DeleteInvestment(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	investmentID, err := uuid.Parse(c.Param("id"))
+	investmentIDStr := c.Param("id")
+	investmentIDUint, err := strconv.ParseUint(investmentIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "DeleteInvestment - Invalid investment ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid investment ID")
 		return
 	}
+	investmentID := uint(investmentIDUint)
 
 	logger.Debugf(ctx, "DeleteInvestment - Deleting investment: %s", investmentID)
 
@@ -254,12 +260,14 @@ func BuyShares(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	investmentID, err := uuid.Parse(c.Param("id"))
+	investmentIDStr := c.Param("id")
+	investmentIDUint, err := strconv.ParseUint(investmentIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "BuyShares - Invalid investment ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid investment ID")
 		return
 	}
+	investmentID := uint(investmentIDUint)
 
 	var buyData struct {
 		Quantity float64 `json:"quantity" binding:"required,gt=0"`
@@ -319,12 +327,14 @@ func SellShares(c *gin.Context) {
 	}
 
 	ctx = middleware.GetContextWithUserID(c)
-	investmentID, err := uuid.Parse(c.Param("id"))
+	investmentIDStr := c.Param("id")
+	investmentIDUint, err := strconv.ParseUint(investmentIDStr, 10, 32)
 	if err != nil {
 		logger.Warnf(ctx, "SellShares - Invalid investment ID: %v", err)
 		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid investment ID")
 		return
 	}
+	investmentID := uint(investmentIDUint)
 
 	var sellData struct {
 		Quantity float64 `json:"quantity" binding:"required,gt=0"`

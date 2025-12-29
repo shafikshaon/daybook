@@ -8,18 +8,17 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // RecurringTransactionService defines business logic for recurring transactions
 type RecurringTransactionService interface {
-	ListRecurringTransactions(ctx context.Context, userID uuid.UUID) ([]models.RecurringTransaction, error)
-	GetRecurringTransaction(ctx context.Context, id, userID uuid.UUID) (*models.RecurringTransaction, error)
+	ListRecurringTransactions(ctx context.Context, userID uint) ([]models.RecurringTransaction, error)
+	GetRecurringTransaction(ctx context.Context, id, userID uint) (*models.RecurringTransaction, error)
 	CreateRecurringTransaction(ctx context.Context, recurringTransaction *models.RecurringTransaction) (*models.RecurringTransaction, error)
-	UpdateRecurringTransaction(ctx context.Context, id, userID uuid.UUID, updateData *models.RecurringTransaction) (*models.RecurringTransaction, error)
-	DeleteRecurringTransaction(ctx context.Context, id, userID uuid.UUID) error
-	ProcessRecurringTransactions(ctx context.Context, userID uuid.UUID) (*ProcessRecurringResult, error)
+	UpdateRecurringTransaction(ctx context.Context, id, userID uint, updateData *models.RecurringTransaction) (*models.RecurringTransaction, error)
+	DeleteRecurringTransaction(ctx context.Context, id, userID uint) error
+	ProcessRecurringTransactions(ctx context.Context, userID uint) (*ProcessRecurringResult, error)
 }
 
 type recurringTransactionService struct {
@@ -56,25 +55,25 @@ func NewRecurringTransactionService(
 }
 
 // ListRecurringTransactions retrieves all recurring transactions for a user
-func (s *recurringTransactionService) ListRecurringTransactions(ctx context.Context, userID uuid.UUID) ([]models.RecurringTransaction, error) {
+func (s *recurringTransactionService) ListRecurringTransactions(ctx context.Context, userID uint) ([]models.RecurringTransaction, error) {
 	return s.repo.FindAll(ctx, userID)
 }
 
 // GetRecurringTransaction retrieves a specific recurring transaction
-func (s *recurringTransactionService) GetRecurringTransaction(ctx context.Context, id, userID uuid.UUID) (*models.RecurringTransaction, error) {
+func (s *recurringTransactionService) GetRecurringTransaction(ctx context.Context, id, userID uint) (*models.RecurringTransaction, error) {
 	return s.repo.FindByID(ctx, id, userID)
 }
 
 // CreateRecurringTransaction creates a new recurring transaction with validation
 func (s *recurringTransactionService) CreateRecurringTransaction(ctx context.Context, recurringTransaction *models.RecurringTransaction) (*models.RecurringTransaction, error) {
 	// Validate required UUID fields
-	if recurringTransaction.TransactionTemplate.AccountID == uuid.Nil {
+	if recurringTransaction.TransactionTemplate.AccountID == 0 {
 		return nil, errors.New("account ID is required")
 	}
 
 	// Validate transfer-specific requirements
 	if recurringTransaction.TransactionTemplate.Type == "transfer" {
-		if recurringTransaction.TransactionTemplate.ToAccountID == nil || *recurringTransaction.TransactionTemplate.ToAccountID == uuid.Nil {
+		if recurringTransaction.TransactionTemplate.ToAccountID == nil || *recurringTransaction.TransactionTemplate.ToAccountID == 0 {
 			return nil, errors.New("to account ID is required for transfers")
 		}
 	}
@@ -118,7 +117,7 @@ func (s *recurringTransactionService) CreateRecurringTransaction(ctx context.Con
 }
 
 // UpdateRecurringTransaction updates an existing recurring transaction
-func (s *recurringTransactionService) UpdateRecurringTransaction(ctx context.Context, id, userID uuid.UUID, updateData *models.RecurringTransaction) (*models.RecurringTransaction, error) {
+func (s *recurringTransactionService) UpdateRecurringTransaction(ctx context.Context, id, userID uint, updateData *models.RecurringTransaction) (*models.RecurringTransaction, error) {
 	// Fetch existing recurring transaction
 	existing, err := s.repo.FindByID(ctx, id, userID)
 	if err != nil {
@@ -126,13 +125,13 @@ func (s *recurringTransactionService) UpdateRecurringTransaction(ctx context.Con
 	}
 
 	// Validate required UUID fields
-	if updateData.TransactionTemplate.AccountID == uuid.Nil {
+	if updateData.TransactionTemplate.AccountID == 0 {
 		return nil, errors.New("account ID is required")
 	}
 
 	// Validate transfer-specific requirements
 	if updateData.TransactionTemplate.Type == "transfer" {
-		if updateData.TransactionTemplate.ToAccountID == nil || *updateData.TransactionTemplate.ToAccountID == uuid.Nil {
+		if updateData.TransactionTemplate.ToAccountID == nil || *updateData.TransactionTemplate.ToAccountID == 0 {
 			return nil, errors.New("to account ID is required for transfers")
 		}
 	}
@@ -171,7 +170,7 @@ func (s *recurringTransactionService) UpdateRecurringTransaction(ctx context.Con
 }
 
 // DeleteRecurringTransaction deletes a recurring transaction
-func (s *recurringTransactionService) DeleteRecurringTransaction(ctx context.Context, id, userID uuid.UUID) error {
+func (s *recurringTransactionService) DeleteRecurringTransaction(ctx context.Context, id, userID uint) error {
 	// Fetch the recurring transaction to get description for logging
 	recurringTransaction, err := s.repo.FindByID(ctx, id, userID)
 	if err != nil {
@@ -197,7 +196,7 @@ func (s *recurringTransactionService) DeleteRecurringTransaction(ctx context.Con
 }
 
 // ProcessRecurringTransactions generates missing transactions for all enabled recurring transactions
-func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.Context, userID uuid.UUID) (*ProcessRecurringResult, error) {
+func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.Context, userID uint) (*ProcessRecurringResult, error) {
 	// Get all enabled recurring transactions for the user
 	recurringTransactions, err := s.repo.FindEnabled(ctx, userID)
 	if err != nil {

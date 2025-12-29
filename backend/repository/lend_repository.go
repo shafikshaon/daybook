@@ -5,7 +5,6 @@ import (
 
 	"daybook-backend/models"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -19,16 +18,16 @@ type LendRepository interface {
 	BaseRepository[models.LendRecord]
 
 	// FindWithFilters retrieves lends with optional filters
-	FindWithFilters(ctx context.Context, userID uuid.UUID, filters LendFilters) ([]models.LendRecord, error)
+	FindWithFilters(ctx context.Context, userID uint, filters LendFilters) ([]models.LendRecord, error)
 
 	// FindPaymentsByLend retrieves all payments for a specific lend
-	FindPaymentsByLend(ctx context.Context, lendID, userID uuid.UUID) ([]models.LendPayment, error)
+	FindPaymentsByLend(ctx context.Context, lendID, userID uint) ([]models.LendPayment, error)
 
 	// CreatePayment creates a new lend payment record
 	CreatePayment(ctx context.Context, payment *models.LendPayment) error
 
 	// GetAccountName retrieves the account name by ID
-	GetAccountName(ctx context.Context, accountID uuid.UUID) (string, error)
+	GetAccountName(ctx context.Context, accountID uint) (string, error)
 }
 
 type lendRepository struct {
@@ -43,7 +42,7 @@ func NewLendRepository(db *gorm.DB) LendRepository {
 }
 
 // FindWithFilters retrieves lends with optional filters
-func (r *lendRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, filters LendFilters) ([]models.LendRecord, error) {
+func (r *lendRepository) FindWithFilters(ctx context.Context, userID uint, filters LendFilters) ([]models.LendRecord, error) {
 	var lends []models.LendRecord
 
 	query := r.db.WithContext(ctx).Where("user_id = ?", userID)
@@ -57,7 +56,7 @@ func (r *lendRepository) FindWithFilters(ctx context.Context, userID uuid.UUID, 
 }
 
 // FindPaymentsByLend retrieves all payments for a specific lend
-func (r *lendRepository) FindPaymentsByLend(ctx context.Context, lendID, userID uuid.UUID) ([]models.LendPayment, error) {
+func (r *lendRepository) FindPaymentsByLend(ctx context.Context, lendID, userID uint) ([]models.LendPayment, error) {
 	var payments []models.LendPayment
 	err := r.db.WithContext(ctx).
 		Where("lend_id = ? AND user_id = ?", lendID, userID).
@@ -72,7 +71,7 @@ func (r *lendRepository) CreatePayment(ctx context.Context, payment *models.Lend
 }
 
 // GetAccountName retrieves the account name by ID
-func (r *lendRepository) GetAccountName(ctx context.Context, accountID uuid.UUID) (string, error) {
+func (r *lendRepository) GetAccountName(ctx context.Context, accountID uint) (string, error) {
 	var account models.Account
 	err := r.db.WithContext(ctx).Select("name").Where("id = ?", accountID).First(&account).Error
 	if err != nil {

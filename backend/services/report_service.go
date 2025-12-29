@@ -6,40 +6,38 @@ import (
 	"time"
 
 	"daybook-backend/repository"
-
-	"github.com/google/uuid"
 )
 
 // ReportService defines business logic for reports
 type ReportService interface {
 	// Dashboard Summary
-	GetDashboardSummary(ctx context.Context, userID uuid.UUID) (*DashboardSummary, error)
+	GetDashboardSummary(ctx context.Context, userID uint) (*DashboardSummary, error)
 
 	// Income vs Expense
-	GetIncomeExpenseReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*IncomeExpenseReport, error)
+	GetIncomeExpenseReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*IncomeExpenseReport, error)
 
 	// Category Analysis
-	GetCategoryAnalysis(ctx context.Context, userID uuid.UUID, req *CategoryAnalysisRequest) (*CategoryAnalysisReport, error)
+	GetCategoryAnalysis(ctx context.Context, userID uint, req *CategoryAnalysisRequest) (*CategoryAnalysisReport, error)
 
 	// Account Reports
-	GetAccountReport(ctx context.Context, userID uuid.UUID) (*AccountReport, error)
-	GetAccountBalanceHistory(ctx context.Context, userID uuid.UUID, accountID uuid.UUID, req *TimeRangeRequest) (*AccountHistoryReport, error)
+	GetAccountReport(ctx context.Context, userID uint) (*AccountReport, error)
+	GetAccountBalanceHistory(ctx context.Context, userID uint, accountID uint, req *TimeRangeRequest) (*AccountHistoryReport, error)
 
 	// Net Worth
-	GetNetWorthReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*NetWorthReport, error)
+	GetNetWorthReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*NetWorthReport, error)
 
 	// Budget Reports
-	GetBudgetReport(ctx context.Context, userID uuid.UUID, month time.Time) (*BudgetReport, error)
+	GetBudgetReport(ctx context.Context, userID uint, month time.Time) (*BudgetReport, error)
 
 	// Cash Flow
-	GetCashFlowReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*CashFlowReport, error)
+	GetCashFlowReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*CashFlowReport, error)
 
 	// Period Summaries
-	GetMonthlySummary(ctx context.Context, userID uuid.UUID, month time.Time) (*PeriodSummaryReport, error)
-	GetYearlySummary(ctx context.Context, userID uuid.UUID, year int) (*PeriodSummaryReport, error)
+	GetMonthlySummary(ctx context.Context, userID uint, month time.Time) (*PeriodSummaryReport, error)
+	GetYearlySummary(ctx context.Context, userID uint, year int) (*PeriodSummaryReport, error)
 
 	// Comparisons
-	GetPeriodComparison(ctx context.Context, userID uuid.UUID, req *ComparisonRequest) (*ComparisonReport, error)
+	GetPeriodComparison(ctx context.Context, userID uint, req *ComparisonRequest) (*ComparisonReport, error)
 }
 
 // Request/Response structures
@@ -101,7 +99,7 @@ type AccountReport struct {
 }
 
 type AccountHistoryReport struct {
-	AccountID   uuid.UUID                   `json:"accountId"`
+	AccountID   uint                        `json:"accountId"`
 	AccountName string                      `json:"accountName"`
 	History     []repository.BalanceHistory `json:"history"`
 	StartDate   time.Time                   `json:"startDate"`
@@ -149,7 +147,7 @@ func NewReportService(repo repository.ReportRepository) ReportService {
 }
 
 // GetDashboardSummary retrieves dashboard summary with key metrics
-func (s *reportService) GetDashboardSummary(ctx context.Context, userID uuid.UUID) (*DashboardSummary, error) {
+func (s *reportService) GetDashboardSummary(ctx context.Context, userID uint) (*DashboardSummary, error) {
 	summary := &DashboardSummary{}
 
 	now := time.Now()
@@ -214,7 +212,7 @@ func (s *reportService) GetDashboardSummary(ctx context.Context, userID uuid.UUI
 }
 
 // GetIncomeExpenseReport retrieves income vs expense report with trends
-func (s *reportService) GetIncomeExpenseReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*IncomeExpenseReport, error) {
+func (s *reportService) GetIncomeExpenseReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*IncomeExpenseReport, error) {
 	report := &IncomeExpenseReport{
 		Period: fmt.Sprintf("%s to %s", req.StartDate.Format("2006-01-02"), req.EndDate.Format("2006-01-02")),
 	}
@@ -242,7 +240,7 @@ func (s *reportService) GetIncomeExpenseReport(ctx context.Context, userID uuid.
 }
 
 // GetCategoryAnalysis retrieves category-wise analysis
-func (s *reportService) GetCategoryAnalysis(ctx context.Context, userID uuid.UUID, req *CategoryAnalysisRequest) (*CategoryAnalysisReport, error) {
+func (s *reportService) GetCategoryAnalysis(ctx context.Context, userID uint, req *CategoryAnalysisRequest) (*CategoryAnalysisReport, error) {
 	report := &CategoryAnalysisReport{
 		Type:   req.Type,
 		Period: fmt.Sprintf("%s to %s", req.StartDate.Format("2006-01-02"), req.EndDate.Format("2006-01-02")),
@@ -272,7 +270,7 @@ func (s *reportService) GetCategoryAnalysis(ctx context.Context, userID uuid.UUI
 }
 
 // GetAccountReport retrieves account balances report
-func (s *reportService) GetAccountReport(ctx context.Context, userID uuid.UUID) (*AccountReport, error) {
+func (s *reportService) GetAccountReport(ctx context.Context, userID uint) (*AccountReport, error) {
 	report := &AccountReport{}
 
 	balances, err := s.repo.GetAccountBalances(ctx, userID)
@@ -294,7 +292,7 @@ func (s *reportService) GetAccountReport(ctx context.Context, userID uuid.UUID) 
 }
 
 // GetAccountBalanceHistory retrieves balance history for an account
-func (s *reportService) GetAccountBalanceHistory(ctx context.Context, userID uuid.UUID, accountID uuid.UUID, req *TimeRangeRequest) (*AccountHistoryReport, error) {
+func (s *reportService) GetAccountBalanceHistory(ctx context.Context, userID uint, accountID uint, req *TimeRangeRequest) (*AccountHistoryReport, error) {
 	report := &AccountHistoryReport{
 		AccountID: accountID,
 		StartDate: req.StartDate,
@@ -327,7 +325,7 @@ func (s *reportService) GetAccountBalanceHistory(ctx context.Context, userID uui
 }
 
 // GetNetWorthReport retrieves net worth report with trend
-func (s *reportService) GetNetWorthReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*NetWorthReport, error) {
+func (s *reportService) GetNetWorthReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*NetWorthReport, error) {
 	report := &NetWorthReport{}
 
 	// Get current net worth
@@ -353,7 +351,7 @@ func (s *reportService) GetNetWorthReport(ctx context.Context, userID uuid.UUID,
 }
 
 // GetBudgetReport retrieves budget performance report
-func (s *reportService) GetBudgetReport(ctx context.Context, userID uuid.UUID, month time.Time) (*BudgetReport, error) {
+func (s *reportService) GetBudgetReport(ctx context.Context, userID uint, month time.Time) (*BudgetReport, error) {
 	report := &BudgetReport{
 		Month: month,
 	}
@@ -387,7 +385,7 @@ func (s *reportService) GetBudgetReport(ctx context.Context, userID uuid.UUID, m
 }
 
 // GetCashFlowReport retrieves cash flow report
-func (s *reportService) GetCashFlowReport(ctx context.Context, userID uuid.UUID, req *TimeRangeRequest) (*CashFlowReport, error) {
+func (s *reportService) GetCashFlowReport(ctx context.Context, userID uint, req *TimeRangeRequest) (*CashFlowReport, error) {
 	report := &CashFlowReport{
 		Period: fmt.Sprintf("%s to %s", req.StartDate.Format("2006-01-02"), req.EndDate.Format("2006-01-02")),
 	}
@@ -399,20 +397,17 @@ func (s *reportService) GetCashFlowReport(ctx context.Context, userID uuid.UUID,
 	}
 	report.Summary = summary
 
-	// Get monthly cash flow if it's a year or multi-month period
-	if req.EndDate.Sub(req.StartDate).Hours() > 30*24 {
-		year := req.StartDate.Year()
-		monthlyCashFlow, err := s.repo.GetCashFlowByMonth(ctx, userID, year)
-		if err == nil {
-			report.MonthlyCashFlow = monthlyCashFlow
-		}
+	// Get monthly cash flow breakdown for the date range
+	monthlyCashFlow, err := s.repo.GetCashFlowByDateRange(ctx, userID, req.StartDate, req.EndDate)
+	if err == nil {
+		report.MonthlyCashFlow = monthlyCashFlow
 	}
 
 	return report, nil
 }
 
 // GetMonthlySummary retrieves monthly summary report
-func (s *reportService) GetMonthlySummary(ctx context.Context, userID uuid.UUID, month time.Time) (*PeriodSummaryReport, error) {
+func (s *reportService) GetMonthlySummary(ctx context.Context, userID uint, month time.Time) (*PeriodSummaryReport, error) {
 	report := &PeriodSummaryReport{}
 
 	summary, err := s.repo.GetMonthlySummary(ctx, userID, month)
@@ -439,7 +434,7 @@ func (s *reportService) GetMonthlySummary(ctx context.Context, userID uuid.UUID,
 }
 
 // GetYearlySummary retrieves yearly summary report
-func (s *reportService) GetYearlySummary(ctx context.Context, userID uuid.UUID, year int) (*PeriodSummaryReport, error) {
+func (s *reportService) GetYearlySummary(ctx context.Context, userID uint, year int) (*PeriodSummaryReport, error) {
 	report := &PeriodSummaryReport{}
 
 	summary, err := s.repo.GetYearlySummary(ctx, userID, year)
@@ -466,7 +461,7 @@ func (s *reportService) GetYearlySummary(ctx context.Context, userID uuid.UUID, 
 }
 
 // GetPeriodComparison retrieves period comparison report with insights
-func (s *reportService) GetPeriodComparison(ctx context.Context, userID uuid.UUID, req *ComparisonRequest) (*ComparisonReport, error) {
+func (s *reportService) GetPeriodComparison(ctx context.Context, userID uint, req *ComparisonRequest) (*ComparisonReport, error) {
 	report := &ComparisonReport{
 		Insights: []string{},
 	}

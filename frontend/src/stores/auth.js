@@ -22,12 +22,16 @@ export const useAuthStore = defineStore('auth', {
         const userStr = localStorage.getItem('auth_user')
 
         if (token && userStr) {
+          // Set token and user from localStorage first
           this.token = token
           this.user = JSON.parse(userStr)
           this.isAuthenticated = true
 
-          // Validate token with backend in background (don't await to avoid blocking)
-          this.validateToken()
+          // Validate token with backend and update user data
+          // If validation fails, it will logout automatically
+          this.validateToken().catch(() => {
+            // Silently catch validation errors - logout is handled in validateToken
+          })
         }
       } catch (error) {
         console.error('Error initializing auth:', error)
@@ -38,12 +42,17 @@ export const useAuthStore = defineStore('auth', {
     async validateToken() {
       try {
         const profileResponse = await apiService.auth.getProfile()
-        this.user = profileResponse.data
-        localStorage.setItem('auth_user', JSON.stringify(this.user))
+        if (profileResponse.data) {
+          this.user = profileResponse.data
+          localStorage.setItem('auth_user', JSON.stringify(this.user))
+        }
       } catch (error) {
-        // Token is invalid, logout
+        // Token is invalid or expired, logout
         console.error('Token validation failed:', error)
-        this.logout()
+        // Only logout if we get a proper error (not network issues during background validation)
+        if (error.response?.status === 401) {
+          this.logout()
+        }
       }
     },
 

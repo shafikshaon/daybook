@@ -7,19 +7,18 @@ import (
 	"daybook-backend/models"
 	"daybook-backend/repository"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 // TransactionService defines business logic for transactions
 type TransactionService interface {
-	ListTransactions(ctx context.Context, userID uuid.UUID, filters repository.TransactionFilters, pagination repository.PaginationParams) (*TransactionListResponse, error)
-	GetTransaction(ctx context.Context, id, userID uuid.UUID) (*TransactionResponse, error)
+	ListTransactions(ctx context.Context, userID uint, filters repository.TransactionFilters, pagination repository.PaginationParams) (*TransactionListResponse, error)
+	GetTransaction(ctx context.Context, id, userID uint) (*TransactionResponse, error)
 	CreateTransaction(ctx context.Context, transaction *models.Transaction) (*models.Transaction, error)
-	UpdateTransaction(ctx context.Context, id, userID uuid.UUID, updateData *models.Transaction) (*models.Transaction, error)
-	DeleteTransaction(ctx context.Context, id, userID uuid.UUID) error
-	BulkImportTransactions(ctx context.Context, userID uuid.UUID, transactions []models.Transaction) (*BulkImportResult, error)
-	GetTransactionStats(ctx context.Context, userID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionStats, error)
+	UpdateTransaction(ctx context.Context, id, userID uint, updateData *models.Transaction) (*models.Transaction, error)
+	DeleteTransaction(ctx context.Context, id, userID uint) error
+	BulkImportTransactions(ctx context.Context, userID uint, transactions []models.Transaction) (*BulkImportResult, error)
+	GetTransactionStats(ctx context.Context, userID uint, filters repository.TransactionFilters) (*repository.TransactionStats, error)
 }
 
 type transactionService struct {
@@ -79,7 +78,7 @@ func NewTransactionService(
 }
 
 // ListTransactions retrieves transactions with filtering, pagination, and enrichment
-func (s *transactionService) ListTransactions(ctx context.Context, userID uuid.UUID, filters repository.TransactionFilters, pagination repository.PaginationParams) (*TransactionListResponse, error) {
+func (s *transactionService) ListTransactions(ctx context.Context, userID uint, filters repository.TransactionFilters, pagination repository.PaginationParams) (*TransactionListResponse, error) {
 	// Fetch transactions
 	result, err := s.repo.FindWithFilters(ctx, userID, filters, pagination)
 	if err != nil {
@@ -132,7 +131,7 @@ func (s *transactionService) ListTransactions(ctx context.Context, userID uuid.U
 }
 
 // GetTransaction retrieves a specific transaction with enrichment
-func (s *transactionService) GetTransaction(ctx context.Context, id, userID uuid.UUID) (*TransactionResponse, error) {
+func (s *transactionService) GetTransaction(ctx context.Context, id, userID uint) (*TransactionResponse, error) {
 	transaction, err := s.repo.FindByID(ctx, id, userID)
 	if err != nil {
 		return nil, err
@@ -269,7 +268,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, transaction 
 }
 
 // UpdateTransaction updates a transaction and recalculates balances
-func (s *transactionService) UpdateTransaction(ctx context.Context, id, userID uuid.UUID, updateData *models.Transaction) (*models.Transaction, error) {
+func (s *transactionService) UpdateTransaction(ctx context.Context, id, userID uint, updateData *models.Transaction) (*models.Transaction, error) {
 	// Fetch existing transaction
 	existing, err := s.repo.FindByID(ctx, id, userID)
 	if err != nil {
@@ -412,7 +411,7 @@ func (s *transactionService) UpdateTransaction(ctx context.Context, id, userID u
 }
 
 // DeleteTransaction deletes a transaction and reverses balance changes
-func (s *transactionService) DeleteTransaction(ctx context.Context, id, userID uuid.UUID) error {
+func (s *transactionService) DeleteTransaction(ctx context.Context, id, userID uint) error {
 	// Fetch the transaction
 	transaction, err := s.repo.FindByID(ctx, id, userID)
 	if err != nil {
@@ -491,7 +490,7 @@ func (s *transactionService) DeleteTransaction(ctx context.Context, id, userID u
 }
 
 // BulkImportTransactions imports multiple transactions
-func (s *transactionService) BulkImportTransactions(ctx context.Context, userID uuid.UUID, transactions []models.Transaction) (*BulkImportResult, error) {
+func (s *transactionService) BulkImportTransactions(ctx context.Context, userID uint, transactions []models.Transaction) (*BulkImportResult, error) {
 	result := &BulkImportResult{
 		Message: "Bulk import completed",
 	}
@@ -511,6 +510,6 @@ func (s *transactionService) BulkImportTransactions(ctx context.Context, userID 
 }
 
 // GetTransactionStats calculates transaction statistics
-func (s *transactionService) GetTransactionStats(ctx context.Context, userID uuid.UUID, filters repository.TransactionFilters) (*repository.TransactionStats, error) {
+func (s *transactionService) GetTransactionStats(ctx context.Context, userID uint, filters repository.TransactionFilters) (*repository.TransactionStats, error) {
 	return s.repo.CalculateStats(ctx, userID, filters)
 }

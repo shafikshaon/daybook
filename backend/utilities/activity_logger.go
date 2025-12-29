@@ -8,16 +8,15 @@ import (
 	"daybook-backend/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 // ActivityLogParams contains parameters for logging an activity
 type ActivityLogParams struct {
-	UserID      uuid.UUID
+	UserID      uint
 	Action      string
 	Module      string
 	EntityType  string
-	EntityID    *uuid.UUID
+	EntityID    *uint
 	Description string
 	Metadata    map[string]interface{}
 }
@@ -61,7 +60,7 @@ func LogActivity(c *gin.Context, params ActivityLogParams) {
 }
 
 // LogAuthActivity logs authentication-related activities
-func LogAuthActivity(c *gin.Context, userID uuid.UUID, action string, description string) {
+func LogAuthActivity(c *gin.Context, userID uint, action string, description string) {
 	LogActivity(c, ActivityLogParams{
 		UserID:      userID,
 		Action:      action,
@@ -73,7 +72,7 @@ func LogAuthActivity(c *gin.Context, userID uuid.UUID, action string, descriptio
 }
 
 // LogEntityActivity logs entity-related activities (create, update, delete)
-func LogEntityActivity(c *gin.Context, userID uuid.UUID, action string, module string, entityType string, entityID uuid.UUID, description string, metadata map[string]interface{}) {
+func LogEntityActivity(c *gin.Context, userID uint, action string, module string, entityType string, entityID uint, description string, metadata map[string]interface{}) {
 	LogActivity(c, ActivityLogParams{
 		UserID:      userID,
 		Action:      action,
@@ -86,7 +85,7 @@ func LogEntityActivity(c *gin.Context, userID uuid.UUID, action string, module s
 }
 
 // LogViewActivity logs view activities
-func LogViewActivity(c *gin.Context, userID uuid.UUID, module string, entityType string, entityID *uuid.UUID, description string) {
+func LogViewActivity(c *gin.Context, userID uint, module string, entityType string, entityID *uint, description string) {
 	LogActivity(c, ActivityLogParams{
 		UserID:      userID,
 		Action:      models.ActionView,
