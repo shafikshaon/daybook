@@ -35,9 +35,11 @@ api.interceptors.response.use(
   error => {
     if (error.response?.status === 401) {
       // Unauthorized - clear auth and redirect to login
-      // But don't redirect if we're already on login/signup page or if this is a login request
+      // But don't redirect if we're already on login/signup page or if this is an auth-related request
       const isAuthPage = window.location.pathname === '/login' || window.location.pathname === '/signup'
-      const isAuthRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/signup')
+      const isAuthRequest = error.config?.url?.includes('/auth/login') ||
+                           error.config?.url?.includes('/auth/signup') ||
+                           error.config?.url?.includes('/auth/me')  // Don't auto-redirect on profile validation
 
       if (!isAuthPage && !isAuthRequest) {
         localStorage.removeItem('auth_token')

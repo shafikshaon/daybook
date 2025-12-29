@@ -153,7 +153,7 @@
                 <div class="mt-3">
                   <div class="d-flex justify-content-between align-items-center">
                     <strong>Total Balance:</strong>
-                    <strong class="text-success">{{ formatCurrency(accountsReport?.totalBalance || 0) }}</strong>
+                    <strong class="text-success">{{ formatCurrency(accountsReport?.totalAsset || 0) }}</strong>
                   </div>
                 </div>
               </div>
@@ -192,13 +192,13 @@
       </div>
 
       <!-- Budget Performance (if available) -->
-      <div v-if="budgetReport && budgetReport.budgets && budgetReport.budgets.length > 0" class="card mb-4">
+      <div v-if="budgetReport && budgetReport.performance && budgetReport.performance.length > 0" class="card mb-4">
         <div class="card-header">
           <h5 class="mb-0">🎯 Budget Performance</h5>
         </div>
         <div class="card-body">
           <div class="row g-3">
-            <div v-for="budget in budgetReport.budgets" :key="budget.categoryId" class="col-md-6 col-lg-4">
+            <div v-for="budget in budgetReport.performance" :key="budget.categoryId" class="col-md-6 col-lg-4">
               <div class="budget-card">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <strong>{{ budget.categoryName }}</strong>
@@ -209,15 +209,15 @@
                 <div class="progress mb-2" style="height: 24px;">
                   <div
                     class="progress-bar"
-                    :class="getBudgetProgressClass(budget.percentageUsed)"
-                    :style="{ width: Math.min(budget.percentageUsed, 100) + '%' }"
+                    :class="getBudgetProgressClass(budget.percentage)"
+                    :style="{ width: Math.min(budget.percentage, 100) + '%' }"
                   >
-                    {{ Math.round(budget.percentageUsed) }}%
+                    {{ Math.round(budget.percentage) }}%
                   </div>
                 </div>
                 <div class="d-flex justify-content-between small text-muted">
-                  <span>{{ formatCurrency(budget.spent) }} / {{ formatCurrency(budget.budgeted) }}</span>
-                  <span>{{ formatCurrency(budget.remaining) }} left</span>
+                  <span>{{ formatCurrency(budget.actualAmount) }} / {{ formatCurrency(budget.budgetAmount) }}</span>
+                  <span>{{ formatCurrency(budget.difference) }} left</span>
                 </div>
               </div>
             </div>
@@ -295,7 +295,7 @@
               <tfoot>
                 <tr class="table-active">
                   <td colspan="2"><strong>Total Balance</strong></td>
-                  <td class="text-end"><strong>{{ formatCurrency(accountsReport.totalBalance) }}</strong></td>
+                  <td class="text-end"><strong>{{ formatCurrency(accountsReport.totalAsset) }}</strong></td>
                   <td colspan="2"></td>
                 </tr>
               </tfoot>
@@ -387,6 +387,7 @@ import {
 } from 'chart.js'
 import apiService from '@/services/api-backend'
 import { format, startOfMonth, endOfMonth, subMonths, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subYears } from 'date-fns'
+import { useSettingsStore } from '@/stores/settings'
 
 // Register Chart.js components
 ChartJS.register(
@@ -411,6 +412,9 @@ export default {
     Doughnut
   },
   setup() {
+    // Stores
+    const settingsStore = useSettingsStore()
+
     // State
     const initialLoading = ref(true)
     const loading = ref(false)
@@ -509,11 +513,11 @@ export default {
     })
 
     const accountData = computed(() => {
-      if (!accountsReport.value || !accountsReport.value.accounts) {
+      if (!accountsReport.value || !accountsReport.value.balances) {
         return { labels: [], datasets: [] }
       }
 
-      const accounts = accountsReport.value.accounts
+      const accounts = accountsReport.value.balances
       return {
         labels: accounts.map(a => a.accountName),
         datasets: [{
@@ -531,11 +535,11 @@ export default {
     })
 
     const cashFlowData = computed(() => {
-      if (!cashFlowReport.value || !cashFlowReport.value.monthlyBreakdown) {
+      if (!cashFlowReport.value || !cashFlowReport.value.monthlyCashFlow) {
         return { labels: [], datasets: [] }
       }
 
-      const breakdown = cashFlowReport.value.monthlyBreakdown
+      const breakdown = cashFlowReport.value.monthlyCashFlow
       return {
         labels: breakdown.map(m => m.month),
         datasets: [
@@ -618,7 +622,7 @@ export default {
           beginAtZero: true,
           ticks: {
             callback: function(value) {
-              return '$' + value.toLocaleString()
+              return settingsStore.currencySymbol + value.toLocaleString()
             }
           }
         }
@@ -690,7 +694,7 @@ export default {
           beginAtZero: true,
           ticks: {
             callback: function(value) {
-              return '$' + value.toLocaleString()
+              return settingsStore.currencySymbol + value.toLocaleString()
             }
           }
         }
@@ -724,7 +728,7 @@ export default {
           beginAtZero: true,
           ticks: {
             callback: function(value) {
-              return '$' + value.toLocaleString()
+              return settingsStore.currencySymbol + value.toLocaleString()
             }
           }
         }
@@ -748,12 +752,8 @@ export default {
 
     // Methods
     const formatCurrency = (value) => {
-      if (value === null || value === undefined) return '$0.00'
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2
-      }).format(value)
+      if (value === null || value === undefined) return settingsStore.formatCurrency(0)
+      return settingsStore.formatCurrency(value)
     }
 
     const getChangeText = (current, previous, inverse = false) => {

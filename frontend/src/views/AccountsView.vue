@@ -86,6 +86,7 @@
                 <th>Description</th>
                 <th>Currency</th>
                 <th class="text-end">Balance</th>
+                <th>Last Updated</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -108,6 +109,12 @@
                   {{ formatCurrency(account.balance) }}
                   <small v-if="account.initialBalance && account.initialBalance !== account.balance" class="text-muted d-block" style="font-size: 0.75rem;">
                     ({{ account.balance >= account.initialBalance ? '+' : '' }}{{ formatCurrency(account.balance - (account.initialBalance || 0)) }})
+                  </small>
+                </td>
+                <td>
+                  <TimestampDisplay :timestamp="account.updatedAt" />
+                  <small v-if="account.createdAt" class="text-muted d-block" style="font-size: 0.7rem;">
+                    Created: {{ formatTimestamp(account.createdAt, false) }}
                   </small>
                 </td>
                 <td class="text-center">
@@ -279,6 +286,8 @@ import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
 import ReconciliationModal from '@/components/ReconciliationModal.vue'
 import ReconciliationHistory from '@/components/ReconciliationHistory.vue'
+import TimestampDisplay from '@/components/TimestampDisplay.vue'
+import { formatTimestamp } from '@/utils/dateUtils'
 
 const accountsStore = useAccountsStore()
 const goalsStore = useGoalsStore()

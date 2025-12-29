@@ -155,21 +155,21 @@ func (r *reportRepository) GetIncomeExpenseSummary(ctx context.Context, userID u
 	// Get total income
 	r.db.WithContext(ctx).
 		Table("transactions").
-		Where("user_id = ? AND type = ? AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, "income", startDate, endDate).
+		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, "income", startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&result.TotalIncome)
 
 	// Get total expense
 	r.db.WithContext(ctx).
 		Table("transactions").
-		Where("user_id = ? AND type = ? AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, "expense", startDate, endDate).
+		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, "expense", startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&result.TotalExpense)
 
 	// Get total transfers
 	r.db.WithContext(ctx).
 		Table("transactions").
-		Where("user_id = ? AND type = ? AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, "transfer", startDate, endDate).
+		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, "transfer", startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&result.TotalTransfer)
 
@@ -204,7 +204,7 @@ func (r *reportRepository) GetIncomeExpenseTrend(ctx context.Context, userID uui
 			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expense,
 			COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END), 0) as net
 		FROM transactions
-		WHERE user_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL AND type != 'tracking'
+		WHERE user_id = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL AND type != 'tracking'
 		GROUP BY period
 		ORDER BY period ASC
 	`
@@ -221,7 +221,7 @@ func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uuid
 	var total float64
 	r.db.WithContext(ctx).
 		Table("transactions").
-		Where("user_id = ? AND type = ? AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
+		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&total)
 
@@ -234,7 +234,7 @@ func (r *reportRepository) GetCategoryBreakdown(ctx context.Context, userID uuid
 			CASE WHEN ? > 0 THEN (COALESCE(SUM(t.amount), 0) / ? * 100) ELSE 0 END as percentage
 		FROM transactions t
 		LEFT JOIN categories c ON t.category_id = c.id
-		WHERE t.user_id = ? AND t.type = ? AND t.date >= ? AND t.date <= ? AND t.deleted_at IS NULL
+		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL
 		GROUP BY t.category_id, c.name
 		ORDER BY amount DESC
 	`
@@ -250,7 +250,7 @@ func (r *reportRepository) GetTopCategories(ctx context.Context, userID uuid.UUI
 	var total float64
 	r.db.WithContext(ctx).
 		Table("transactions").
-		Where("user_id = ? AND type = ? AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
+		Where("user_id = ? AND type = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, transactionType, startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&total)
 
@@ -263,7 +263,7 @@ func (r *reportRepository) GetTopCategories(ctx context.Context, userID uuid.UUI
 			CASE WHEN ? > 0 THEN (COALESCE(SUM(t.amount), 0) / ? * 100) ELSE 0 END as percentage
 		FROM transactions t
 		LEFT JOIN categories c ON t.category_id = c.id
-		WHERE t.user_id = ? AND t.type = ? AND t.date >= ? AND t.date <= ? AND t.deleted_at IS NULL
+		WHERE t.user_id = ? AND t.type = ? AND DATE(t.date) >= DATE(?) AND DATE(t.date) <= DATE(?) AND t.deleted_at IS NULL
 		GROUP BY t.category_id, c.name
 		ORDER BY amount DESC
 		LIMIT ?
@@ -324,7 +324,7 @@ func (r *reportRepository) GetAccountBalanceHistory(ctx context.Context, userID 
 				` + dateFormat + ` as period,
 				SUM(CASE WHEN type = 'income' THEN amount WHEN type = 'expense' THEN -amount ELSE 0 END) as change
 			FROM transactions
-			WHERE account_id = ? AND user_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL
+			WHERE account_id = ? AND user_id = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL
 			GROUP BY period
 			ORDER BY period ASC
 		)
@@ -441,8 +441,8 @@ func (r *reportRepository) GetBudgetPerformance(ctx context.Context, userID uuid
 		LEFT JOIN transactions t ON t.category_id = b.category_id
 			AND t.user_id = b.user_id
 			AND t.type = 'expense'
-			AND t.date >= ?
-			AND t.date <= ?
+			AND DATE(t.date) >= DATE(?)
+			AND DATE(t.date) <= DATE(?)
 			AND t.deleted_at IS NULL
 		WHERE b.user_id = ? AND b.month = ? AND b.deleted_at IS NULL
 		GROUP BY b.category_id, c.name, b.amount
@@ -465,13 +465,13 @@ func (r *reportRepository) GetCashFlowSummary(ctx context.Context, userID uuid.U
 
 	// Get total inflow (income)
 	r.db.WithContext(ctx).Table("transactions").
-		Where("user_id = ? AND type = 'income' AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, startDate, endDate).
+		Where("user_id = ? AND type = 'income' AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&summary.TotalInflow)
 
 	// Get total outflow (expense)
 	r.db.WithContext(ctx).Table("transactions").
-		Where("user_id = ? AND type = 'expense' AND date >= ? AND date <= ? AND deleted_at IS NULL", userID, startDate, endDate).
+		Where("user_id = ? AND type = 'expense' AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL", userID, startDate, endDate).
 		Select("COALESCE(SUM(amount), 0)").
 		Scan(&summary.TotalOutflow)
 
@@ -528,7 +528,7 @@ func (r *reportRepository) getPeriodSummary(ctx context.Context, userID uuid.UUI
 			COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as total_expense,
 			COUNT(*) as transaction_count
 		FROM transactions
-		WHERE user_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL AND type != 'tracking'
+		WHERE user_id = ? AND DATE(date) >= DATE(?) AND DATE(date) <= DATE(?) AND deleted_at IS NULL AND type != 'tracking'
 	`
 
 	r.db.WithContext(ctx).Raw(query, userID, startDate, endDate).Scan(&summary)
