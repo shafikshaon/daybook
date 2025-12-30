@@ -454,7 +454,7 @@ const exportData = async (type, format) => {
     info(`Preparing ${type} export...`)
 
     // Get the auth token
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth_token')
     if (!token) {
       error('You must be logged in to export data')
       return
