@@ -25,7 +25,7 @@ type Account struct {
 	DeletedAt                gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// BeforeCreate sets the initial balance to current balance on account creation
+// BeforeCreate sets the initial balance to the current balance on account creation
 func (a *Account) BeforeCreate(tx *gorm.DB) error {
 	// Set initial balance to the provided balance on creation
 	if a.InitialBalance == 0 && a.Balance != 0 {

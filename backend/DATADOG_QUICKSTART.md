@@ -13,7 +13,7 @@ Get Datadog monitoring running on your Linux machine in 5 minutes.
 Replace `YOUR_API_KEY` with your actual API key:
 
 ```bash
-DD_API_KEY=YOUR_API_KEY \
+DD_API_KEY=f3ba6830d00c5b5d38a424a1da87affb \
 DD_SITE="datadoghq.com" \
 DD_APM_ENABLED=true \
 bash -c "$(curl -L https://s3.amazonaws.com/dd-agent/scripts/install_script.sh)"
