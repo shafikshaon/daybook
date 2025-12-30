@@ -301,16 +301,27 @@ Database schema is automatically created/updated on application startup using GO
 
 ## Monitoring with Datadog APM
 
-The application supports Datadog APM (Application Performance Monitoring) for distributed tracing, performance monitoring, and observability.
+The application includes **comprehensive Datadog APM integration** for tracking everything - HTTP requests, database queries, Redis operations, and custom business metrics.
+
+### Quick Start
+
+For detailed setup instructions, see **[DATADOG_SETUP.md](DATADOG_SETUP.md)** (Linux installation guide)
+For monitoring details, see **[MONITORING_GUIDE.md](MONITORING_GUIDE.md)** (what gets tracked)
 
 ### Prerequisites
 
 - Datadog account (sign up at https://www.datadoghq.com/)
 - Datadog Agent installed and running on your system or infrastructure
 
-### Installation
+### What Gets Tracked
 
-The Datadog SDK is already included in the project dependencies. No additional installation is required.
+When enabled, Datadog tracks:
+- ✅ All HTTP requests (endpoints, latency, status codes, errors)
+- ✅ All database queries (SQL statements, execution time, rows affected)
+- ✅ All Redis operations (commands, keys, cache hits/misses)
+- ✅ Custom business metrics (user registrations, transactions, payments, etc.)
+- ✅ Errors and exceptions with full stack traces
+- ✅ Service dependencies and distributed traces
 
 ### Configuration
 
