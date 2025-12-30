@@ -54,6 +54,7 @@ type Container struct {
 	RecurringTransactionService services.RecurringTransactionService
 	TransactionService          services.TransactionService
 	ReportService               services.ReportService
+	ExportService               services.ExportService
 	// TODO: Add more services as we migrate
 
 	// Handlers
@@ -73,6 +74,7 @@ type Container struct {
 	RecurringTransactionHandler *handlers.RecurringTransactionHandler
 	TransactionHandler          *handlers.TransactionHandler
 	ReportHandler               *handlers.ReportHandler
+	ExportHandler               *handlers.ExportHandler
 	// TODO: Add more handlers as we migrate
 }
 
@@ -202,6 +204,18 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	)
 
 	c.ReportService = services.NewReportService(c.ReportRepo)
+
+	c.ExportService = services.NewExportService(
+		c.TransactionRepo,
+		c.AccountRepo,
+		c.BudgetRepo,
+		c.GoalRepo,
+		c.CategoryRepo,
+		c.CreditCardRepo,
+		c.DebtRepo,
+		c.LendRepo,
+		c.ActivityLogService,
+	)
 	// TODO: Add more services as we migrate
 
 	// Initialize handlers
@@ -221,6 +235,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.RecurringTransactionHandler = handlers.NewRecurringTransactionHandler(c.RecurringTransactionService)
 	c.TransactionHandler = handlers.NewTransactionHandler(c.TransactionService)
 	c.ReportHandler = handlers.NewReportHandler(c.ReportService)
+	c.ExportHandler = handlers.NewExportHandler(c.ExportService)
 	// TODO: Add more handlers as we migrate
 
 	return c

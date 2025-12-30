@@ -181,6 +181,12 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 				settingsRoutes.DELETE("/categories/:id", c.CategoryHandler.DeleteCategory)
 			}
 
+			// Export data routes
+			exportRoutes := protected.Group("/export")
+			{
+				exportRoutes.GET("", c.ExportHandler.ExportData)
+			}
+
 			// Reconciliation routes
 			reconciliationRoutes := protected.Group("/reconciliations")
 			{

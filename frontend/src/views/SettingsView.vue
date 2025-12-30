@@ -246,11 +246,107 @@
           </div>
           <div class="card-body">
             <div class="row g-3">
-              <div class="col-12 col-md-4">
-                <button class="btn btn-primary w-100" @click="exportData">
-                  📤 Export Data
-                </button>
-                <small class="text-muted d-block mt-2">Download all your data as JSON</small>
+              <div class="col-12">
+                <h6 class="mb-3">Export Your Data</h6>
+                <p class="text-muted">Download your financial data in CSV or JSON format</p>
+              </div>
+
+              <!-- Export Options -->
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Transactions</h6>
+                    <p class="card-text small text-muted">Export all your income, expenses, and transfers</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('transactions', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('transactions', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Accounts</h6>
+                    <p class="card-text small text-muted">Export all your accounts and balances</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('accounts', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('accounts', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Budgets</h6>
+                    <p class="card-text small text-muted">Export all your budget configurations</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('budgets', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('budgets', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Goals</h6>
+                    <p class="card-text small text-muted">Export all your savings and investment goals</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('goals', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('goals', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Categories</h6>
+                    <p class="card-text small text-muted">Export all your income and expense categories</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('categories', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('categories', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100 border-primary">
+                  <div class="card-body">
+                    <h6 class="card-title text-primary">All Data</h6>
+                    <p class="card-text small text-muted">Complete export of all your financial data</p>
+                    <button class="btn btn-sm btn-primary w-100" @click="exportData('all', 'json')">
+                      Export Everything
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -353,9 +449,66 @@ const saveSettings = async () => {
   }
 }
 
-const exportData = () => {
-  // Export data functionality would require backend API endpoint
-  info('Export functionality will be available in a future update.')
+const exportData = async (type, format) => {
+  try {
+    info(`Preparing ${type} export...`)
+
+    // Get the auth token
+    const token = localStorage.getItem('token')
+    if (!token) {
+      error('You must be logged in to export data')
+      return
+    }
+
+    // Build the API URL
+    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+    let url = `${baseURL}/api/v1/export?type=${type}&format=${format}`
+
+    // For transactions, add date range (last year by default)
+    if (type === 'transactions') {
+      const endDate = new Date().toISOString().split('T')[0]
+      const startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0]
+      url += `&start_date=${startDate}&end_date=${endDate}`
+    }
+
+    // Fetch the file
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`)
+    }
+
+    // Get the filename from the Content-Disposition header
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let filename = `${type}.${format}`
+    if (contentDisposition) {
+      const matches = /filename=([^;]+)/.exec(contentDisposition)
+      if (matches && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '')
+      }
+    }
+
+    // Download the file
+    const blob = await response.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    success(`Successfully exported ${type} as ${format.toUpperCase()}`)
+  } catch (err) {
+    console.error('Export error:', err)
+    error(err.message || 'Failed to export data')
+  }
 }
 
 onMounted(async () => {
