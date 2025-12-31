@@ -461,8 +461,8 @@ const exportData = async (type, format) => {
     }
 
     // Build the API URL
-    const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-    let url = `${baseURL}/api/v1/export?type=${type}&format=${format}`
+    const apiURL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1'
+    let url = `${apiURL}/export?type=${type}&format=${format}`
 
     // For transactions, add date range (last year by default)
     if (type === 'transactions') {
