@@ -12,6 +12,9 @@ import (
 type UserRepository interface {
 	BaseRepository[models.User]
 
+	// FindByUserID finds a user by their ID (users table has no user_id column)
+	FindByUserID(ctx context.Context, userID uint) (*models.User, error)
+
 	// FindByUsername finds a user by username
 	FindByUsername(ctx context.Context, username string) (*models.User, error)
 
@@ -37,6 +40,16 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{
 		GormBaseRepository: NewGormBaseRepository[models.User](db),
 	}
+}
+
+// FindByUserID finds a user by their ID
+func (r *userRepository) FindByUserID(ctx context.Context, userID uint) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).First(&user, userID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 // FindByUsername finds a user by username

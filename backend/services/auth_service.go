@@ -194,14 +194,12 @@ func (s *authService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 
 // GetProfile retrieves a user's profile
 func (s *authService) GetProfile(ctx context.Context, userID uint) (*models.User, error) {
-	// Note: BaseRepository.FindByID expects (id, userID) but for User, we only have userID
-	// So we'll use the db directly here
-	var user models.User
-	err := s.userRepo.Query(ctx, userID).First(&user, userID).Error
+	// Find user by ID directly (users table doesn't have user_id column)
+	user, err := s.userRepo.FindByUserID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return user, nil
 }
 
 // UpdateProfile updates a user's profile
