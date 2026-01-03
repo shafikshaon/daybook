@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import apiService from '@/services/api-backend'
+import apiService, { api } from '@/services/api-backend'
 
 export const useBackupsStore = defineStore('backups', {
   state: () => ({
@@ -62,23 +62,13 @@ export const useBackupsStore = defineStore('backups', {
 
     async downloadBackup(backupId) {
       try {
-        const token = localStorage.getItem('token')
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
-        const url = `${baseUrl}/api/v1/backups/${backupId}/download`
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+        // Use axios instance to get the proper base URL and auth headers
+        const response = await api.get(`/backups/${backupId}/download`, {
+          responseType: 'blob'
         })
 
-        if (!response.ok) {
-          throw new Error('Failed to download backup')
-        }
-
         // Get filename from Content-Disposition header
-        const contentDisposition = response.headers.get('Content-Disposition')
+        const contentDisposition = response.headers['content-disposition']
         let filename = 'backup.sql'
         if (contentDisposition) {
           const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition)
@@ -88,7 +78,7 @@ export const useBackupsStore = defineStore('backups', {
         }
 
         // Create blob and download
-        const blob = await response.blob()
+        const blob = new Blob([response.data])
         const downloadUrl = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = downloadUrl
