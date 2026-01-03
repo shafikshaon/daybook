@@ -166,6 +166,7 @@ func (s *goalService) UpdateGoal(ctx context.Context, goalID, userID uint, updat
 	existing.Category = updateData.Category
 	existing.Priority = updateData.Priority
 	existing.TargetAmount = updateData.TargetAmount
+	existing.CurrentAmount = updateData.CurrentAmount
 	existing.TargetDate = updateData.TargetDate
 	existing.MonthlyContribution = updateData.MonthlyContribution
 	existing.Status = updateData.Status

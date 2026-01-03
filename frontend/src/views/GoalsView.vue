@@ -324,6 +324,14 @@
                   <input type="number" step="0.01" class="form-control" v-model.number="editGoalForm.targetAmount" required />
                 </div>
                 <div class="col-12 col-md-6 mb-3">
+                  <label class="form-label">Current Amount</label>
+                  <input type="number" step="0.01" class="form-control" v-model.number="editGoalForm.currentAmount" />
+                  <small class="text-muted">Manually adjust the current saved amount for this goal</small>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-md-12 mb-3">
                   <label class="form-label">Target Date</label>
                   <input type="date" class="form-control" v-model="editGoalForm.targetDate" />
                 </div>
@@ -804,6 +812,7 @@ const editGoalForm = ref({
   category: '',
   priority: '',
   targetAmount: 0,
+  currentAmount: 0,
   targetDate: '',
   monthlyContribution: 0,
   status: 'active'
@@ -1038,6 +1047,7 @@ const editGoal = (goal) => {
     category: goal.category,
     priority: goal.priority,
     targetAmount: goal.targetAmount,
+    currentAmount: goal.currentAmount || 0,
     targetDate: goal.targetDate ? goal.targetDate.split('T')[0] : '',
     monthlyContribution: goal.monthlyContribution || 0,
     status: goal.status || 'active'
