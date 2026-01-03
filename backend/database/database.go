@@ -72,6 +72,7 @@ func InitDatabase(cfg *config.Config) error {
 		&models.ServiceRecord{},
 		&models.AssetAttachment{},
 		&models.ActivityLog{},
+		&models.Backup{},
 	)
 	if err != nil {
 		customLogger.Errorf(ctx, "Database migration failed: %v", err)
