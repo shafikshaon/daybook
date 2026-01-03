@@ -97,6 +97,10 @@ func (s *recurringTransactionService) CreateRecurringTransaction(ctx context.Con
 		return nil, errors.New("invalid frequency. Must be one of: daily, weekly, biweekly, monthly, quarterly, yearly")
 	}
 
+	// Set template fields to satisfy database constraints
+	recurringTransaction.TransactionTemplate.Date = recurringTransaction.StartDate
+	recurringTransaction.TransactionTemplate.UserID = recurringTransaction.UserID
+
 	// Create the recurring transaction
 	if err := s.repo.Create(ctx, recurringTransaction); err != nil {
 		return nil, err
@@ -150,6 +154,10 @@ func (s *recurringTransactionService) UpdateRecurringTransaction(ctx context.Con
 	existing.StartDate = updateData.StartDate
 	existing.EndDate = updateData.EndDate
 	existing.Enabled = updateData.Enabled
+
+	// Set template fields to satisfy database constraints
+	existing.TransactionTemplate.Date = existing.StartDate
+	existing.TransactionTemplate.UserID = existing.UserID
 
 	// Save updates
 	if err := s.repo.Update(ctx, existing); err != nil {
