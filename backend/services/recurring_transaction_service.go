@@ -259,7 +259,6 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 					Where("user_id = ? AND recurring_id = ? AND date::date = ?::date",
 						userID, recurring.ID, txnDate.Format("2006-01-02")).
 					Count(&existingCount).Error
-
 				if err != nil {
 					result.Errors++
 					continue

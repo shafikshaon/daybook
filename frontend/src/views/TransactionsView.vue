@@ -146,6 +146,24 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Transaction History</h5>
         <div class="d-flex align-items-center gap-2">
+          <div class="btn-group">
+            <button
+              type="button"
+              class="btn btn-sm btn-outline-success dropdown-toggle"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+              </svg>
+              Export
+            </button>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="#" @click.prevent="exportTransactions('csv')">Export as CSV</a></li>
+              <li><a class="dropdown-item" href="#" @click.prevent="exportTransactions('json')">Export as JSON</a></li>
+            </ul>
+          </div>
           <label class="mb-0 me-2">Items per page:</label>
           <select class="form-select form-select-sm" v-model.number="itemsPerPage" @change="changeItemsPerPage(itemsPerPage)" style="width: auto;">
             <option :value="20">20</option>
@@ -680,6 +698,7 @@ import { useCreditCardsStore } from '@/stores/creditCards'
 import { useSettingsStore } from '@/stores/settings'
 import { useNotification } from '@/composables/useNotification'
 import { FileUpload } from '@/components'
+import { api } from '@/services/api-backend'
 
 const transactionsStore = useTransactionsStore()
 const accountsStore = useAccountsStore()
@@ -929,6 +948,55 @@ const clearFilters = () => {
   }
   quickDateFilter.value = ''
   applyFilters()
+}
+
+const exportTransactions = async (format) => {
+  try {
+    // Build query parameters
+    const params = new URLSearchParams({
+      type: 'transactions',
+      format: format
+    })
+
+    // Add date range if specified
+    if (filters.value.startDate) {
+      params.append('start_date', filters.value.startDate)
+    }
+    if (filters.value.endDate) {
+      params.append('end_date', filters.value.endDate)
+    }
+
+    // Make request with blob response type
+    const response = await api.get(`/export?${params.toString()}`, {
+      responseType: 'blob'
+    })
+
+    // Get filename from Content-Disposition header or create default
+    const contentDisposition = response.headers['content-disposition']
+    let filename = `transactions.${format}`
+    if (contentDisposition) {
+      const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition)
+      if (matches != null && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '')
+      }
+    }
+
+    // Create blob and download
+    const blob = new Blob([response.data])
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    success(`Transactions exported successfully as ${format.toUpperCase()}`)
+  } catch (err) {
+    console.error('Error exporting transactions:', err)
+    error('Failed to export transactions')
+  }
 }
 
 const visiblePages = computed(() => {

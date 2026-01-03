@@ -51,7 +51,7 @@ func (s *backupService) CreateBackup(ctx context.Context, userID uint) (*models.
 
 	// Ensure backup directory exists
 	backupDir := s.getBackupDirectory()
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
