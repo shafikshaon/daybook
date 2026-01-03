@@ -235,11 +235,17 @@ func (s *backupService) ListBackups(ctx context.Context, userID uint) ([]models.
 		return nil, fmt.Errorf("failed to fetch backups: %w", err)
 	}
 
+	customLogger.Debugf(ctx, "[BACKUP] Found %d backups for user %d", len(backups), userID)
+
 	// Verify file existence and update sizes
 	for i := range backups {
 		if backups[i].Status == "completed" {
+			customLogger.Debugf(ctx, "[BACKUP] Checking file for backup ID=%d at path: %s", backups[i].ID, backups[i].FilePath)
 			if fileInfo, err := os.Stat(backups[i].FilePath); err == nil {
 				backups[i].FileSize = fileInfo.Size()
+				customLogger.Debugf(ctx, "[BACKUP] File exists, size: %d bytes", fileInfo.Size())
+			} else {
+				customLogger.Warnf(ctx, "[BACKUP] File not found for backup ID=%d: %v", backups[i].ID, err)
 			}
 		}
 	}
@@ -297,6 +303,14 @@ func (s *backupService) getBackupDirectory() string {
 	if dir := os.Getenv("BACKUP_DIR"); dir != "" {
 		return dir
 	}
-	// Default to ./backups in the current working directory
-	return "./backups"
+
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		// Fallback to relative path if we can't get cwd
+		return "./backups"
+	}
+
+	// Return absolute path to backups directory
+	return filepath.Join(cwd, "backups")
 }
