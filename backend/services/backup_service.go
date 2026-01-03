@@ -294,7 +294,20 @@ func (s *backupService) DeleteBackup(ctx context.Context, userID uint, backupID 
 
 // GetBackupFilePath returns the full path to a backup file
 func (s *backupService) GetBackupFilePath(backup *models.Backup) string {
-	return backup.FilePath
+	// If the path is already absolute, return it as is
+	if filepath.IsAbs(backup.FilePath) {
+		return backup.FilePath
+	}
+
+	// If it's a relative path, convert it to absolute
+	// This handles legacy backups created before the path fix
+	cwd, err := os.Getwd()
+	if err != nil {
+		// Fallback to the stored path if we can't get cwd
+		return backup.FilePath
+	}
+
+	return filepath.Join(cwd, backup.FilePath)
 }
 
 // getBackupDirectory returns the directory path for storing backups

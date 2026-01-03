@@ -284,8 +284,8 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 			{
 				backupRoutes.POST("", c.BackupHandler.CreateBackup)
 				backupRoutes.GET("", c.BackupHandler.ListBackups)
+				backupRoutes.GET("/:id/download", c.BackupHandler.DownloadBackup) // More specific route first
 				backupRoutes.GET("/:id", c.BackupHandler.GetBackup)
-				backupRoutes.GET("/:id/download", c.BackupHandler.DownloadBackup)
 				backupRoutes.DELETE("/:id", c.BackupHandler.DeleteBackup)
 			}
 		}
