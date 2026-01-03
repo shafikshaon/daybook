@@ -80,7 +80,7 @@
     <!-- Goals List -->
     <div class="row g-3">
       <div v-for="goal in goals" :key="goal.id" class="col-12 col-md-6 col-lg-4">
-        <div class="card goal-card" @click="viewGoalDetails(goal.id)">
+        <div class="card goal-card" @click="viewGoalDetails(goal.id)" :style="{ borderLeft: `4px solid ${goal.color || '#3b82f6'}` }">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div>
@@ -107,8 +107,11 @@
               </div>
               <div class="progress" style="height: 12px;">
                 <div
-                  class="progress-bar progress-bar-professional"
-                  :style="{ width: Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) + '%' }"
+                  class="progress-bar"
+                  :style="{
+                    width: Math.min((goal.currentAmount / goal.targetAmount) * 100, 100) + '%',
+                    backgroundColor: goal.color || '#3b82f6'
+                  }"
                 ></div>
               </div>
               <div class="d-flex justify-content-between mt-1">
@@ -369,8 +372,11 @@
               </div>
               <div class="progress" style="height: 20px;">
                 <div
-                  class="progress-bar progress-bar-professional"
-                  :style="{ width: Math.min((selectedGoal.currentAmount / selectedGoal.targetAmount) * 100, 100) + '%' }"
+                  class="progress-bar"
+                  :style="{
+                    width: Math.min((selectedGoal.currentAmount / selectedGoal.targetAmount) * 100, 100) + '%',
+                    backgroundColor: selectedGoal.color || '#3b82f6'
+                  }"
                 >
                   {{ formatCurrency(selectedGoal.currentAmount) }} / {{ formatCurrency(selectedGoal.targetAmount) }}
                 </div>
@@ -1318,10 +1324,10 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.progress-bar-professional {
-  background-color: #3b82f6;
+.progress-bar {
   background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
   background-size: 1rem 1rem;
+  transition: width 0.3s ease, background-color 0.3s ease;
 }
 
 .btn-add-holding {
@@ -1346,10 +1352,6 @@ onMounted(async () => {
   color: #ffffff;
   background-color: #10b981;
   border-color: #059669;
-}
-
-.dark-mode .progress-bar-professional {
-  background-color: #3b82f6;
 }
 
 .dark-mode .btn-add-holding {
