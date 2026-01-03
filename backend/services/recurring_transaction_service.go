@@ -332,10 +332,10 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 				result.Created++
 			}
 
-			// Update LastProcessed date using direct tx query
+			// Update LastProcessed date using UpdateColumn to bypass hooks and avoid template_date issues
 			if err := tx.WithContext(ctx).Model(&models.RecurringTransaction{}).
 				Where("id = ?", recurring.ID).
-				Update("last_processed", now).Error; err != nil {
+				UpdateColumn("last_processed", now).Error; err != nil {
 				result.Errors++
 			}
 		}
