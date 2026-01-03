@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"daybook-backend/config"
+	customLogger "daybook-backend/logger"
 	"daybook-backend/models"
 	"daybook-backend/repository"
 )
@@ -87,7 +88,7 @@ func (s *backupService) CreateBackup(ctx context.Context, userID uint) (*models.
 // performBackup executes pg_dump to create the backup file
 func (s *backupService) performBackup(backupID uint, filePath string) {
 	// Create a context with timeout (5 minutes max for backup)
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(customLogger.CreateContext(""), 5*time.Minute)
 	defer cancel()
 
 	// Find pg_dump executable - check common locations for macOS Homebrew
@@ -95,17 +96,17 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	if err != nil {
 		errorMsg := fmt.Sprintf("pg_dump command not found: %v. Please install PostgreSQL client tools.", err)
 		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
-		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+		customLogger.Errorf(ctx, "[BACKUP] Failed to find pg_dump for backup ID=%d: %v", backupID, err)
 		return
 	}
-	fmt.Printf("[BACKUP] Found pg_dump at: %s\n", pgDumpPath)
+	customLogger.Infof(ctx, "[BACKUP] Found pg_dump at: %s for backup ID=%d", pgDumpPath, backupID)
 
 	// Create the backup file
 	file, err := os.Create(filePath)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to create file: %v", err)
 		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
-		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+		customLogger.Errorf(ctx, "[BACKUP] Failed to create backup file for ID=%d: %v", backupID, err)
 		return
 	}
 	defer file.Close()
@@ -114,7 +115,7 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	dbConfig := s.config.Database
 
 	// Log the backup attempt (don't log password)
-	fmt.Printf("[BACKUP] Starting backup ID=%d, connecting to %s:%s/%s as %s\n",
+	customLogger.Infof(ctx, "[BACKUP] Starting backup ID=%d, connecting to %s:%s/%s as %s",
 		backupID, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.User)
 
 	pgDumpCmd := exec.CommandContext(ctx,
@@ -139,7 +140,7 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	pgDumpCmd.Stderr = &stderrBuf
 
 	// Execute pg_dump
-	fmt.Printf("[BACKUP] Executing pg_dump for backup ID=%d (timeout: 5 minutes)\n", backupID)
+	customLogger.Infof(ctx, "[BACKUP] Executing pg_dump for backup ID=%d (timeout: 5 minutes)", backupID)
 	startTime := time.Now()
 
 	if err := pgDumpCmd.Run(); err != nil {
@@ -150,7 +151,7 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 		if ctx.Err() == context.DeadlineExceeded {
 			errorMsg := "Backup timeout: operation took longer than 5 minutes"
 			s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
-			fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+			customLogger.Errorf(ctx, "[BACKUP] Timeout for backup ID=%d after 5 minutes", backupID)
 			return
 		}
 
@@ -159,23 +160,23 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 			errorMsg = fmt.Sprintf("pg_dump failed: %v - %s", err, stderrOutput)
 		}
 		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
-		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+		customLogger.Errorf(ctx, "[BACKUP] pg_dump failed for backup ID=%d: %v, stderr: %s", backupID, err, stderrOutput)
 		return
 	}
 
 	duration := time.Since(startTime)
-	fmt.Printf("[BACKUP] pg_dump completed in %v\n", duration)
+	customLogger.Infof(ctx, "[BACKUP] pg_dump completed in %v for backup ID=%d", duration, backupID)
 
 	// Get file size
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to get file info: %v", err)
 		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
-		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+		customLogger.Errorf(ctx, "[BACKUP] Failed to get file info for backup ID=%d: %v", backupID, err)
 		return
 	}
 
-	fmt.Printf("[BACKUP] Backup ID=%d completed successfully, size=%d bytes (%.2f MB)\n",
+	customLogger.Infof(ctx, "[BACKUP] Backup ID=%d completed successfully, size=%d bytes (%.2f MB)",
 		backupID, fileInfo.Size(), float64(fileInfo.Size())/(1024*1024))
 
 	// Get the backup to update
@@ -184,9 +185,9 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 		backup.FileSize = fileInfo.Size()
 		backup.Status = "completed"
 		s.backupRepo.Update(context.Background(), backup)
-		fmt.Printf("[BACKUP] Backup ID=%d status updated to completed\n", backupID)
+		customLogger.Infof(ctx, "[BACKUP] Backup ID=%d status updated to completed", backupID)
 	} else {
-		fmt.Printf("[BACKUP ERROR] Failed to update backup ID=%d: %v\n", backupID, err)
+		customLogger.Errorf(ctx, "[BACKUP] Failed to update backup ID=%d: %v", backupID, err)
 	}
 }
 
