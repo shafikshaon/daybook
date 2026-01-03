@@ -338,6 +338,23 @@
               </div>
 
               <div class="col-12 col-md-6 col-lg-4">
+                <div class="card h-100">
+                  <div class="card-body">
+                    <h6 class="card-title">Assets</h6>
+                    <p class="card-text small text-muted">Export all your assets and warranty information</p>
+                    <div class="btn-group w-100" role="group">
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('assets', 'csv')">
+                        CSV
+                      </button>
+                      <button class="btn btn-sm btn-outline-primary" @click="exportData('assets', 'json')">
+                        JSON
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md-6 col-lg-4">
                 <div class="card h-100 border-primary">
                   <div class="card-body">
                     <h6 class="card-title text-primary">All Data</h6>

@@ -26,7 +26,7 @@ func (h *ExportHandler) ExportData(c *gin.Context) {
 		return
 	}
 
-	dataType := c.Query("type") // transactions, accounts, budgets, goals, categories, all
+	dataType := c.Query("type") // transactions, accounts, budgets, goals, categories, assets, all
 	format := c.Query("format") // csv, json
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
@@ -121,6 +121,15 @@ func (h *ExportHandler) ExportData(c *gin.Context) {
 			filename = "categories.json"
 		}
 
+	case "assets":
+		if format == "csv" {
+			data, err = h.service.ExportAssetsCSV(ctx, userID)
+			filename = "assets.csv"
+		} else {
+			data, err = h.service.ExportAssetsJSON(ctx, userID)
+			filename = "assets.json"
+		}
+
 	case "all":
 		// All data export only supports JSON
 		data, err = h.service.ExportAllDataJSON(ctx, userID)
@@ -128,7 +137,7 @@ func (h *ExportHandler) ExportData(c *gin.Context) {
 
 	default:
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid type. Must be one of: transactions, accounts, budgets, goals, categories, all",
+			"error": "Invalid type. Must be one of: transactions, accounts, budgets, goals, categories, assets, all",
 		})
 		return
 	}

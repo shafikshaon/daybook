@@ -999,8 +999,9 @@ const getCategoryColor = (categoryId) => {
 }
 
 const getAccountName = (accountId) => {
+  if (!accountId || accountId === 0) return '-'
   const account = accountsStore.getAccountById(accountId)
-  return account ? account.name : accountId
+  return account ? account.name : '-'
 }
 
 const getCreditCardName = (cardId) => {

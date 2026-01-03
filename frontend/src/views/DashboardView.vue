@@ -95,18 +95,18 @@
               No budgets set
             </div>
             <div v-else>
-              <div v-for="budget in budgets.slice(0, 4)" :key="budget.id" class="mb-3">
+              <div v-for="budgetItem in budgets.slice(0, 4)" :key="getBudgetId(budgetItem)" class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span>{{ getCategoryName(budget.categoryId) }}</span>
+                  <span>{{ getCategoryName(getBudgetCategoryId(budgetItem)) }}</span>
                   <span class="text-muted">
-                    {{ formatCurrency(getBudgetProgress(budget.id)?.spent || 0) }} / {{ formatCurrency(budget.amount) }}
+                    {{ formatCurrency(getBudgetProgress(getBudgetId(budgetItem))?.spent || 0) }} / {{ formatCurrency(getBudgetAmount(budgetItem)) }}
                   </span>
                 </div>
                 <div class="progress" style="height: 8px;">
                   <div
                     class="progress-bar"
-                    :class="getProgressBarClass(getBudgetProgress(budget.id)?.percentage)"
-                    :style="{ width: Math.min(getBudgetProgress(budget.id)?.percentage || 0, 100) + '%' }"
+                    :class="getProgressBarClass(getBudgetProgress(getBudgetId(budgetItem))?.percentage)"
+                    :style="{ width: Math.min(getBudgetProgress(getBudgetId(budgetItem))?.percentage || 0, 100) + '%' }"
                   ></div>
                 </div>
               </div>
@@ -192,6 +192,19 @@ const formatDate = (dateString) => {
 const getCategoryName = (categoryId) => {
   const category = transactionsStore.getCategoryById(categoryId)
   return category ? category.name : categoryId
+}
+
+// Helper functions to handle BudgetProgress structure
+const getBudgetId = (budgetItem) => {
+  return budgetItem.budget ? budgetItem.budget.id : budgetItem.id
+}
+
+const getBudgetCategoryId = (budgetItem) => {
+  return budgetItem.budget ? budgetItem.budget.categoryId : budgetItem.categoryId
+}
+
+const getBudgetAmount = (budgetItem) => {
+  return budgetItem.budget ? budgetItem.budget.amount : budgetItem.amount
 }
 
 const getBudgetProgress = (budgetId) => {

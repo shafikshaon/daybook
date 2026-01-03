@@ -24,6 +24,8 @@ type ExportService interface {
 	ExportGoalsJSON(ctx context.Context, userID uint) ([]byte, error)
 	ExportCategoriesCSV(ctx context.Context, userID uint) ([]byte, error)
 	ExportCategoriesJSON(ctx context.Context, userID uint) ([]byte, error)
+	ExportAssetsCSV(ctx context.Context, userID uint) ([]byte, error)
+	ExportAssetsJSON(ctx context.Context, userID uint) ([]byte, error)
 	ExportAllDataJSON(ctx context.Context, userID uint) ([]byte, error)
 }
 
@@ -33,6 +35,7 @@ type exportService struct {
 	budgetRepo      repository.BudgetRepository
 	goalRepo        repository.GoalRepository
 	categoryRepo    repository.CategoryRepository
+	assetRepo       repository.AssetRepository
 	creditCardRepo  repository.CreditCardRepository
 	debtRepo        repository.DebtRepository
 	lendRepo        repository.LendRepository
@@ -46,6 +49,7 @@ func NewExportService(
 	budgetRepo repository.BudgetRepository,
 	goalRepo repository.GoalRepository,
 	categoryRepo repository.CategoryRepository,
+	assetRepo repository.AssetRepository,
 	creditCardRepo repository.CreditCardRepository,
 	debtRepo repository.DebtRepository,
 	lendRepo repository.LendRepository,
@@ -57,6 +61,7 @@ func NewExportService(
 		budgetRepo:      budgetRepo,
 		goalRepo:        goalRepo,
 		categoryRepo:    categoryRepo,
+		assetRepo:       assetRepo,
 		creditCardRepo:  creditCardRepo,
 		debtRepo:        debtRepo,
 		lendRepo:        lendRepo,
@@ -472,6 +477,98 @@ func (s *exportService) ExportCategoriesJSON(ctx context.Context, userID uint) (
 	return data, nil
 }
 
+// ExportAssetsCSV exports assets as CSV
+func (s *exportService) ExportAssetsCSV(ctx context.Context, userID uint) ([]byte, error) {
+	assets, err := s.assetRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch assets: %w", err)
+	}
+
+	var buf bytes.Buffer
+	writer := csv.NewWriter(&buf)
+
+	// Write header
+	header := []string{"ID", "Name", "Category", "Brand", "Model", "Serial Number", "Purchase Date", "Purchase Price", "Purchase Location", "Warranty Start", "Warranty End", "Warranty Provider", "Warranty Type", "Status", "Notes", "Created At"}
+	if err := writer.Write(header); err != nil {
+		return nil, fmt.Errorf("failed to write CSV header: %w", err)
+	}
+
+	// Write data
+	for _, asset := range assets {
+		warrantyStart := ""
+		if asset.WarrantyStartDate != nil {
+			warrantyStart = asset.WarrantyStartDate.Time.Format("2006-01-02")
+		}
+
+		warrantyEnd := ""
+		if asset.WarrantyEndDate != nil {
+			warrantyEnd = asset.WarrantyEndDate.Time.Format("2006-01-02")
+		}
+
+		record := []string{
+			fmt.Sprintf("%d", asset.ID),
+			asset.Name,
+			asset.Category,
+			asset.Brand,
+			asset.Model,
+			asset.SerialNumber,
+			asset.PurchaseDate.Time.Format("2006-01-02"),
+			fmt.Sprintf("%.2f", asset.PurchasePrice),
+			asset.PurchaseLocation,
+			warrantyStart,
+			warrantyEnd,
+			asset.WarrantyProvider,
+			asset.WarrantyType,
+			asset.Status,
+			asset.Notes,
+			asset.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		if err := writer.Write(record); err != nil {
+			return nil, fmt.Errorf("failed to write CSV record: %w", err)
+		}
+	}
+
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		return nil, fmt.Errorf("CSV writer error: %w", err)
+	}
+
+	// Log activity
+	s.activityLogger.LogActivity(ctx, ActivityLogParams{
+		UserID:      userID,
+		Action:      "export",
+		Module:      "assets",
+		EntityType:  "csv",
+		Description: fmt.Sprintf("Exported %d assets to CSV", len(assets)),
+	})
+
+	return buf.Bytes(), nil
+}
+
+// ExportAssetsJSON exports assets as JSON
+func (s *exportService) ExportAssetsJSON(ctx context.Context, userID uint) ([]byte, error) {
+	assets, err := s.assetRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch assets: %w", err)
+	}
+
+	data, err := json.MarshalIndent(assets, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	// Log activity
+	s.activityLogger.LogActivity(ctx, ActivityLogParams{
+		UserID:      userID,
+		Action:      "export",
+		Module:      "assets",
+		EntityType:  "json",
+		Description: fmt.Sprintf("Exported %d assets to JSON", len(assets)),
+	})
+
+	return data, nil
+}
+
 // ExportAllDataJSON exports all user data as a comprehensive JSON file
 func (s *exportService) ExportAllDataJSON(ctx context.Context, userID uint) ([]byte, error) {
 	// Fetch all data
@@ -479,6 +576,7 @@ func (s *exportService) ExportAllDataJSON(ctx context.Context, userID uint) ([]b
 	categories, _ := s.categoryRepo.FindAll(ctx, userID)
 	budgets, _ := s.budgetRepo.FindAll(ctx, userID)
 	goals, _ := s.goalRepo.FindAll(ctx, userID)
+	assets, _ := s.assetRepo.FindAll(ctx, userID)
 	creditCards, _ := s.creditCardRepo.FindAll(ctx, userID)
 	debts, _ := s.debtRepo.FindAll(ctx, userID)
 	lends, _ := s.lendRepo.FindAll(ctx, userID)
@@ -512,6 +610,7 @@ func (s *exportService) ExportAllDataJSON(ctx context.Context, userID uint) ([]b
 			"transactions": transactions,
 			"budgets":      budgets,
 			"goals":        goals,
+			"assets":       assets,
 			"credit_cards": creditCards,
 			"debts":        debts,
 			"lends":        lends,
@@ -522,6 +621,7 @@ func (s *exportService) ExportAllDataJSON(ctx context.Context, userID uint) ([]b
 			"transactions_count": len(transactions),
 			"budgets_count":      len(budgets),
 			"goals_count":        len(goals),
+			"assets_count":       len(assets),
 			"credit_cards_count": len(creditCards),
 			"debts_count":        len(debts),
 			"lends_count":        len(lends),
@@ -538,7 +638,7 @@ func (s *exportService) ExportAllDataJSON(ctx context.Context, userID uint) ([]b
 	}
 
 	// Log activity
-	totalRecords := len(accounts) + len(categories) + len(transactions) + len(budgets) + len(goals) + len(creditCards) + len(debts) + len(lends)
+	totalRecords := len(accounts) + len(categories) + len(transactions) + len(budgets) + len(goals) + len(assets) + len(creditCards) + len(debts) + len(lends)
 	s.activityLogger.LogActivity(ctx, ActivityLogParams{
 		UserID:      userID,
 		Action:      "export",
