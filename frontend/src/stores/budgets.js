@@ -30,7 +30,7 @@ export const useBudgetsStore = defineStore('budgets', {
 
     getBudgetById: (state) => (id) => {
       return state.budgets.find(item => {
-        const budget = b.budget || item
+        const budget = item.budget || item
         return budget.id === id
       })
     },
