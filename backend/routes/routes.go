@@ -278,6 +278,16 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 				activityRoutes.DELETE("/cleanup", handlers.DeleteOldActivityLogs)
 				activityRoutes.POST("/backfill", handlers.BackfillActivityLogs)
 			}
+
+			// Backup routes
+			backupRoutes := protected.Group("/backups")
+			{
+				backupRoutes.POST("", c.BackupHandler.CreateBackup)
+				backupRoutes.GET("", c.BackupHandler.ListBackups)
+				backupRoutes.GET("/:id", c.BackupHandler.GetBackup)
+				backupRoutes.GET("/:id/download", c.BackupHandler.DownloadBackup)
+				backupRoutes.DELETE("/:id", c.BackupHandler.DeleteBackup)
+			}
 		}
 	}
 }

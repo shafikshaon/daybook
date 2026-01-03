@@ -32,6 +32,7 @@ type Container struct {
 	RecurringTransactionRepo repository.RecurringTransactionRepository
 	TransactionRepo          repository.TransactionRepository
 	ReportRepo               repository.ReportRepository
+	BackupRepo               repository.BackupRepository
 	// TODO: Add more repositories as we migrate
 
 	// Services
@@ -53,6 +54,7 @@ type Container struct {
 	TransactionService          services.TransactionService
 	ReportService               services.ReportService
 	ExportService               services.ExportService
+	BackupService               services.BackupService
 	// TODO: Add more services as we migrate
 
 	// Handlers
@@ -73,6 +75,7 @@ type Container struct {
 	TransactionHandler          *handlers.TransactionHandler
 	ReportHandler               *handlers.ReportHandler
 	ExportHandler               *handlers.ExportHandler
+	BackupHandler               *handlers.BackupHandler
 	// TODO: Add more handlers as we migrate
 }
 
@@ -100,6 +103,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.RecurringTransactionRepo = repository.NewRecurringTransactionRepository(db)
 	c.TransactionRepo = repository.NewTransactionRepository(db)
 	c.ReportRepo = repository.NewReportRepository(db)
+	c.BackupRepo = repository.NewBackupRepository(db)
 	// TODO: Add more repositories as we migrate
 
 	// Initialize services
@@ -214,6 +218,12 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 		c.LendRepo,
 		c.ActivityLogService,
 	)
+
+	c.BackupService = services.NewBackupService(
+		c.BackupRepo,
+		c.ActivityLogService,
+		cfg,
+	)
 	// TODO: Add more services as we migrate
 
 	// Initialize handlers
@@ -234,6 +244,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	c.TransactionHandler = handlers.NewTransactionHandler(c.TransactionService)
 	c.ReportHandler = handlers.NewReportHandler(c.ReportService)
 	c.ExportHandler = handlers.NewExportHandler(c.ExportService)
+	c.BackupHandler = handlers.NewBackupHandler(c.BackupService)
 	// TODO: Add more handlers as we migrate
 
 	return c

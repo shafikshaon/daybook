@@ -369,6 +369,68 @@
           </div>
         </div>
       </div>
+
+      <!-- Database Backups -->
+      <div class="col-12">
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Database Backups</h5>
+            <button class="btn btn-primary btn-sm" @click="createBackup" :disabled="backupLoading">
+              <span v-if="backupLoading" class="spinner-border spinner-border-sm me-2"></span>
+              {{ backupLoading ? 'Creating...' : 'Create New Backup' }}
+            </button>
+          </div>
+          <div class="card-body">
+            <div v-if="backups.length === 0" class="text-center text-muted py-4">
+              No backups yet. Click "Create New Backup" to get started.
+            </div>
+            <div v-else class="table-responsive">
+              <table class="table table-hover">
+                <thead>
+                  <tr>
+                    <th>File Name</th>
+                    <th>Created</th>
+                    <th>Size</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="backup in backups" :key="backup.id">
+                    <td>
+                      <span class="fw-semibold">{{ backup.fileName }}</span>
+                    </td>
+                    <td>{{ formatDate(backup.createdAt) }}</td>
+                    <td>{{ formatFileSize(backup.fileSize) }}</td>
+                    <td>
+                      <span class="badge" :class="getStatusClass(backup.status)">
+                        {{ backup.status }}
+                      </span>
+                    </td>
+                    <td class="text-end">
+                      <button
+                        v-if="backup.status === 'completed'"
+                        class="btn btn-sm btn-success me-2"
+                        @click="downloadBackup(backup.id)"
+                        title="Download backup"
+                      >
+                        Download
+                      </button>
+                      <button
+                        class="btn btn-sm btn-danger"
+                        @click="deleteBackup(backup.id)"
+                        title="Delete backup"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -377,15 +439,19 @@
 import { ref, computed, onMounted } from 'vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useAuthStore } from '@/stores/auth'
+import { useBackupsStore } from '@/stores/backups'
 import { useNotification } from '@/composables/useNotification'
 
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
+const backupsStore = useBackupsStore()
 const { info, success, error } = useNotification()
 
 const settings = computed(() => settingsStore.settings)
 const currencies = computed(() => settingsStore.currencies)
 const currentUser = computed(() => authStore.currentUser)
+const backups = computed(() => backupsStore.allBackups)
+const backupLoading = computed(() => backupsStore.loading)
 
 // Profile form
 const profileForm = ref({
@@ -528,8 +594,72 @@ const exportData = async (type, format) => {
   }
 }
 
+// Backup management
+const createBackup = async () => {
+  try {
+    info('Creating database backup...')
+    await backupsStore.createBackup()
+    success('Backup initiated successfully')
+  } catch (err) {
+    error(err.response?.data?.error || err.message || 'Failed to create backup')
+  }
+}
+
+const downloadBackup = async (backupId) => {
+  try {
+    info('Downloading backup...')
+    await backupsStore.downloadBackup(backupId)
+    success('Backup downloaded successfully')
+  } catch (err) {
+    error(err.response?.data?.error || err.message || 'Failed to download backup')
+  }
+}
+
+const deleteBackup = async (backupId) => {
+  if (!confirm('Are you sure you want to delete this backup? This action cannot be undone.')) {
+    return
+  }
+
+  try {
+    await backupsStore.deleteBackup(backupId)
+    success('Backup deleted successfully')
+  } catch (err) {
+    error(err.response?.data?.error || err.message || 'Failed to delete backup')
+  }
+}
+
+const formatFileSize = (bytes) => {
+  return backupsStore.formatFileSize(bytes)
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return '-'
+  const date = new Date(dateString)
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-success'
+    case 'pending':
+      return 'bg-warning'
+    case 'failed':
+      return 'bg-danger'
+    default:
+      return 'bg-secondary'
+  }
+}
+
 onMounted(async () => {
   await settingsStore.loadSettings()
   initializeProfileForm()
+  await backupsStore.fetchBackups()
 })
 </script>
