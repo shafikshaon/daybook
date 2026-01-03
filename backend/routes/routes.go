@@ -129,6 +129,7 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 			budgetRoutes := protected.Group("/budgets")
 			{
 				budgetRoutes.GET("", c.BudgetHandler.ListBudgets)
+				budgetRoutes.GET("/progress", c.BudgetHandler.ListBudgets) // Same as GET "" but with explicit /progress path
 				budgetRoutes.GET("/:id", c.BudgetHandler.GetBudget)
 				budgetRoutes.GET("/:id/progress", c.BudgetHandler.GetBudgetProgress)
 				budgetRoutes.POST("", c.BudgetHandler.CreateBudget)

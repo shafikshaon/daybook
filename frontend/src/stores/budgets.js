@@ -129,7 +129,7 @@ export const useBudgetsStore = defineStore('budgets', {
   actions: {
     async fetchBudgets() {
       try {
-        const response = await apiService.get('budgets/progress')
+        const response = await apiService.get('budgets')
         this.budgets = response.data || []
       } catch (error) {
         console.error('Error fetching budgets:', error)
