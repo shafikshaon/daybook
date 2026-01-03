@@ -79,3 +79,10 @@ func (r *lendRepository) GetAccountName(ctx context.Context, accountID uint) (st
 	}
 	return account.Name, nil
 }
+
+// WithTx returns a new repository instance with the transaction
+func (r *lendRepository) WithTx(tx *gorm.DB) BaseRepository[models.LendRecord] {
+	return &lendRepository{
+		GormBaseRepository: NewGormBaseRepository[models.LendRecord](tx),
+	}
+}
