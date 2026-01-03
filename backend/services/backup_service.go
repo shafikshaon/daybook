@@ -179,16 +179,25 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	customLogger.Infof(ctx, "[BACKUP] Backup ID=%d completed successfully, size=%d bytes (%.2f MB)",
 		backupID, fileInfo.Size(), float64(fileInfo.Size())/(1024*1024))
 
-	// Get the backup to update
-	backup, err := s.backupRepo.FindByID(context.Background(), backupID, 0) // userID=0 for system operation
-	if err == nil {
-		backup.FileSize = fileInfo.Size()
-		backup.Status = "completed"
-		s.backupRepo.Update(context.Background(), backup)
-		customLogger.Infof(ctx, "[BACKUP] Backup ID=%d status updated to completed", backupID)
-	} else {
-		customLogger.Errorf(ctx, "[BACKUP] Failed to update backup ID=%d: %v", backupID, err)
+	// Update the backup status and file size using UpdateStatus
+	if err := s.backupRepo.UpdateStatus(context.Background(), backupID, "completed", ""); err != nil {
+		customLogger.Errorf(ctx, "[BACKUP] Failed to update backup ID=%d status: %v", backupID, err)
+		return
 	}
+
+	// Update file size separately using raw SQL to avoid userID constraint
+	updateCtx := context.Background()
+	if err := s.updateBackupFileSize(updateCtx, backupID, fileInfo.Size()); err != nil {
+		customLogger.Warnf(ctx, "[BACKUP] Failed to update file size for backup ID=%d: %v", backupID, err)
+		// Don't return here - the backup is still marked as completed
+	}
+
+	customLogger.Infof(ctx, "[BACKUP] Backup ID=%d status updated to completed", backupID)
+}
+
+// updateBackupFileSize updates just the file size field for a backup
+func (s *backupService) updateBackupFileSize(ctx context.Context, backupID uint, fileSize int64) error {
+	return s.backupRepo.UpdateFileSize(ctx, backupID, fileSize)
 }
 
 // findPgDump locates the pg_dump executable

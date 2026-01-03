@@ -20,6 +20,9 @@ type BackupRepository interface {
 
 	// UpdateStatus updates the status of a backup
 	UpdateStatus(ctx context.Context, id uint, status string, errorMsg string) error
+
+	// UpdateFileSize updates the file size of a backup
+	UpdateFileSize(ctx context.Context, id uint, fileSize int64) error
 }
 
 type backupRepository struct {
@@ -63,4 +66,11 @@ func (r *backupRepository) UpdateStatus(ctx context.Context, id uint, status str
 			"status":        status,
 			"error_message": errorMsg,
 		}).Error
+}
+
+// UpdateFileSize updates the file size of a backup
+func (r *backupRepository) UpdateFileSize(ctx context.Context, id uint, fileSize int64) error {
+	return r.db.WithContext(ctx).Model(&models.Backup{}).
+		Where("id = ?", id).
+		Update("file_size", fileSize).Error
 }

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql/driver"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,9 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		str = str[1 : len(str)-1]
 	}
+
+	// Trim whitespace
+	str = strings.TrimSpace(str)
 
 	// Handle empty strings after quote removal
 	if str == "" {
