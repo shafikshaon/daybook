@@ -16,7 +16,6 @@ type Config struct {
 	Redis    RedisConfig    `mapstructure:"redis"`
 	JWT      JWTConfig      `mapstructure:"jwt"`
 	CORS     CORSConfig     `mapstructure:"cors"`
-	Datadog  DatadogConfig  `mapstructure:"datadog"`
 }
 
 type ServerConfig struct {
@@ -53,14 +52,6 @@ type CORSConfig struct {
 	ExposeHeaders    []string `mapstructure:"expose_headers"`
 	AllowCredentials bool     `mapstructure:"allow_credentials"`
 	MaxAge           int      `mapstructure:"max_age"`
-}
-
-type DatadogConfig struct {
-	Enabled     bool   `mapstructure:"enabled"`
-	ServiceName string `mapstructure:"service_name"`
-	Environment string `mapstructure:"environment"`
-	AgentHost   string `mapstructure:"agent_host"`
-	AgentPort   string `mapstructure:"agent_port"`
 }
 
 var AppConfig *Config
@@ -123,13 +114,6 @@ func LoadConfig() (*Config, error) {
 			ExposeHeaders:    parseStringSlice(getEnv("CORS_EXPOSE_HEADERS", "")),
 			AllowCredentials: getEnv("CORS_ALLOW_CREDENTIALS", "true") == "true",
 			MaxAge:           parseIntWithDefault(getEnv("CORS_MAX_AGE", "12"), 12),
-		},
-		Datadog: DatadogConfig{
-			Enabled:     getEnv("DD_ENABLED", "false") == "true",
-			ServiceName: getEnv("DD_SERVICE", "daybook-backend"),
-			Environment: getEnv("DD_ENV", "development"),
-			AgentHost:   getEnv("DD_AGENT_HOST", "localhost"),
-			AgentPort:   getEnv("DD_TRACE_AGENT_PORT", "8126"),
 		},
 	}
 

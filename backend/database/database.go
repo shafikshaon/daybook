@@ -8,8 +8,6 @@ import (
 	"daybook-backend/models"
 
 	"github.com/go-redis/redis/v8"
-	redistrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go-redis/redis.v8"
-	gormtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorm.io/gorm.v1"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -39,15 +37,6 @@ func InitDatabase(cfg *config.Config) error {
 	}
 
 	customLogger.Infof(ctx, "Database connection established successfully")
-
-	// Add Datadog tracing plugin if enabled
-	if cfg.Datadog.Enabled {
-		if err := DB.Use(gormtrace.NewTracePlugin(gormtrace.WithServiceName(cfg.Datadog.ServiceName))); err != nil {
-			customLogger.Warnf(ctx, "Failed to enable Datadog GORM tracing: %v", err)
-		} else {
-			customLogger.Infof(ctx, "Datadog GORM tracing enabled")
-		}
-	}
 
 	// Enable UUID extension
 	DB.WithContext(ctx).Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"")
@@ -97,36 +86,12 @@ func InitDatabase(cfg *config.Config) error {
 func InitRedis(cfg *config.Config) error {
 	ctx := customLogger.CreateContext("")
 
-	// Create Redis client with optional Datadog tracing
-	if cfg.Datadog.Enabled {
-		// Use Datadog's wrapped client for tracing
-		wrappedClient := redistrace.NewClient(&redis.Options{
-			Addr:     cfg.Redis.GetAddr(),
-			Password: cfg.Redis.Password,
-			DB:       cfg.Redis.DB,
-		}, redistrace.WithServiceName(cfg.Datadog.ServiceName+"-redis"))
-
-		// Type assert to *redis.Client
-		if client, ok := wrappedClient.(*redis.Client); ok {
-			RedisClient = client
-			customLogger.Infof(ctx, "Datadog Redis tracing enabled")
-		} else {
-			// Fallback to standard client if type assertion fails
-			RedisClient = redis.NewClient(&redis.Options{
-				Addr:     cfg.Redis.GetAddr(),
-				Password: cfg.Redis.Password,
-				DB:       cfg.Redis.DB,
-			})
-			customLogger.Warnf(ctx, "Could not enable Datadog Redis tracing, using standard client")
-		}
-	} else {
-		// Standard Redis client without tracing
-		RedisClient = redis.NewClient(&redis.Options{
-			Addr:     cfg.Redis.GetAddr(),
-			Password: cfg.Redis.Password,
-			DB:       cfg.Redis.DB,
-		})
-	}
+	// Create Redis client
+	RedisClient = redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.GetAddr(),
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	})
 
 	_, err := RedisClient.Ping(ctx).Result()
 	if err != nil {

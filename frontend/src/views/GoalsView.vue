@@ -299,6 +299,13 @@
                   </select>
                 </div>
                 <div class="col-12 col-md-4 mb-3">
+                  <label class="form-label">Color</label>
+                  <input type="color" class="form-control form-control-color" v-model="editGoalForm.color" />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-12 col-md-12 mb-3">
                   <label class="form-label">Status</label>
                   <select class="form-select" v-model="editGoalForm.status">
                     <option value="active">Active</option>

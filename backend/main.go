@@ -15,8 +15,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	gintrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gin-gonic/gin"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 )
 
 func main() {
@@ -31,17 +29,6 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Infof(ctx, "Configuration loaded successfully")
-
-	// Initialize Datadog tracer if enabled
-	if cfg.Datadog.Enabled {
-		logger.Infof(ctx, "Initializing Datadog APM tracer...")
-		tracer.Start(
-			tracer.WithService(cfg.Datadog.ServiceName),
-			tracer.WithEnv(cfg.Datadog.Environment),
-			tracer.WithAgentAddr(fmt.Sprintf("%s:%s", cfg.Datadog.AgentHost, cfg.Datadog.AgentPort)),
-		)
-		logger.Infof(ctx, "Datadog APM tracer initialized for service: %s (env: %s)", cfg.Datadog.ServiceName, cfg.Datadog.Environment)
-	}
 
 	if err := logger.InitLogger(false, "daybook.log", cfg.Server.Mode); err != nil {
 		panic(err)
@@ -93,12 +80,6 @@ func main() {
 	router.Use(cors.New(corsConfig))
 	logger.Infof(ctx, "CORS middleware configured")
 
-	// Add Datadog tracing middleware if enabled
-	if cfg.Datadog.Enabled {
-		router.Use(gintrace.Middleware(cfg.Datadog.ServiceName))
-		logger.Infof(ctx, "Datadog APM middleware configured")
-	}
-
 	// Setup routes
 	logger.Infof(ctx, "Setting up application routes...")
 	routes.SetupRoutes(router, appContainer)
@@ -120,12 +101,6 @@ func main() {
 
 		if err := database.CloseRedis(); err != nil {
 			logger.Errorf(shutdownCtx, "Error closing Redis: %v", err)
-		}
-
-		// Stop Datadog tracer if enabled
-		if cfg.Datadog.Enabled {
-			logger.Infof(shutdownCtx, "Stopping Datadog APM tracer...")
-			tracer.Stop()
 		}
 
 		logger.Infof(shutdownCtx, "Server stopped gracefully")
