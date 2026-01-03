@@ -86,22 +86,25 @@ func (s *backupService) CreateBackup(ctx context.Context, userID uint) (*models.
 
 // performBackup executes pg_dump to create the backup file
 func (s *backupService) performBackup(backupID uint, filePath string) {
-	ctx := context.Background()
+	// Create a context with timeout (5 minutes max for backup)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
-	// Check if pg_dump is available
-	_, err := exec.LookPath("pg_dump")
+	// Find pg_dump executable - check common locations for macOS Homebrew
+	pgDumpPath, err := s.findPgDump()
 	if err != nil {
-		errorMsg := "pg_dump command not found. Please install PostgreSQL client tools."
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		errorMsg := fmt.Sprintf("pg_dump command not found: %v. Please install PostgreSQL client tools.", err)
+		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
 		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
+	fmt.Printf("[BACKUP] Found pg_dump at: %s\n", pgDumpPath)
 
 	// Create the backup file
 	file, err := os.Create(filePath)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to create file: %v", err)
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
 		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
@@ -110,12 +113,12 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	// Prepare pg_dump command
 	dbConfig := s.config.Database
 
-	// Log the backup attempt
+	// Log the backup attempt (don't log password)
 	fmt.Printf("[BACKUP] Starting backup ID=%d, connecting to %s:%s/%s as %s\n",
 		backupID, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.User)
 
-	pgDumpCmd := exec.Command(
-		"pg_dump",
+	pgDumpCmd := exec.CommandContext(ctx,
+		pgDumpPath,
 		"-h", dbConfig.Host,
 		"-p", dbConfig.Port,
 		"-U", dbConfig.User,
@@ -130,46 +133,89 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 	// Capture stderr for better error reporting
 	var stderrBuf bytes.Buffer
 
-	// Set PGPASSWORD environment variable
+	// Set PGPASSWORD environment variable (use dbConfig.Password)
 	pgDumpCmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", dbConfig.Password))
 	pgDumpCmd.Stdout = file
 	pgDumpCmd.Stderr = &stderrBuf
 
 	// Execute pg_dump
-	fmt.Printf("[BACKUP] Executing pg_dump for backup ID=%d\n", backupID)
+	fmt.Printf("[BACKUP] Executing pg_dump for backup ID=%d (timeout: 5 minutes)\n", backupID)
+	startTime := time.Now()
+
 	if err := pgDumpCmd.Run(); err != nil {
 		os.Remove(filePath) // Clean up failed backup file
 		stderrOutput := stderrBuf.String()
+
+		// Check if it was a timeout
+		if ctx.Err() == context.DeadlineExceeded {
+			errorMsg := "Backup timeout: operation took longer than 5 minutes"
+			s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
+			fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+			return
+		}
+
 		errorMsg := fmt.Sprintf("pg_dump failed: %v", err)
 		if stderrOutput != "" {
 			errorMsg = fmt.Sprintf("pg_dump failed: %v - %s", err, stderrOutput)
 		}
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
 		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
+
+	duration := time.Since(startTime)
+	fmt.Printf("[BACKUP] pg_dump completed in %v\n", duration)
 
 	// Get file size
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
 		errorMsg := fmt.Sprintf("Failed to get file info: %v", err)
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		s.backupRepo.UpdateStatus(context.Background(), backupID, "failed", errorMsg)
 		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
 
-	fmt.Printf("[BACKUP] Backup ID=%d completed successfully, size=%d bytes\n", backupID, fileInfo.Size())
+	fmt.Printf("[BACKUP] Backup ID=%d completed successfully, size=%d bytes (%.2f MB)\n",
+		backupID, fileInfo.Size(), float64(fileInfo.Size())/(1024*1024))
 
 	// Get the backup to update
-	backup, err := s.backupRepo.FindByID(ctx, backupID, 0) // userID=0 for system operation
+	backup, err := s.backupRepo.FindByID(context.Background(), backupID, 0) // userID=0 for system operation
 	if err == nil {
 		backup.FileSize = fileInfo.Size()
 		backup.Status = "completed"
-		s.backupRepo.Update(ctx, backup)
+		s.backupRepo.Update(context.Background(), backup)
 		fmt.Printf("[BACKUP] Backup ID=%d status updated to completed\n", backupID)
 	} else {
 		fmt.Printf("[BACKUP ERROR] Failed to update backup ID=%d: %v\n", backupID, err)
 	}
+}
+
+// findPgDump locates the pg_dump executable
+func (s *backupService) findPgDump() (string, error) {
+	// First, try to find it in PATH (works for both Linux and macOS)
+	path, err := exec.LookPath("pg_dump")
+	if err == nil {
+		return path, nil
+	}
+
+	// Common locations for different operating systems
+	commonPaths := []string{
+		// Linux (EC2, Ubuntu, Debian, etc.)
+		"/usr/bin/pg_dump",
+		"/usr/local/bin/pg_dump",
+		"/usr/pgsql-16/bin/pg_dump",
+		"/usr/pgsql-15/bin/pg_dump",
+		"/usr/pgsql-14/bin/pg_dump",
+		"/usr/pgsql-13/bin/pg_dump",
+	}
+
+	for _, path := range commonPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+
+	return "", fmt.Errorf("pg_dump not found in PATH or common locations. Install with: sudo apt-get install postgresql-client (Ubuntu/Debian) or brew install postgresql (macOS)")
 }
 
 // ListBackups retrieves all backups for a user
