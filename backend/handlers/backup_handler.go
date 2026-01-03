@@ -3,8 +3,11 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
+	customLogger "daybook-backend/logger"
+	"daybook-backend/middleware"
 	"daybook-backend/services"
 
 	"github.com/gin-gonic/gin"
@@ -87,31 +90,50 @@ func (h *BackupHandler) GetBackup(c *gin.Context) {
 // DownloadBackup downloads a backup file
 // GET /api/v1/backups/:id/download
 func (h *BackupHandler) DownloadBackup(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	customLogger.Infof(ctx, "DownloadBackup - Entry")
+
 	userID := c.GetUint("userID")
 	if userID == 0 {
+		customLogger.Warnf(ctx, "Unauthorized access")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
 
 	backupID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
+		customLogger.Warnf(ctx, "Invalid backup ID: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid backup ID"})
 		return
 	}
 
-	ctx := c.Request.Context()
+	customLogger.Debugf(ctx, "Fetching backup ID=%d for user=%d", backupID, userID)
 	backup, err := h.service.GetBackup(ctx, userID, uint(backupID))
 	if err != nil {
+		customLogger.Errorf(ctx, "Backup not found: %v", err)
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
 
+	customLogger.Debugf(ctx, "Backup found: status=%s, fileName=%s", backup.Status, backup.FileName)
+
 	if backup.Status != "completed" {
+		customLogger.Warnf(ctx, "Backup is not completed: status=%s", backup.Status)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Backup is not ready for download"})
 		return
 	}
 
 	filePath := h.service.GetBackupFilePath(backup)
+	customLogger.Debugf(ctx, "Backup file path: %s", filePath)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		customLogger.Errorf(ctx, "Backup file does not exist at path: %s", filePath)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Backup file not found"})
+		return
+	}
+
+	customLogger.Infof(ctx, "Serving backup file: %s (size: %d bytes)", backup.FileName, backup.FileSize)
 
 	// Set headers for file download
 	c.Header("Content-Description", "File Transfer")
