@@ -218,11 +218,6 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 
 	// Process each recurring transaction within a database transaction
 	err = s.txManager.WithTransaction(ctx, func(ctx context.Context, tx *gorm.DB) error {
-		// Get transaction-scoped repositories
-		repoTx := s.repo.WithTx(tx)
-		accountRepoTx := s.accountRepo.WithTx(tx)
-		creditCardRepoTx := s.creditCardRepo.WithTx(tx)
-
 		for _, recurring := range recurringTransactions {
 			// Skip if start date is in the future
 			if recurring.StartDate.Time.After(now) {
@@ -294,9 +289,9 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 				isCreditCardTransaction := transaction.CreditCardID != nil
 
 				if isCreditCardTransaction {
-					// Update credit card balance
-					creditCard, err := creditCardRepoTx.(repository.CreditCardRepository).FindByID(ctx, *transaction.CreditCardID, userID)
-					if err != nil {
+					// Update credit card balance using direct tx query
+					var creditCard models.CreditCard
+					if err := tx.WithContext(ctx).Where("id = ? AND user_id = ?", *transaction.CreditCardID, userID).First(&creditCard).Error; err != nil {
 						result.Errors++
 						continue
 					}
@@ -305,14 +300,14 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 						creditCard.CurrentBalance += transaction.Amount
 					}
 
-					if err := creditCardRepoTx.Update(ctx, creditCard); err != nil {
+					if err := tx.WithContext(ctx).Save(&creditCard).Error; err != nil {
 						result.Errors++
 						continue
 					}
 				} else {
-					// Update account balance
-					account, err := accountRepoTx.FindByID(ctx, transaction.AccountID, userID)
-					if err != nil {
+					// Update account balance using direct tx query
+					var account models.Account
+					if err := tx.WithContext(ctx).Where("id = ? AND user_id = ?", transaction.AccountID, userID).First(&account).Error; err != nil {
 						result.Errors++
 						continue
 					}
@@ -328,7 +323,7 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 							UpdateColumn("balance", gorm.Expr("balance + ?", transaction.Amount))
 					}
 
-					if err := accountRepoTx.Update(ctx, account); err != nil {
+					if err := tx.WithContext(ctx).Save(&account).Error; err != nil {
 						result.Errors++
 						continue
 					}
@@ -337,8 +332,10 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 				result.Created++
 			}
 
-			// Update LastProcessed date
-			if err := repoTx.(repository.RecurringTransactionRepository).UpdateLastProcessed(ctx, recurring.ID, now); err != nil {
+			// Update LastProcessed date using direct tx query
+			if err := tx.WithContext(ctx).Model(&models.RecurringTransaction{}).
+				Where("id = ?", recurring.ID).
+				Update("last_processed", now).Error; err != nil {
 				result.Errors++
 			}
 		}
