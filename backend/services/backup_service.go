@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -87,16 +88,32 @@ func (s *backupService) CreateBackup(ctx context.Context, userID uint) (*models.
 func (s *backupService) performBackup(backupID uint, filePath string) {
 	ctx := context.Background()
 
+	// Check if pg_dump is available
+	_, err := exec.LookPath("pg_dump")
+	if err != nil {
+		errorMsg := "pg_dump command not found. Please install PostgreSQL client tools."
+		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
+		return
+	}
+
 	// Create the backup file
 	file, err := os.Create(filePath)
 	if err != nil {
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", fmt.Sprintf("Failed to create file: %v", err))
+		errorMsg := fmt.Sprintf("Failed to create file: %v", err)
+		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
 	defer file.Close()
 
 	// Prepare pg_dump command
 	dbConfig := s.config.Database
+
+	// Log the backup attempt
+	fmt.Printf("[BACKUP] Starting backup ID=%d, connecting to %s:%s/%s as %s\n",
+		backupID, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.User)
+
 	pgDumpCmd := exec.Command(
 		"pg_dump",
 		"-h", dbConfig.Host,
@@ -110,24 +127,38 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 		"--no-privileges",
 	)
 
+	// Capture stderr for better error reporting
+	var stderrBuf bytes.Buffer
+
 	// Set PGPASSWORD environment variable
 	pgDumpCmd.Env = append(os.Environ(), fmt.Sprintf("PGPASSWORD=%s", dbConfig.Password))
 	pgDumpCmd.Stdout = file
-	pgDumpCmd.Stderr = os.Stderr
+	pgDumpCmd.Stderr = &stderrBuf
 
 	// Execute pg_dump
+	fmt.Printf("[BACKUP] Executing pg_dump for backup ID=%d\n", backupID)
 	if err := pgDumpCmd.Run(); err != nil {
 		os.Remove(filePath) // Clean up failed backup file
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", fmt.Sprintf("pg_dump failed: %v", err))
+		stderrOutput := stderrBuf.String()
+		errorMsg := fmt.Sprintf("pg_dump failed: %v", err)
+		if stderrOutput != "" {
+			errorMsg = fmt.Sprintf("pg_dump failed: %v - %s", err, stderrOutput)
+		}
+		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
 
 	// Get file size
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		s.backupRepo.UpdateStatus(ctx, backupID, "failed", fmt.Sprintf("Failed to get file info: %v", err))
+		errorMsg := fmt.Sprintf("Failed to get file info: %v", err)
+		s.backupRepo.UpdateStatus(ctx, backupID, "failed", errorMsg)
+		fmt.Printf("[BACKUP ERROR] %s\n", errorMsg)
 		return
 	}
+
+	fmt.Printf("[BACKUP] Backup ID=%d completed successfully, size=%d bytes\n", backupID, fileInfo.Size())
 
 	// Get the backup to update
 	backup, err := s.backupRepo.FindByID(ctx, backupID, 0) // userID=0 for system operation
@@ -135,6 +166,9 @@ func (s *backupService) performBackup(backupID uint, filePath string) {
 		backup.FileSize = fileInfo.Size()
 		backup.Status = "completed"
 		s.backupRepo.Update(ctx, backup)
+		fmt.Printf("[BACKUP] Backup ID=%d status updated to completed\n", backupID)
+	} else {
+		fmt.Printf("[BACKUP ERROR] Failed to update backup ID=%d: %v\n", backupID, err)
 	}
 }
 
