@@ -4,6 +4,7 @@
       <h1 class="text-purple mb-0">📊 Reports & Analytics</h1>
       <div class="d-flex gap-2">
         <select class="form-select form-select-sm" v-model="selectedPeriod" @change="handlePeriodChange" style="width: auto;">
+          <option value="all">All Data</option>
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
           <option value="this_quarter">This Quarter</option>
@@ -813,6 +814,11 @@ export default {
       let start, end
 
       switch (selectedPeriod.value) {
+        case 'all':
+          // Use a very wide date range to capture all data
+          start = new Date('1900-01-01')
+          end = new Date('2100-12-31')
+          break
         case 'this_month':
           start = startOfMonth(now)
           end = endOfMonth(now)
