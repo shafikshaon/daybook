@@ -56,16 +56,16 @@ func (h *BudgetHandler) ListBudgets(c *gin.Context) {
 		}
 	}
 
-	logger.Debugf(ctx, "Fetching budgets from database...")
-	budgets, err := h.service.ListBudgets(ctx, userID, filters)
+	logger.Debugf(ctx, "Fetching budgets with progress from database...")
+	budgetsWithProgress, err := h.service.ListBudgetsWithProgress(ctx, userID, filters)
 	if err != nil {
 		logger.Errorf(ctx, "Database error fetching budgets: %v", err)
 		utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch budgets")
 		return
 	}
 
-	logger.Infof(ctx, "Successfully retrieved %d budgets for user: %s", len(budgets), userID)
-	utilities.SuccessResponse(c, budgets, "Budgets retrieved successfully")
+	logger.Infof(ctx, "Successfully retrieved %d budgets with progress for user: %s", len(budgetsWithProgress), userID)
+	utilities.SuccessResponse(c, budgetsWithProgress, "Budgets retrieved successfully")
 }
 
 // GetBudget returns a specific budget by ID

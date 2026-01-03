@@ -27,6 +27,9 @@ type BudgetService interface {
 	// ListBudgets retrieves all budgets for a user with optional filters
 	ListBudgets(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]models.Budget, error)
 
+	// ListBudgetsWithProgress retrieves all budgets with spending progress
+	ListBudgetsWithProgress(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]BudgetProgress, error)
+
 	// GetBudget retrieves a specific budget by ID
 	GetBudget(ctx context.Context, budgetID, userID uint) (*models.Budget, error)
 
@@ -62,6 +65,87 @@ func NewBudgetService(
 // ListBudgets retrieves budgets with optional filters
 func (s *budgetService) ListBudgets(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]models.Budget, error) {
 	return s.repo.FindWithFilters(ctx, userID, filters)
+}
+
+// ListBudgetsWithProgress retrieves all budgets with spending progress calculated
+func (s *budgetService) ListBudgetsWithProgress(ctx context.Context, userID uint, filters repository.BudgetFilters) ([]BudgetProgress, error) {
+	// Get all budgets
+	budgets, err := s.repo.FindWithFilters(ctx, userID, filters)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate progress for each budget
+	var budgetsWithProgress []BudgetProgress
+	for _, budget := range budgets {
+		progress, err := s.calculateBudgetProgressForBudget(ctx, &budget, userID)
+		if err != nil {
+			// If we can't calculate progress, skip this budget or use zero values
+			continue
+		}
+		budgetsWithProgress = append(budgetsWithProgress, *progress)
+	}
+
+	return budgetsWithProgress, nil
+}
+
+// calculateBudgetProgressForBudget calculates progress for a given budget object
+func (s *budgetService) calculateBudgetProgressForBudget(ctx context.Context, budget *models.Budget, userID uint) (*BudgetProgress, error) {
+	// Calculate date range based on period
+	var startDate, endDate time.Time
+	now := time.Now().UTC()
+
+	switch budget.Period {
+	case "weekly":
+		startDate = now.AddDate(0, 0, -int(now.Weekday()))
+		startDate = time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC)
+		endDate = startDate.AddDate(0, 0, 7)
+
+	case "monthly":
+		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		endDate = startDate.AddDate(0, 1, 0)
+
+	case "quarterly":
+		currentMonth := int(now.Month())
+		quarterStartMonth := ((currentMonth-1)/3)*3 + 1
+		startDate = time.Date(now.Year(), time.Month(quarterStartMonth), 1, 0, 0, 0, 0, time.UTC)
+		endDate = startDate.AddDate(0, 3, 0)
+
+	case "yearly":
+		startDate = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
+		endDate = startDate.AddDate(1, 0, 0)
+
+	case "custom":
+		if budget.CustomStartDate != nil && budget.CustomEndDate != nil {
+			startDate = *budget.CustomStartDate
+			endDate = *budget.CustomEndDate
+		} else {
+			return nil, errors.New("custom budget dates not set")
+		}
+
+	default:
+		return nil, errors.New("invalid budget period")
+	}
+
+	// Calculate total spending
+	totalSpent, err := s.repo.CalculateTotalSpent(ctx, userID, budget.CategoryID, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate progress
+	progress := &BudgetProgress{
+		Budget:         budget,
+		TotalSpent:     totalSpent,
+		Remaining:      budget.Amount - totalSpent,
+		PercentageUsed: (totalSpent / budget.Amount) * 100,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		IsOverBudget:   totalSpent > budget.Amount,
+		AlertTriggered: (totalSpent / budget.Amount * 100) >= budget.AlertThreshold,
+	}
+
+	return progress, nil
 }
 
 // GetBudget retrieves a specific budget
