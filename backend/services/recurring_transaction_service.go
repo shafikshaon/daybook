@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"daybook-backend/models"
@@ -252,13 +253,20 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 				}
 
 				// Check if transaction already exists for this date and recurring ID (duplicate prevention)
+				// Use both date comparison and recurring_id to ensure uniqueness
 				var existingCount int64
-				tx.Model(&models.Transaction{}).Where(
-					"user_id = ? AND recurring_id = ? AND DATE(date) = DATE(?)",
-					userID, recurring.ID, txnDate,
-				).Count(&existingCount)
+				err := tx.WithContext(ctx).Model(&models.Transaction{}).
+					Where("user_id = ? AND recurring_id = ? AND date::date = ?::date",
+						userID, recurring.ID, txnDate.Format("2006-01-02")).
+					Count(&existingCount).Error
+
+				if err != nil {
+					result.Errors++
+					continue
+				}
 
 				if existingCount > 0 {
+					// Transaction already exists for this date - skip to prevent duplicate
 					result.Skipped++
 					continue
 				}
@@ -281,7 +289,14 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 
 				// Create the transaction
 				if err := tx.Create(&transaction).Error; err != nil {
-					result.Errors++
+					// Check if it's a unique constraint violation (duplicate)
+					errMsg := err.Error()
+					if strings.Contains(errMsg, "unique constraint") || strings.Contains(errMsg, "duplicate key") {
+						// This is a duplicate - skip it instead of counting as error
+						result.Skipped++
+					} else {
+						result.Errors++
+					}
 					continue
 				}
 

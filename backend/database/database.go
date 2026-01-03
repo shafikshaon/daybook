@@ -80,6 +80,20 @@ func InitDatabase(cfg *config.Config) error {
 
 	customLogger.Infof(ctx, "Database migrated successfully")
 
+	// Add unique constraint for recurring transactions to prevent duplicates
+	customLogger.Infof(ctx, "Creating unique index for recurring transactions...")
+	err = DB.WithContext(ctx).Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_recurring_transaction_per_date
+		ON transactions (user_id, recurring_id, (date::date))
+		WHERE recurring_id IS NOT NULL
+	`).Error
+	if err != nil {
+		customLogger.Warnf(ctx, "Failed to create unique index for recurring transactions: %v", err)
+		// Don't fail the migration if index creation fails
+	} else {
+		customLogger.Infof(ctx, "Unique index for recurring transactions created successfully")
+	}
+
 	return nil
 }
 
