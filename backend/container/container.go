@@ -200,6 +200,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 		c.TransactionRepo,
 		c.AccountRepo,
 		c.CreditCardRepo,
+		c.CategoryRepo,
 		c.TxManager,
 		c.ActivityLogService,
 	)

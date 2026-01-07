@@ -13,6 +13,9 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 	// Add logger middleware globally to populate trace IDs
 	router.Use(logger.ModifyContext)
 
+	// Add timezone middleware to convert timestamps to UTC+6 in responses
+	router.Use(middleware.TimezoneMiddleware())
+
 	// Health check endpoint
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "message": "Daybook API is running"})

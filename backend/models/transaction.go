@@ -13,7 +13,7 @@ type Transaction struct {
 	ToAccountID      *uint          `gorm:"index" json:"toAccountId"`                // For transfers
 	Type             string         `gorm:"not null" json:"type" binding:"required"` // income, expense, transfer
 	Amount           float64        `gorm:"not null" json:"amount" binding:"required,gt=0"`
-	CategoryID       uint           `gorm:"not null;index" json:"categoryId" binding:"required"`
+	CategoryID       uint           `gorm:"default:0;index" json:"categoryId"`
 	Date             Date           `gorm:"not null;index" json:"date"`
 	Description      string         `json:"description"`
 	Tags             []string       `gorm:"type:jsonb;serializer:json" json:"tags"`

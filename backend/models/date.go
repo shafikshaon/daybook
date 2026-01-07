@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"daybook-backend/timezone"
 )
 
 // Date is a custom type that handles date-only strings in JSON
@@ -33,7 +35,8 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 	}
 
 	// Try parsing as date-only format first (2006-01-02)
-	t, err := time.Parse("2006-01-02", str)
+	// Parse in UTC+6 timezone and convert to UTC for storage
+	t, err := timezone.ParseInAppTimezone("2006-01-02", str)
 	if err == nil {
 		d.Time = t
 		return nil
@@ -42,26 +45,30 @@ func (d *Date) UnmarshalJSON(b []byte) error {
 	// Try parsing as RFC3339 format (2006-01-02T15:04:05Z07:00)
 	t, err = time.Parse(time.RFC3339, str)
 	if err == nil {
-		d.Time = t
+		// Convert to UTC for storage
+		d.Time = timezone.ToUTC(t)
 		return nil
 	}
 
 	// Try parsing as RFC3339Nano format
 	t, err = time.Parse(time.RFC3339Nano, str)
 	if err == nil {
-		d.Time = t
+		// Convert to UTC for storage
+		d.Time = timezone.ToUTC(t)
 		return nil
 	}
 
 	return fmt.Errorf("unable to parse date: %s", str)
 }
 
-// MarshalJSON marshals the date as a date-only string
+// MarshalJSON marshals the date as a date-only string in UTC+6 timezone
 func (d Date) MarshalJSON() ([]byte, error) {
 	if d.Time.IsZero() {
 		return []byte("null"), nil
 	}
-	return []byte(fmt.Sprintf("\"%s\"", d.Time.Format("2006-01-02"))), nil
+	// Convert to UTC+6 before formatting
+	localTime := timezone.ToAppTimezone(d.Time)
+	return []byte(fmt.Sprintf("\"%s\"", localTime.Format("2006-01-02"))), nil
 }
 
 // Value implements the driver.Valuer interface for database storage

@@ -25,6 +25,7 @@ type transactionService struct {
 	repo            repository.TransactionRepository
 	accountRepo     repository.AccountRepository
 	creditCardRepo  repository.CreditCardRepository
+	categoryRepo    repository.CategoryRepository
 	txManager       repository.TransactionManager
 	activityService ActivityLogService
 }
@@ -65,6 +66,7 @@ func NewTransactionService(
 	repo repository.TransactionRepository,
 	accountRepo repository.AccountRepository,
 	creditCardRepo repository.CreditCardRepository,
+	categoryRepo repository.CategoryRepository,
 	txManager repository.TransactionManager,
 	activityService ActivityLogService,
 ) TransactionService {
@@ -72,6 +74,7 @@ func NewTransactionService(
 		repo:            repo,
 		accountRepo:     accountRepo,
 		creditCardRepo:  creditCardRepo,
+		categoryRepo:    categoryRepo,
 		txManager:       txManager,
 		activityService: activityService,
 	}
@@ -170,6 +173,36 @@ func (s *transactionService) CreateTransaction(ctx context.Context, transaction 
 	// Validate date
 	if transaction.Date.IsZero() {
 		return nil, errors.New("date is required")
+	}
+
+	// For transfers, automatically get or create Transfer category if categoryId is 0 or not provided
+	if transaction.Type == "transfer" && transaction.CategoryID == 0 {
+		// Try to find existing Transfer category
+		categories, err := s.categoryRepo.FindAll(ctx, transaction.UserID)
+		if err == nil {
+			for _, cat := range categories {
+				if cat.Name == "Transfer" && cat.Type == "transfer" {
+					transaction.CategoryID = cat.ID
+					break
+				}
+			}
+		}
+
+		// If still not found, create Transfer category
+		if transaction.CategoryID == 0 {
+			transferCategory := &models.Category{
+				UserID:      transaction.UserID,
+				Name:        "Transfer",
+				Type:        "transfer",
+				Icon:        "🔄",
+				Color:       "#8B5CF6",
+				IsDefault:   true,
+				Description: "Transfer between accounts",
+			}
+			if err := s.categoryRepo.Create(ctx, transferCategory); err == nil {
+				transaction.CategoryID = transferCategory.ID
+			}
+		}
 	}
 
 	// Determine if this is a credit card transaction or account transaction
