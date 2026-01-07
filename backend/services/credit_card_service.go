@@ -223,7 +223,7 @@ func (s *creditCardService) RecordTransaction(ctx context.Context, cardID, userI
 			Amount:       req.Amount,
 			Date:         req.Date,
 			Description:  req.Description,
-			CategoryID:   req.CategoryID,
+			CategoryID:   models.FlexibleUint(req.CategoryID),
 			CreditCardID: &cardID,
 			Tags:         req.Tags,
 			Attachments:  req.Attachments,

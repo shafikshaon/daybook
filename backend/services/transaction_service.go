@@ -182,7 +182,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, transaction 
 		if err == nil {
 			for _, cat := range categories {
 				if cat.Name == "Transfer" && cat.Type == "transfer" {
-					transaction.CategoryID = cat.ID
+					transaction.CategoryID = models.FlexibleUint(cat.ID)
 					break
 				}
 			}
@@ -200,7 +200,7 @@ func (s *transactionService) CreateTransaction(ctx context.Context, transaction 
 				Description: "Transfer between accounts",
 			}
 			if err := s.categoryRepo.Create(ctx, transferCategory); err == nil {
-				transaction.CategoryID = transferCategory.ID
+				transaction.CategoryID = models.FlexibleUint(transferCategory.ID)
 			}
 		}
 	}

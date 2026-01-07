@@ -111,7 +111,7 @@ func (s *accountService) CreateAccount(ctx context.Context, account *models.Acco
 				UserID:      account.UserID,
 				AccountID:   account.ID,
 				Type:        "income",
-				CategoryID:  openingBalanceCategory.ID,
+				CategoryID:  models.FlexibleUint(openingBalanceCategory.ID),
 				Amount:      account.InitialBalance,
 				Date:        models.Date{Time: account.CreatedAt},
 				Description: "Opening balance for " + account.Name,
