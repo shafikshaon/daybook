@@ -411,6 +411,25 @@ export const useTransactionsStore = defineStore('transactions', {
       }
     },
 
+    async updateLastProcessed(id, lastProcessedDate) {
+      try {
+        const response = await apiService.patch('recurring-transactions', `${id}/last-processed`, {
+          lastProcessed: lastProcessedDate
+        })
+
+        // Update the local state
+        const index = this.recurringTransactions.findIndex(rt => rt.id === id)
+        if (index !== -1) {
+          this.recurringTransactions[index] = response.data
+        }
+
+        return response.data
+      } catch (error) {
+        console.error('Error updating last processed date:', error)
+        throw error
+      }
+    },
+
     calculateNextDate(lastDate, frequency) {
       const next = new Date(lastDate)
 

@@ -14,6 +14,7 @@ type RecurringTransactionRepository interface {
 	BaseRepository[models.RecurringTransaction]
 	FindEnabled(ctx context.Context, userID uint) ([]models.RecurringTransaction, error)
 	UpdateLastProcessed(ctx context.Context, id uint, processedTime time.Time) error
+	UpdateFields(ctx context.Context, id, userID uint, updates map[string]interface{}) error
 }
 
 type recurringTransactionRepository struct {
@@ -42,4 +43,12 @@ func (r *recurringTransactionRepository) UpdateLastProcessed(ctx context.Context
 		Model(&models.RecurringTransaction{}).
 		Where("id = ?", id).
 		Update("last_processed", processedTime).Error
+}
+
+// UpdateFields updates multiple fields for a recurring transaction
+func (r *recurringTransactionRepository) UpdateFields(ctx context.Context, id, userID uint, updates map[string]interface{}) error {
+	return r.db.WithContext(ctx).
+		Model(&models.RecurringTransaction{}).
+		Where("id = ? AND user_id = ?", id, userID).
+		Updates(updates).Error
 }

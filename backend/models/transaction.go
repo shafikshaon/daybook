@@ -41,7 +41,8 @@ type RecurringTransaction struct {
 	Frequency           string         `gorm:"not null" json:"frequency"` // daily, weekly, biweekly, monthly, quarterly, yearly
 	StartDate           Date           `gorm:"not null" json:"startDate"`
 	EndDate             *Date          `json:"endDate"`
-	LastProcessed       *time.Time     `gorm:"type:timestamptz" json:"lastProcessed"`
+	LastProcessed       *time.Time     `gorm:"type:timestamptz" json:"lastProcessed"` // Date of last transaction created
+	NextExecutionDate   *time.Time     `gorm:"type:timestamptz" json:"nextExecutionDate"` // Date when next transaction should be created
 	Enabled             bool           `gorm:"default:true" json:"enabled"`
 	CreatedAt           time.Time      `json:"createdAt"`
 	UpdatedAt           time.Time      `json:"updatedAt"`

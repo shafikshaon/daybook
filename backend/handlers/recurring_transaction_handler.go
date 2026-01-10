@@ -198,3 +198,47 @@ func (h *RecurringTransactionHandler) ProcessRecurringTransactions(c *gin.Contex
 		userID, result.Created, result.Skipped, result.Errors)
 	utilities.SuccessResponse(c, result, "Processing completed")
 }
+
+// UpdateLastProcessed manually updates the last processed date for a recurring transaction
+func (h *RecurringTransactionHandler) UpdateLastProcessed(c *gin.Context) {
+	ctx := middleware.GetContextWithUserID(c)
+	logger.Infof(ctx, "UpdateLastProcessed - Entry")
+
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		logger.Warnf(ctx, "Unauthorized: %v", err)
+		utilities.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		logger.Warnf(ctx, "Invalid ID: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, "Invalid recurring transaction ID")
+		return
+	}
+
+	var request struct {
+		LastProcessed string `json:"lastProcessed" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		logger.Warnf(ctx, "Validation error: %v", err)
+		utilities.ErrorResponse(c, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	recurringTransaction, err := h.service.UpdateLastProcessed(ctx, uint(id), userID, request.LastProcessed)
+	if err != nil {
+		logger.Errorf(ctx, "Service operation failed: %v", err)
+		if err.Error() == "recurring transaction not found" {
+			utilities.ErrorResponse(c, http.StatusNotFound, err.Error())
+		} else {
+			utilities.ErrorResponse(c, http.StatusInternalServerError, "Failed to update last processed date")
+		}
+		return
+	}
+
+	logger.Infof(ctx, "Last processed date updated successfully for recurring transaction: %d", id)
+	utilities.SuccessResponse(c, recurringTransaction, "Last processed date updated successfully")
+}

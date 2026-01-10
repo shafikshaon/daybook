@@ -91,6 +91,7 @@ func SetupRoutes(router *gin.Engine, c *container.Container) {
 				recurringTransactionRoutes.PUT("/:id", c.RecurringTransactionHandler.UpdateRecurringTransaction)
 				recurringTransactionRoutes.DELETE("/:id", c.RecurringTransactionHandler.DeleteRecurringTransaction)
 				recurringTransactionRoutes.POST("/process", c.RecurringTransactionHandler.ProcessRecurringTransactions)
+				recurringTransactionRoutes.PATCH("/:id/last-processed", c.RecurringTransactionHandler.UpdateLastProcessed)
 			}
 			// Credit card routes
 			creditCardRoutes := protected.Group("/credit-cards")

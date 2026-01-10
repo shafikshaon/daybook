@@ -64,6 +64,7 @@
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Last Processed</th>
+                <th>Next Due</th>
                 <th class="text-center">Actions</th>
               </tr>
             </thead>
@@ -86,7 +87,24 @@
                 <td>{{ formatFrequency(schedule.frequency) }}</td>
                 <td>{{ formatDate(schedule.startDate) }}</td>
                 <td>{{ schedule.endDate ? formatDate(schedule.endDate) : 'Never' }}</td>
-                <td>{{ schedule.lastProcessed ? formatDate(schedule.lastProcessed) : 'Not yet' }}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-1">
+                    <span>{{ schedule.lastProcessed ? formatDate(schedule.lastProcessed) : 'Not yet' }}</span>
+                    <button
+                      v-if="schedule.lastProcessed"
+                      class="btn btn-sm btn-link p-0 text-decoration-none"
+                      @click="showEditLastProcessed(schedule)"
+                      title="Edit last processed date"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <span :class="getNextDueBadgeClass(schedule.nextExecutionDate)">
+                    {{ schedule.nextExecutionDate ? formatDate(schedule.nextExecutionDate) : 'N/A' }}
+                  </span>
+                </td>
                 <td class="text-center">
                   <button
                     class="btn btn-sm me-1"
@@ -219,6 +237,48 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Last Processed Date Modal -->
+    <div class="modal fade" :class="{ 'show d-block': showEditLastProcessedModal }" style="background-color: rgba(0,0,0,0.5);" v-if="showEditLastProcessedModal">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Last Processed Date</h5>
+            <button type="button" class="btn-close" @click="closeEditLastProcessedModal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <strong>⚠️ Important:</strong> Changing the last processed date will affect when the next transaction is created.
+              Make sure you understand the impact before proceeding.
+            </div>
+            <form @submit.prevent="saveLastProcessedDate">
+              <div class="mb-3">
+                <label class="form-label">Schedule</label>
+                <input type="text" class="form-control" :value="editingSchedule?.transactionTemplate?.description" disabled />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Current Last Processed Date</label>
+                <input type="text" class="form-control" :value="formatDate(editingSchedule?.lastProcessed)" disabled />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">New Last Processed Date *</label>
+                <input type="date" class="form-control" v-model="lastProcessedForm.date" required />
+                <small class="text-muted">Set the date of the last transaction that was created</small>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Expected Next Due Date</label>
+                <input type="text" class="form-control" :value="calculateExpectedNextDate()" disabled />
+                <small class="text-muted">The next transaction will be scheduled for this date</small>
+              </div>
+              <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" @click="closeEditLastProcessedModal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Date</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -239,6 +299,8 @@ const showAddModal = ref(false)
 const processing = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
+const showEditLastProcessedModal = ref(false)
+const editingSchedule = ref(null)
 
 const form = ref({
   description: '',
@@ -252,6 +314,10 @@ const form = ref({
   endDate: '',
   enabled: true,
   notes: ''
+})
+
+const lastProcessedForm = ref({
+  date: ''
 })
 
 const recurringTransactions = computed(() => transactionsStore.recurringTransactions)
@@ -295,6 +361,19 @@ const getAmountClass = (type) => {
   if (type === 'income') return 'text-success'
   if (type === 'expense') return 'text-danger'
   return 'text-info'
+}
+
+const getNextDueBadgeClass = (nextExecutionDate) => {
+  if (!nextExecutionDate) return 'text-muted'
+
+  const nextDate = new Date(nextExecutionDate)
+  const today = new Date()
+  const daysUntil = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24))
+
+  if (daysUntil < 0) return 'text-danger fw-bold' // Overdue
+  if (daysUntil === 0) return 'text-warning fw-bold' // Due today
+  if (daysUntil <= 3) return 'text-warning' // Due soon
+  return 'text-success' // Future
 }
 
 const onTypeChange = () => {
@@ -421,6 +500,46 @@ const closeModal = () => {
     endDate: '',
     enabled: true,
     notes: ''
+  }
+}
+
+const showEditLastProcessed = (schedule) => {
+  editingSchedule.value = schedule
+  lastProcessedForm.value.date = schedule.lastProcessed
+    ? new Date(schedule.lastProcessed).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0]
+  showEditLastProcessedModal.value = true
+}
+
+const closeEditLastProcessedModal = () => {
+  showEditLastProcessedModal.value = false
+  editingSchedule.value = null
+  lastProcessedForm.value.date = ''
+}
+
+const calculateExpectedNextDate = () => {
+  if (!lastProcessedForm.value.date || !editingSchedule.value) return 'N/A'
+
+  const nextDate = transactionsStore.calculateNextDate(
+    lastProcessedForm.value.date,
+    editingSchedule.value.frequency
+  )
+
+  return formatDate(nextDate)
+}
+
+const saveLastProcessedDate = async () => {
+  try {
+    await transactionsStore.updateLastProcessed(
+      editingSchedule.value.id,
+      lastProcessedForm.value.date
+    )
+
+    await transactionsStore.fetchRecurringTransactions()
+    success('Last processed date updated successfully')
+    closeEditLastProcessedModal()
+  } catch (err) {
+    error(err.response?.data?.message || err.message || 'Error updating last processed date')
   }
 }
 

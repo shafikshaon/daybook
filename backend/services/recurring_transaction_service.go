@@ -20,6 +20,7 @@ type RecurringTransactionService interface {
 	UpdateRecurringTransaction(ctx context.Context, id, userID uint, updateData *models.RecurringTransaction) (*models.RecurringTransaction, error)
 	DeleteRecurringTransaction(ctx context.Context, id, userID uint) error
 	ProcessRecurringTransactions(ctx context.Context, userID uint) (*ProcessRecurringResult, error)
+	UpdateLastProcessed(ctx context.Context, id, userID uint, lastProcessedDate string) (*models.RecurringTransaction, error)
 }
 
 type recurringTransactionService struct {
@@ -233,13 +234,18 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 			}
 
 			// Determine the start point for generating transactions
+			// If LastProcessed exists, start from the day after it; otherwise start from StartDate
 			startFrom := recurring.StartDate.Time
 			if recurring.LastProcessed != nil {
-				startFrom = *recurring.LastProcessed
+				// Start from the next period after last processed date
+				startFrom = calculateNextDate(*recurring.LastProcessed, recurring.Frequency)
 			}
 
 			// Generate transactions from startFrom to now
 			transactionDates := calculateTransactionDates(startFrom, now, recurring.Frequency, recurring.StartDate.Time)
+
+			// Track the last transaction date created for this recurring transaction
+			var lastCreatedDate *time.Time
 
 			for _, txnDate := range transactionDates {
 				// Skip if transaction date is before start date
@@ -344,13 +350,41 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 				}
 
 				result.Created++
+
+				// Track the last transaction date created
+				txnDateCopy := txnDate
+				lastCreatedDate = &txnDateCopy
 			}
 
-			// Update LastProcessed date using UpdateColumn to bypass hooks and avoid template_date issues
-			if err := tx.WithContext(ctx).Model(&models.RecurringTransaction{}).
-				Where("id = ?", recurring.ID).
-				UpdateColumn("last_processed", now).Error; err != nil {
-				result.Errors++
+			// Update LastProcessed and NextExecutionDate
+			// Only update if we actually created transactions OR if this is first run
+			if lastCreatedDate != nil {
+				// LastProcessed is the date of the last transaction we created
+				nextDate := calculateNextDate(*lastCreatedDate, recurring.Frequency)
+
+				updates := map[string]interface{}{
+					"last_processed": lastCreatedDate,
+					"next_execution_date": nextDate,
+				}
+
+				if err := tx.WithContext(ctx).Model(&models.RecurringTransaction{}).
+					Where("id = ?", recurring.ID).
+					Updates(updates).Error; err != nil {
+					result.Errors++
+				}
+			} else if recurring.LastProcessed == nil {
+				// First run but no transactions created yet (might be future start date)
+				// Set next execution to start date
+				nextDate := recurring.StartDate.Time
+				updates := map[string]interface{}{
+					"next_execution_date": nextDate,
+				}
+
+				if err := tx.WithContext(ctx).Model(&models.RecurringTransaction{}).
+					Where("id = ?", recurring.ID).
+					Updates(updates).Error; err != nil {
+					result.Errors++
+				}
 			}
 		}
 
@@ -363,43 +397,83 @@ func (s *recurringTransactionService) ProcessRecurringTransactions(ctx context.C
 	return result, nil
 }
 
+// calculateNextDate calculates the next date based on frequency
+func calculateNextDate(from time.Time, frequency string) time.Time {
+	switch frequency {
+	case "daily":
+		return from.AddDate(0, 0, 1)
+	case "weekly":
+		return from.AddDate(0, 0, 7)
+	case "biweekly":
+		return from.AddDate(0, 0, 14)
+	case "monthly":
+		return from.AddDate(0, 1, 0)
+	case "quarterly":
+		return from.AddDate(0, 3, 0)
+	case "yearly":
+		return from.AddDate(1, 0, 0)
+	default:
+		return from
+	}
+}
+
 // calculateTransactionDates calculates all transaction dates between start and end based on frequency
+// The start date is included in the results if it's not after the end date
 func calculateTransactionDates(start, end time.Time, frequency string, originalStartDate time.Time) []time.Time {
 	var dates []time.Time
 	current := start
 
-	// For the first run, include the start date if it's the original start date
-	if start.Equal(originalStartDate) {
-		dates = append(dates, start)
-	}
+	// Include all due dates from start to end (inclusive)
+	for !current.After(end) {
+		// Make sure we don't go before the original start date
+		if !current.Before(originalStartDate) {
+			dates = append(dates, current)
+		}
 
-	for {
 		// Calculate next date based on frequency
-		var next time.Time
-		switch frequency {
-		case "daily":
-			next = current.AddDate(0, 0, 1)
-		case "weekly":
-			next = current.AddDate(0, 0, 7)
-		case "biweekly":
-			next = current.AddDate(0, 0, 14)
-		case "monthly":
-			next = current.AddDate(0, 1, 0)
-		case "quarterly":
-			next = current.AddDate(0, 3, 0)
-		case "yearly":
-			next = current.AddDate(1, 0, 0)
-		default:
-			return dates
-		}
-
-		if next.After(end) {
-			break
-		}
-
-		dates = append(dates, next)
-		current = next
+		current = calculateNextDate(current, frequency)
 	}
 
 	return dates
+}
+
+// UpdateLastProcessed manually updates the last processed date for a recurring transaction
+func (s *recurringTransactionService) UpdateLastProcessed(ctx context.Context, id, userID uint, lastProcessedDate string) (*models.RecurringTransaction, error) {
+	// Fetch the recurring transaction
+	recurring, err := s.repo.FindByID(ctx, id, userID)
+	if err != nil {
+		return nil, errors.New("recurring transaction not found")
+	}
+
+	// Parse the date string
+	parsedDate, err := time.Parse("2006-01-02", lastProcessedDate)
+	if err != nil {
+		return nil, errors.New("invalid date format. Use YYYY-MM-DD")
+	}
+
+	// Calculate the next execution date based on the new last processed date
+	nextDate := calculateNextDate(parsedDate, recurring.Frequency)
+
+	// Update the recurring transaction
+	updates := map[string]interface{}{
+		"last_processed": parsedDate,
+		"next_execution_date": nextDate,
+	}
+
+	if err := s.repo.UpdateFields(ctx, id, userID, updates); err != nil {
+		return nil, err
+	}
+
+	// Log activity
+	s.activityService.LogActivity(ctx, ActivityLogParams{
+		UserID:      userID,
+		Action:      models.ActionUpdate,
+		Module:      models.ModuleTransaction,
+		EntityType:  "RecurringTransaction",
+		EntityID:    &id,
+		Description: "Updated last processed date for: " + recurring.TransactionTemplate.Description,
+	})
+
+	// Fetch and return the updated recurring transaction
+	return s.repo.FindByID(ctx, id, userID)
 }
