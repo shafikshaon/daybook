@@ -88,15 +88,15 @@
                 <td>{{ formatDate(schedule.startDate) }}</td>
                 <td>{{ schedule.endDate ? formatDate(schedule.endDate) : 'Never' }}</td>
                 <td>
-                  <div class="d-flex align-items-center gap-1">
+                  <div class="d-flex align-items-center gap-2">
                     <span>{{ schedule.lastProcessed ? formatDate(schedule.lastProcessed) : 'Not yet' }}</span>
                     <button
-                      v-if="schedule.lastProcessed"
-                      class="btn btn-sm btn-link p-0 text-decoration-none"
+                      class="btn btn-sm btn-outline-secondary"
                       @click="showEditLastProcessed(schedule)"
                       title="Edit last processed date"
+                      style="padding: 0.125rem 0.375rem; font-size: 0.75rem;"
                     >
-                      ✏️
+                      📝 Edit
                     </button>
                   </div>
                 </td>
@@ -243,12 +243,15 @@
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Edit Last Processed Date</h5>
+            <h5 class="modal-title">
+              {{ editingSchedule?.lastProcessed ? 'Edit' : 'Set' }} Last Processed Date
+            </h5>
             <button type="button" class="btn-close" @click="closeEditLastProcessedModal"></button>
           </div>
           <div class="modal-body">
             <div class="alert alert-warning">
-              <strong>⚠️ Important:</strong> Changing the last processed date will affect when the next transaction is created.
+              <strong>⚠️ Important:</strong>
+              {{ editingSchedule?.lastProcessed ? 'Changing' : 'Setting' }} the last processed date will affect when the next transaction is created.
               Make sure you understand the impact before proceeding.
             </div>
             <form @submit.prevent="saveLastProcessedDate">
@@ -256,14 +259,19 @@
                 <label class="form-label">Schedule</label>
                 <input type="text" class="form-control" :value="editingSchedule?.transactionTemplate?.description" disabled />
               </div>
-              <div class="mb-3">
+              <div class="mb-3" v-if="editingSchedule?.lastProcessed">
                 <label class="form-label">Current Last Processed Date</label>
                 <input type="text" class="form-control" :value="formatDate(editingSchedule?.lastProcessed)" disabled />
               </div>
               <div class="mb-3">
-                <label class="form-label">New Last Processed Date *</label>
+                <label class="form-label">{{ editingSchedule?.lastProcessed ? 'New' : 'Set' }} Last Processed Date *</label>
                 <input type="date" class="form-control" v-model="lastProcessedForm.date" required />
-                <small class="text-muted">Set the date of the last transaction that was created</small>
+                <small class="text-muted">
+                  {{ editingSchedule?.lastProcessed
+                    ? 'Set the date of the last transaction that was created'
+                    : 'Set when the last transaction should be considered as created'
+                  }}
+                </small>
               </div>
               <div class="mb-3">
                 <label class="form-label">Expected Next Due Date</label>
@@ -272,7 +280,9 @@
               </div>
               <div class="d-flex justify-content-end gap-2">
                 <button type="button" class="btn btn-secondary" @click="closeEditLastProcessedModal">Cancel</button>
-                <button type="submit" class="btn btn-primary">Update Date</button>
+                <button type="submit" class="btn btn-primary">
+                  {{ editingSchedule?.lastProcessed ? 'Update Date' : 'Set Date' }}
+                </button>
               </div>
             </form>
           </div>
@@ -505,9 +515,14 @@ const closeModal = () => {
 
 const showEditLastProcessed = (schedule) => {
   editingSchedule.value = schedule
-  lastProcessedForm.value.date = schedule.lastProcessed
-    ? new Date(schedule.lastProcessed).toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0]
+  // Default to start date if never processed, otherwise use last processed date
+  if (schedule.lastProcessed) {
+    lastProcessedForm.value.date = new Date(schedule.lastProcessed).toISOString().split('T')[0]
+  } else if (schedule.startDate) {
+    lastProcessedForm.value.date = new Date(schedule.startDate).toISOString().split('T')[0]
+  } else {
+    lastProcessedForm.value.date = new Date().toISOString().split('T')[0]
+  }
   showEditLastProcessedModal.value = true
 }
 
