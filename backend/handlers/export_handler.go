@@ -26,10 +26,11 @@ func (h *ExportHandler) ExportData(c *gin.Context) {
 		return
 	}
 
-	dataType := c.Query("type") // transactions, accounts, budgets, goals, categories, assets, all
-	format := c.Query("format") // csv, json
+	dataType := c.Query("type")             // transactions, accounts, budgets, goals, categories, assets, all
+	format := c.Query("format")             // csv, json
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
+	transactionType := c.Query("transaction_type") // income, expense, transfer (optional filter)
 
 	// Validate parameters
 	if dataType == "" {
@@ -78,10 +79,10 @@ func (h *ExportHandler) ExportData(c *gin.Context) {
 		}
 
 		if format == "csv" {
-			data, err = h.service.ExportTransactionsCSV(ctx, userID, startDate, endDate)
+			data, err = h.service.ExportTransactionsCSV(ctx, userID, startDate, endDate, transactionType)
 			filename = fmt.Sprintf("transactions_%s_%s.csv", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 		} else {
-			data, err = h.service.ExportTransactionsJSON(ctx, userID, startDate, endDate)
+			data, err = h.service.ExportTransactionsJSON(ctx, userID, startDate, endDate, transactionType)
 			filename = fmt.Sprintf("transactions_%s_%s.json", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 		}
 

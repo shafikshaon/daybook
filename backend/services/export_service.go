@@ -14,8 +14,8 @@ import (
 
 // ExportService handles data export operations
 type ExportService interface {
-	ExportTransactionsCSV(ctx context.Context, userID uint, startDate, endDate time.Time) ([]byte, error)
-	ExportTransactionsJSON(ctx context.Context, userID uint, startDate, endDate time.Time) ([]byte, error)
+	ExportTransactionsCSV(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]byte, error)
+	ExportTransactionsJSON(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]byte, error)
 	ExportAccountsCSV(ctx context.Context, userID uint) ([]byte, error)
 	ExportAccountsJSON(ctx context.Context, userID uint) ([]byte, error)
 	ExportBudgetsCSV(ctx context.Context, userID uint) ([]byte, error)
@@ -70,12 +70,15 @@ func NewExportService(
 }
 
 // ExportTransactionsCSV exports transactions as CSV
-func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, startDate, endDate time.Time) ([]byte, error) {
+func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]byte, error) {
 	// Use FindWithFilters to get transactions by date range
 	filters := repository.TransactionFilters{
 		StartDate:       &startDate,
 		EndDate:         &endDate,
 		IncludeTracking: true, // Include all transactions
+	}
+	if transactionType != "" {
+		filters.Type = &transactionType
 	}
 	pagination := repository.PaginationParams{
 		Page:  1,
@@ -88,11 +91,30 @@ func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, 
 	}
 	transactions := result.Transactions
 
+	// Fetch categories and accounts for name lookups
+	categories, err := s.categoryRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch categories: %w", err)
+	}
+	categoryMap := make(map[uint]string)
+	for _, cat := range categories {
+		categoryMap[cat.ID] = cat.Name
+	}
+
+	accounts, err := s.accountRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accounts: %w", err)
+	}
+	accountMap := make(map[uint]string)
+	for _, acc := range accounts {
+		accountMap[acc.ID] = acc.Name
+	}
+
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
 	// Write header
-	header := []string{"ID", "Date", "Type", "Amount", "Category ID", "Account ID", "To Account ID", "Description", "Tags", "Created At"}
+	header := []string{"ID", "Date", "Type", "Amount", "Category", "Account", "To Account", "Description", "Tags", "Created At"}
 	if err := writer.Write(header); err != nil {
 		return nil, fmt.Errorf("failed to write CSV header: %w", err)
 	}
@@ -105,9 +127,11 @@ func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, 
 			tags = string(tagsBytes)
 		}
 
-		toAccountID := ""
+		categoryName := categoryMap[uint(tx.CategoryID)]
+		accountName := accountMap[uint(tx.AccountID)]
+		toAccountName := ""
 		if tx.ToAccountID != nil {
-			toAccountID = fmt.Sprintf("%d", *tx.ToAccountID)
+			toAccountName = accountMap[uint(*tx.ToAccountID)]
 		}
 
 		record := []string{
@@ -115,9 +139,9 @@ func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, 
 			tx.Date.Format("2006-01-02"),
 			tx.Type,
 			fmt.Sprintf("%.2f", tx.Amount),
-			fmt.Sprintf("%d", tx.CategoryID),
-			fmt.Sprintf("%d", tx.AccountID),
-			toAccountID,
+			categoryName,
+			accountName,
+			toAccountName,
 			tx.Description,
 			tags,
 			tx.CreatedAt.Format("2006-01-02 15:04:05"),
@@ -144,13 +168,33 @@ func (s *exportService) ExportTransactionsCSV(ctx context.Context, userID uint, 
 	return buf.Bytes(), nil
 }
 
+// TransactionExport represents a transaction with category and account names for export
+type TransactionExport struct {
+	ID            uint        `json:"id"`
+	Date          string      `json:"date"`
+	Type          string      `json:"type"`
+	Amount        float64     `json:"amount"`
+	CategoryID    uint        `json:"categoryId"`
+	CategoryName  string      `json:"categoryName"`
+	AccountID     uint        `json:"accountId"`
+	AccountName   string      `json:"accountName"`
+	ToAccountID   *uint       `json:"toAccountId,omitempty"`
+	ToAccountName string      `json:"toAccountName,omitempty"`
+	Description   string      `json:"description"`
+	Tags          []string    `json:"tags"`
+	CreatedAt     string      `json:"createdAt"`
+}
+
 // ExportTransactionsJSON exports transactions as JSON
-func (s *exportService) ExportTransactionsJSON(ctx context.Context, userID uint, startDate, endDate time.Time) ([]byte, error) {
+func (s *exportService) ExportTransactionsJSON(ctx context.Context, userID uint, startDate, endDate time.Time, transactionType string) ([]byte, error) {
 	// Use FindWithFilters to get transactions by date range
 	filters := repository.TransactionFilters{
 		StartDate:       &startDate,
 		EndDate:         &endDate,
 		IncludeTracking: true, // Include all transactions
+	}
+	if transactionType != "" {
+		filters.Type = &transactionType
 	}
 	pagination := repository.PaginationParams{
 		Page:  1,
@@ -163,7 +207,51 @@ func (s *exportService) ExportTransactionsJSON(ctx context.Context, userID uint,
 	}
 	transactions := result.Transactions
 
-	data, err := json.MarshalIndent(transactions, "", "  ")
+	// Fetch categories and accounts for name lookups
+	categories, err := s.categoryRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch categories: %w", err)
+	}
+	categoryMap := make(map[uint]string)
+	for _, cat := range categories {
+		categoryMap[cat.ID] = cat.Name
+	}
+
+	accounts, err := s.accountRepo.FindAll(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch accounts: %w", err)
+	}
+	accountMap := make(map[uint]string)
+	for _, acc := range accounts {
+		accountMap[acc.ID] = acc.Name
+	}
+
+	// Build enriched transaction export data
+	exportData := make([]TransactionExport, len(transactions))
+	for i, tx := range transactions {
+		toAccountName := ""
+		if tx.ToAccountID != nil {
+			toAccountName = accountMap[uint(*tx.ToAccountID)]
+		}
+
+		exportData[i] = TransactionExport{
+			ID:            tx.ID,
+			Date:          tx.Date.Format("2006-01-02"),
+			Type:          tx.Type,
+			Amount:        tx.Amount,
+			CategoryID:    uint(tx.CategoryID),
+			CategoryName:  categoryMap[uint(tx.CategoryID)],
+			AccountID:     uint(tx.AccountID),
+			AccountName:   accountMap[uint(tx.AccountID)],
+			ToAccountID:   tx.ToAccountID,
+			ToAccountName: toAccountName,
+			Description:   tx.Description,
+			Tags:          tx.Tags,
+			CreatedAt:     tx.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+	}
+
+	data, err := json.MarshalIndent(exportData, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON: %w", err)
 	}

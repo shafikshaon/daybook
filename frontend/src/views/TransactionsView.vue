@@ -965,6 +965,10 @@ const exportTransactions = async (format) => {
     if (filters.value.endDate) {
       params.append('end_date', filters.value.endDate)
     }
+    // Add transaction type filter if specified
+    if (filters.value.type) {
+      params.append('transaction_type', filters.value.type)
+    }
 
     // Make request with blob response type
     const response = await api.get(`/export?${params.toString()}`, {
